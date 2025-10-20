@@ -1,0 +1,49 @@
+<package format="3">
+  <name>ros2aria</name>
+  <version>0.9.0</version>
+  <description>
+    The <tt>RosAria</tt> node provides a ROS interface for most Adept MobileRobots, 
+    MobileRobots Inc., and ActivMedia mobile robot bases including
+    Pioneer 2, Pioneer 3, AmigoBot, PeopleBot, PowerBot, PatrolBot, Seekur,
+    Seekur Jr., Pioneer LX,
+    and any other past, current or future robot base supported by Adept MobileRobot's 
+    open source ARIA library. 
+    Information from the robot base, and velocity and acceleration control, is implemented
+    via a <tt>RosAria</tt> node, which publishes topics providing data recieved from
+    the robot's embedded controller by ARIA, and sets desired velocity, acceleration and 
+    other commands in ARIA when new commands are received from command topics.
+  </description>
+  <maintainer email="srecko.juric-kavelj@fer.hr">Srećko Jurić-Kavelj</maintainer>
+  <maintainer email="ivan.markovic@fer.hr">Ivan Marković</maintainer>
+  <maintainer email="reed.hedges@aedpt.com">Reed Hedges</maintainer>
+  <maintainer email="GA.Harkema@avans.nl">Gerard Harkema</maintainer>
+
+  <license>GPLv2</license>
+
+  <url type="website">http://www.ros.org/wiki/ROSARIA</url>
+  <url type="bugtracker">https://github.com/amor-ros-pkg/rosaria/issues</url> 
+
+  <author>Srećko Jurić-Kavelj</author>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>libaria</depend>
+  <depend>rclcpp</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <depend>dynamic_reconfigure</depend> <!-- If ported, otherwise remove -->
+  <depend>std_srvs</depend>
+  <depend>ros2aria_interfaces</depend>
+
+  <!-- Remove message_generation and catkin-specific dependencies -->
+  <!-- Remove <run_depend> and <build_depend> in favor of <depend> -->
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
