@@ -93,7 +93,7 @@ def launch_setup(context, *args, **kwargs):
         # joint states (Gazebo → ROS)
         '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
         # lidar (Gazebo → ROS)
-        '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+        #'/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
         # simulation clock (Gazebo → ROS)
         #'/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
     ],

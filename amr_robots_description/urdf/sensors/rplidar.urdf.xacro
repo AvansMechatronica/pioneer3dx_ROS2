@@ -55,9 +55,9 @@
       <xacro:inertial_cuboid mass="${mass}" x="${length_x}" y="${length_y}" z="${length_z}"/>
 
       <gazebo reference="${name}_link">
-        <sensor name="gpu_lidar" type="gpu_lidar">
+        <sensor name="lidar" type="ray">
           <pose>0 0 0.5 0 0 0</pose>
-          <!--<topic>lidar</topic>-->
+          <topic>lidar</topic>
           <update_rate>10</update_rate>
           <ray>
             <scan>
@@ -86,9 +86,6 @@
       </gazebo>
     </link>
 
-    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"> 
-      <render_engine>ogre2</render_engine>
-    </plugin>
 
   </xacro:macro>
 </robot>
