@@ -66,13 +66,14 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # === Spawn robot in Gazebo ===
-    sdf_robot_description_file = os.path.join(sim_pkg, 'models', 'robots', 'pioneer3dx.sdf.xacro')
+    sdf_robot_description_file = os.path.join(sim_pkg, 'models', 'robots', 'pioneer3dx_w_sensors.sdf.xacro')
     sdf_robot_description = Command(['xacro ', sdf_robot_description_file])
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
         arguments=['-name', 'pioneer3dx', 
-                    '-string', sdf_robot_description],
+        #            '-string', sdf_robot_description],
+                    '-topic', 'robot_description'],
                     #'-z', '1'],
         output='screen',
     )
@@ -91,6 +92,8 @@ def launch_setup(context, *args, **kwargs):
         '/world/maze/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
         # joint states (Gazebo → ROS)
         '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
+        # lidar (Gazebo → ROS)
+        '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
         # simulation clock (Gazebo → ROS)
         #'/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
     ],
@@ -121,10 +124,10 @@ def launch_setup(context, *args, **kwargs):
     return [
         gz_resource_path,
         gazebo_launch,
-        #robot_state_publisher,
+        robot_state_publisher,
         spawn_robot,
         ros_gz_bridge,
-        #rviz_node,
+        rviz_node,
     ]
 
 
