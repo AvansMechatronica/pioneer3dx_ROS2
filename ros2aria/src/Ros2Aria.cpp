@@ -55,7 +55,7 @@ public:
     // declare parameters and load defaults
     declare_parameter<std::string>("port", "/dev/ttyUSB0");
     declare_parameter<int>("baud", 0);
-    declare_parameter<bool>("debug_aria", false);
+    declare_parameter<bool>("debug_aria", true);
     declare_parameter<std::string>("aria_log_filename", "Aria.log");
     declare_parameter<bool>("publish_aria_lasers", false);
     declare_parameter<std::string>("odom_frame", "odom");
@@ -85,6 +85,7 @@ public:
     if (serial_baud != 0) {
       RCLCPP_INFO(get_logger(), "RosAria: set serial port baud rate %d", serial_baud);
     }
+
 
     // Publishers
     pose_pub = create_publisher<nav_msgs::msg::Odometry>("pose", 10);
@@ -122,10 +123,11 @@ public:
       cmdvel_watchdog_timer = create_wall_timer(std::chrono::milliseconds(100),
         std::bind(&RosAriaNode::cmdvel_watchdog, this));
     }
+    #if 0
 
     // TF broadcaster
     tf_broadcaster = std::make_shared<tf2_ros::TransformBroadcaster>(this);
-
+#endif
     // ARIA init and setup
     Aria::init();
     if (Setup() != 0) {

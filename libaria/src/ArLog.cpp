@@ -188,6 +188,9 @@ AREXPORT void ArLog::logErrorFromOSPlain(LogLevel level, const char *str)
 */
 AREXPORT void ArLog::logErrorFromOS(LogLevel level, const char *str, ...)
 {
+  return;
+}
+#if 0
   if (level > ourLevel)
     return;
 
@@ -232,13 +235,19 @@ AREXPORT void ArLog::logErrorFromOS(LogLevel level, const char *str, ...)
 
 #ifndef WIN32
   const char *errorString = NULL;
-  //char buf[256];
-  if (strerror_r(err, buf, sizeof(buf)) == 0)
-      printf("Error: %s\n", buf);
+  // Changed by gerard to use the reentrant version
+#if 0
+  char err_buf[256];
+  if (strerror_r(err, err_buf, sizeof(err_buf)) == 0)
+      printf("Error: %s\n", err_buf);
   else
+#endif
       printf("Unknown error: %d\n", err);
-
-  snprintf(bufWithError, sizeof(bufWithError) - 1, "%s | ErrorFromOSNum: %d ErrorFromOSString: %s", buf, err, errorString);
+#if 0
+  snprintf(bufWithError, sizeof(bufWithError) - 1, "%s | ErrorFromOSNum: %d ErrorFromOSString: %s", buf, err, err_buf);//errorString);
+#else
+  snprintf(bufWithError, sizeof(bufWithError) - 1, "%s | ErrorFromOSNum: %d ErrorFromOSString: ????", buf, err);//errorString);
+#endif
   bufWithError[sizeof(bufWithError) - 1] = '\0';
 #else
   LPVOID errorString = NULL;
@@ -299,7 +308,7 @@ AREXPORT void ArLog::logErrorFromOS(LogLevel level, const char *str, ...)
   va_end(ptr);
   ourMutex.unlock();
 }
-
+#endif
 
 /**
    This function appends errorno in linux, or getLastError in windows,
@@ -322,6 +331,9 @@ AREXPORT void ArLog::logErrorFromOSPlainNoLock(LogLevel level, const char *str)
 */
 AREXPORT void ArLog::logErrorFromOSNoLock(LogLevel level, const char *str, ...)
 {
+  return;
+}
+#if 0
   if (level > ourLevel)
     return;
 
@@ -364,14 +376,20 @@ AREXPORT void ArLog::logErrorFromOSNoLock(LogLevel level, const char *str, ...)
   char bufWithError[10200];  
 
 #ifndef WIN32
-  const char *errorString = NULL;
-  //char buf[256];
-  if (strerror_r(err, buf, sizeof(buf)) == 0)
-      printf("Error: %s\n", buf);
+  //const char *errorString = NULL;
+  // Changed by gerard to use the reentrant version
+#if 0
+  char err_buf[256];
+  if (strerror_r(err, err_buf, sizeof(err_buf)) == 0)
+      printf("Error: %s\n", err_buf);
   else
+#endif
       printf("Unknown error: %d\n", err);
-
-  snprintf(bufWithError, sizeof(bufWithError) - 1, "%s | ErrorFromOSNum: %d ErrorFromOSString: %s", buf, err, errorString);
+#if 0
+  snprintf(bufWithError, sizeof(bufWithError) - 1, "%s | ErrorFromOSNum: %d ErrorFromOSString: %s", buf, err, err_buf);//errorString);
+#else
+  snprintf(bufWithError, sizeof(bufWithError) - 1, "%s | ErrorFromOSNum: %d ErrorFromOSString: ???", buf, err);//errorString);
+#endif
   bufWithError[sizeof(bufWithError) - 1] = '\0';
 #else
   LPVOID errorString = NULL;
@@ -431,7 +449,7 @@ AREXPORT void ArLog::logErrorFromOSNoLock(LogLevel level, const char *str, ...)
   
   va_end(ptr);
 }
-
+#endif
 /**
    Initialize the logging utility by supplying the type of logging and the
    level of logging. If the type is File, the fileName needs to be supplied.

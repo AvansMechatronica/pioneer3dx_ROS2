@@ -40,6 +40,7 @@ bool ArJoyHandler::init(void)
   if (myUseOld)
   {
     myOldJoyDesc = ArUtil::fopen("/dev/js0", "r");
+    // Added by gerard to log if we opened the old device
     if(myOldJoyDesc != nullptr)
       ArLog::log(ArLog::Verbose, "ArJoyHandler: Opened /dev/js0 (old Linux device name scheme)");
   }

@@ -588,6 +588,7 @@ ArCameraCollection::ParamInfo *ArCameraCollection::findParamInfo
 {
   CameraInfo *cameraInfo = findCameraInfo(cameraName);
   if (cameraInfo == NULL) {
+    // Changed by gerard to return nullptr
     return nullptr;
   }
 
