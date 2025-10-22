@@ -93,7 +93,7 @@ def launch_setup(context, *args, **kwargs):
         # joint states (Gazebo → ROS)
         '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
         # lidar (Gazebo → ROS)
-        #'/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+        '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
         # simulation clock (Gazebo → ROS)
         #'/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
     ],
@@ -109,6 +109,24 @@ def launch_setup(context, *args, **kwargs):
     ],
         output='screen',
     )
+
+
+    # RPLIDAR static transforms
+    robot_name = 'pioneer3dx'
+    rplidar_stf = Node(
+            name='rplidar_stf',
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            output='screen',
+            arguments=[
+                '0', '0', '0', '0', '0', '0.0',
+#                'rplidar_link', [robot_name, '/rplidar_link/rplidar']],
+                'rplidar_link', 'pioneer3dx/rplidar_link/rplidar'],
+            remappings=[
+                ('/tf', 'tf'),
+                ('/tf_static', 'tf_static'),
+            ]
+        )
 
     # === RViz2 ===
     rviz_node = Node(
@@ -127,6 +145,7 @@ def launch_setup(context, *args, **kwargs):
         robot_state_publisher,
         spawn_robot,
         ros_gz_bridge,
+        rplidar_stf,
         rviz_node,
     ]
 
