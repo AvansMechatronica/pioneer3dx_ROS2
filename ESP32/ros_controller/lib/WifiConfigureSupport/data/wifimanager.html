@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Railtrack WiFi Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" type="text/css" href="style.css">
+</head>
+<body>
+  <div class="topnav">
+    <h1>Railtrack WiFi Manager</h1>
+  </div>
+  <div class="content">
+    <div class="card-grid">
+      <div class="card">
+        <form action="/" method="POST">
+          <p>
+            <label for="ssid">SSID</label>
+            <input type="text" id ="ssid" name="ssid"><br>
+            <label for="pass">Password</label>
+            <input type="text" id ="pass" name="pass"><br>
+            <label for="ros_agent_ipPath">microROS Agent IP Addr</label>
+            <input type="text" id ="ros_agent_ipPath" name="ros_agent_ipPath" value="192.168.2.150"><br>
+            <label for="ros_agent_port">microROS Agent Port</label>
+            <input type="text" id ="ros_agent_port" name="ros_agent_port" value="8888"><br>
+            <input type ="submit" value ="Submit">
+          </p>
+        </form>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
