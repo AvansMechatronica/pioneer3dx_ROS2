@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<sdf version="1.8" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:include filename="$(find p3dx_gazebo)/models/robots/pioneer3dx.sdf.xacro"/>
+
+  <link name="base_link"/>
+
+  <xacro:pioneer3dx base_link="base_link"/>
+
+</sdf>
