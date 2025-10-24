@@ -66,13 +66,10 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # === Spawn robot in Gazebo ===
-    sdf_robot_description_file = os.path.join(sim_pkg, 'models', 'robots', 'pioneer3dx_w_sensors.sdf.xacro')
-    sdf_robot_description = Command(['xacro ', sdf_robot_description_file])
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
         arguments=['-name', 'pioneer3dx', 
-        #            '-string', sdf_robot_description],
                     '-topic', 'robot_description'],
                     #'-z', '1'],
         output='screen',
@@ -87,9 +84,9 @@ def launch_setup(context, *args, **kwargs):
         # cmd_vel (ROS → Gazebo)
         '/model/pioneer3dx/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
         # enable (ROS → Gazebo)
-        '/model/pioneer3dx/enable@std_msgs/msg/Bool]gz.msgs.Boolean',
+        #'/model/pioneer3dx/enable@std_msgs/msg/Bool]gz.msgs.Boolean',
         # odometry (Gazebo → ROS)
-        '/world/maze/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+        #'/world/maze/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
         # joint states (Gazebo → ROS)
         '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
         # lidar (Gazebo → ROS)
@@ -100,9 +97,9 @@ def launch_setup(context, *args, **kwargs):
     remappings=[
         # (Optional) Simplify names for ROS side
         ('/model/pioneer3dx/cmd_vel', '/cmd_vel'),
-        ('/world/maze/model/pioneer3dx/odometry', '/odom'),
+#        ('/world/maze/model/pioneer3dx/odometry', '/odom'),
         ('/world/maze/model/pioneer3dx/joint_state', '/joint_states'),
-        ('/model/pioneer3dx/enable', '/enable'),
+#        ('/model/pioneer3dx/enable', '/enable'),
     ],
     parameters=[
     #    {'use_sim_time': 'true'}
