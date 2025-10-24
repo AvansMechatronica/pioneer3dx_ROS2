@@ -1,0 +1,23 @@
+{
+	"folders": [
+		{
+			"path": "encoder_test"
+		},
+		{
+			"path": "ros_controller"
+		},
+		{
+			"path": "motor_test"
+		},
+		{
+			"path": "regelaar_test"
+		},
+		{
+			"path": "rplidar_test_a"
+		},
+		{
+			"path": "rplidar_test_b"
+		}
+	],
+	"settings": {}
+}
