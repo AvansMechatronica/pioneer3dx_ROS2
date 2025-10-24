@@ -164,14 +164,14 @@ def generate_launch_description():
 
     urdf_arg = DeclareLaunchArgument(
         'urdf_gazebo',
-        default_value=os.path.join(desc_pkg, 'urdf', 'pioneer3dx.urdf.xacro'),
+        default_value=os.path.join(desc_pkg, 'urdf', 'p3dx.urdf.xacro'),
         description='Path to robot URDF or Xacro file',
     )
 
 
     rviz_arg = DeclareLaunchArgument(
         'rviz_config',
-        default_value=os.path.join(sim_pkg, 'rviz', 'pioneer3dx_default.rviz'),
+        default_value=os.path.join(sim_pkg, 'rviz', 'p3dx_default.rviz'),
         description='Path to RViz configuration file',
     )
 

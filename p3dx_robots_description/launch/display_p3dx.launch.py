@@ -66,7 +66,7 @@ def launch_setup(context, *args, **kwargs):
 
 def generate_launch_description():
     pkg_share = get_package_share_directory('p3dx_robots_description')
-    default_urdf_path = os.path.join(pkg_share, 'urdf', 'pioneer3dx_gazebo.urdf.xacro')
+    default_urdf_path = os.path.join(pkg_share, 'urdf', 'p3dx.urdf.xacro')
 
     urdf_arg = DeclareLaunchArgument(
         'urdf',
