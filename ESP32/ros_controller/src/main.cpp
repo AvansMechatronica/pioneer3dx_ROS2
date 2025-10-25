@@ -1,10 +1,11 @@
-/*Motor controller using micro_ros serial set_microros_transports*/
-#include "micro_ros_includes.h"
-#include <stdio.h>
+#include <Arduino.h>
+#include <micro_ros_platformio.h>
+
 #include <rcl/rcl.h>
-#include <rcl/error_handling.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
+#include "rosidl_runtime_c/string_functions.h"  // Header for string assignment functions
+
 #include <geometry_msgs/msg/twist.h>
 #include <std_msgs/msg/int32.h>
 #include <odometry.h>
@@ -39,7 +40,7 @@ float kp_l = 1.8;
 float ki_l = 5;
 float kd_l = 0.1;
 //pid constants of right wheel
-float kp_r = 2.25;
+float kp_r = 1.8;
 float ki_r = 5;
 float kd_r = 0.1;
 
@@ -192,75 +193,33 @@ void error_loop() {
   }
 }
 
-//subscription callback function
-
-void setup() {
-
-  //initializing the pid constants
-  leftWheel.initPID(kp_l, ki_l, kd_l);
-  rightWheel.initPID(kp_r, ki_r, kd_r);
-  //initializing interrupt functions for counting the encoder tick values
-  attachInterrupt(digitalPinToInterrupt(leftWheel.EncoderPinB), updateEncoderL, RISING);
-  attachInterrupt(digitalPinToInterrupt(rightWheel.EncoderPinA), updateEncoderR, RISING);
-  //initializing pwm signal parameters
-  ledcSetup(pwmChannelL, freq, resolution);
-  ledcAttachPin(leftWheel.Enable, pwmChannelL);
-  ledcSetup(pwmChannelR, freq, resolution);
-  ledcAttachPin(rightWheel.Enable, pwmChannelR);
-
-  set_microros_transports();
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, HIGH);
-
-  delay(2000);
-
-  allocator = rcl_get_default_allocator();
-
-  //create init_options
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-
-  // create node
-  RCCHECK(rclc_node_init_default(&node, "micro_ros_esp32_node", "", &support));
-
-  // create subscriber for cmd_vel topic
-  RCCHECK(rclc_subscription_init_default(
-    &subscriber,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
-    "cmd_vel"));
-  //create a odometry publisher
-  RCCHECK(rclc_publisher_init_default(
-    &odom_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
-    "odom/unfiltered"));
-
-  //timer function for controlling the motor base. At every samplingT time
-  //MotorControll_callback function is called
-  //Here I had set SamplingT=10 Which means at every 10 milliseconds MotorControll_callback function is called
-  const unsigned int samplingT = 20;
-  RCCHECK(rclc_timer_init_default(
-    &ControlTimer,
-    &support,
-    RCL_MS_TO_NS(samplingT),
-    MotorControll_callback));
-
-  // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
-  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
-  // RCCHECK(rclc_executor_add_timer(&executor, &timer));
-  RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
-}
-
-void loop() {
-  // put your main code here, to run repeatedly:
-  delay(100);
-  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
-}
 
 void subscription_callback(const void* msgin) {
   prev_cmd_time = millis();
 }
+
+struct timespec getTime() {
+  struct timespec tp = { 0 };
+  // add time difference between uC time and ROS time to
+  // synchronize time with ROS
+  unsigned long long now = millis() + time_offset;
+  tp.tv_sec = now / 1000;
+  tp.tv_nsec = (now % 1000) * 1000000;
+  return tp;
+}
+
+//function which publishes wheel odometry.
+void publishData() {
+  odom_msg = odometry.getData();
+  ;
+
+  struct timespec time_stamp = getTime();
+
+  odom_msg.header.stamp.sec = time_stamp.tv_sec;
+  odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
+  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+}
+
 
 //function which controlles the motor
 void MotorControll_callback(rcl_timer_t* timer, int64_t last_call_time) {
@@ -322,17 +281,6 @@ void updateEncoderR() {
   encodervalue_r = rightWheel.EncoderCount;
 }
 
-//function which publishes wheel odometry.
-void publishData() {
-  odom_msg = odometry.getData();
-  ;
-
-  struct timespec time_stamp = getTime();
-
-  odom_msg.header.stamp.sec = time_stamp.tv_sec;
-  odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
-}
 void syncTime() {
   // get the current time from the agent
   unsigned long now = millis();
@@ -342,12 +290,97 @@ void syncTime() {
   time_offset = ros_time_ms - now;
 }
 
-struct timespec getTime() {
-  struct timespec tp = { 0 };
-  // add time difference between uC time and ROS time to
-  // synchronize time with ROS
-  unsigned long long now = millis() + time_offset;
-  tp.tv_sec = now / 1000;
-  tp.tv_nsec = (now % 1000) * 1000000;
-  return tp;
+
+
+#define NODE_NAME "p3dx_controller"
+
+
+bool errorLedState = false;
+
+
+
+#if defined(WIFI)
+  String wifiSSID = SSID;
+  String wifiPass = SSID_PASSWORD;
+#endif
+
+void setup() {
+  // Configure serial transport
+  Serial.begin(115200);
+
+
+  //initializing the pid constants
+  leftWheel.initPID(kp_l, ki_l, kd_l);
+  rightWheel.initPID(kp_r, ki_r, kd_r);
+  //initializing interrupt functions for counting the encoder tick values
+  attachInterrupt(digitalPinToInterrupt(leftWheel.EncoderPinB), updateEncoderL, RISING);
+  attachInterrupt(digitalPinToInterrupt(rightWheel.EncoderPinA), updateEncoderR, RISING);
+  //initializing pwm signal parameters
+  ledcSetup(pwmChannelL, freq, resolution);
+  ledcAttachPin(leftWheel.Enable, pwmChannelL);
+  ledcSetup(pwmChannelR, freq, resolution);
+  ledcAttachPin(rightWheel.Enable, pwmChannelR);
+
+#if defined(WIFI)
+
+
+  WiFi.setHostname("p3dx_controller");
+  set_microros_wifi_transports(wifiSSID, wifiPass, AGENT_IP_ADDRESS, (size_t)PORT);
+#else
+  Serial.begin(115200);
+  set_microros_serial_transports(Serial);
+  delay(2000);
+#endif
+
+  allocator = rcl_get_default_allocator();
+
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, HIGH);
+
+  delay(2000);
+
+  allocator = rcl_get_default_allocator();
+
+  //create init_options
+  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+
+  // create node
+  RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
+
+  // create subscriber for cmd_vel topic
+  RCCHECK(rclc_subscription_init_default(
+    &subscriber,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
+    "cmd_vel"));
+  //create a odometry publisher
+  RCCHECK(rclc_publisher_init_default(
+    &odom_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
+    "odom/unfiltered"));
+
+  //timer function for controlling the motor base. At every samplingT time
+  //MotorControll_callback function is called
+  //Here I had set SamplingT=10 Which means at every 10 milliseconds MotorControll_callback function is called
+  const unsigned int samplingT = 20;
+  RCCHECK(rclc_timer_init_default(
+    &ControlTimer,
+    &support,
+    RCL_MS_TO_NS(samplingT),
+    MotorControll_callback));
+
+  // create executor
+  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
+  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &msg, &subscription_callback, ON_NEW_DATA));
+  // RCCHECK(rclc_executor_add_timer(&executor, &timer));
+  RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
+
 }
+
+void loop() {
+  // put your main code here, to run repeatedly:
+  delay(100);
+  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+}
+
