@@ -1,8 +1,8 @@
 #include <Arduino.h>
 #include <Arduino.h>
 
-#define PWM_PIN 25       // PWM output pin
-#define DIR_PIN 26       // Direction pin
+#define PWM_PIN 27       // PWM output pin
+#define DIR_PIN 25       // Direction pin
 
 const int freq = 20000;  // 20 kHz PWM
 const int pwmChannel = 0;

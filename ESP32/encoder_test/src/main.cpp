@@ -1,7 +1,7 @@
 #include <Arduino.h>
 
 // --- Rotary encoder pinnen ---
-#define ENCODER_PIN_A 32
+#define ENCODER_PIN_A 35
 #define ENCODER_PIN_B 33
 
 // --- Variabelen ---
@@ -47,7 +47,7 @@ void loop() {
   if (now - lastPrint >= 1000) {
     lastPrint = now;
 
-    noInterrupts();  // tijdelijk stoppen om stabiel te lezen
+    //noInterrupts();  // tijdelijk stoppen om stabiel te lezen
     int pos = encoderPos;
     interrupts();
 
