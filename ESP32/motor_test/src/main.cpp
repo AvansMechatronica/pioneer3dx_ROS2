@@ -1,8 +1,42 @@
 #include <Arduino.h>
 #include <Arduino.h>
 
-#define PWM_PIN 27       // PWM output pin
-#define DIR_PIN 25       // Direction pin
+
+#define L_PWM_PIN        32
+#define L_DIR_PIN        33
+#define L_ENCODER_PINA   25  //Encoder Output of pin1 must connected with intreput pin of Esp32.
+#define L_ENCODER_PINB   26
+//right wheel
+#define R_PWM_PIN        23
+#define R_DIR_PIN        22
+#define R_ENCODER_PINA   21  //Encoder Output of pin1 must connected with intreput pin of Esp32.
+#define R_ENCODER_PINB   19
+
+
+#define CLOCK_WISE            LOW
+#define COUNTER_CLOCK_WISE    HIGH
+
+#define R_CHANNEL         1
+
+#if defined(R_CHANNEL)
+#undef L_PWM_PIN        
+#undef L_DIR_PIN        
+#undef L_ENCODER_PINA   
+#undef L_ENCODER_PINB
+
+#undef CLOCK_WISE
+#undef COUNTER_CLOCK_WISE
+
+#define L_PWM_PIN        R_PWM_PIN
+#define L_DIR_PIN        R_DIR_PIN
+#define L_ENCODER_PINA   R_ENCODER_PINA
+#define L_ENCODER_PINB   R_ENCODER_PINB
+
+#define CLOCK_WISE            HIGH
+#define COUNTER_CLOCK_WISE    LOW
+
+#endif
+
 
 const int freq = 20000;  // 20 kHz PWM
 const int pwmChannel = 0;
@@ -13,8 +47,8 @@ int dutyCycle = 0;
 void setup() {
   Serial.begin(115200);
   ledcSetup(pwmChannel, freq, resolution);
-  ledcAttachPin(PWM_PIN, pwmChannel);
-  pinMode(DIR_PIN, OUTPUT);
+  ledcAttachPin(L_PWM_PIN, pwmChannel);
+  pinMode(L_DIR_PIN, OUTPUT);
   
   Serial.println("PWM controller gestart.");
   Serial.println("Voer een waarde in tussen -100 en 100:");
@@ -32,16 +66,16 @@ void loop() {
 
     // Bepaal richting
     if (value >= 0) {
-      digitalWrite(DIR_PIN, HIGH);
+      digitalWrite(L_DIR_PIN, CLOCK_WISE);
       dutyCycle = map(value, 0, 100, 0, 1023);
     } else {
-      digitalWrite(DIR_PIN, LOW);
+      digitalWrite(L_DIR_PIN, COUNTER_CLOCK_WISE);
       dutyCycle = map(-value, 0, 100, 0, 1023);
     }
 
     ledcWrite(pwmChannel, dutyCycle);
 
     Serial.printf("Invoer: %d%% → PWM duty = %d / 1023, richting = %s\n",
-                  value, dutyCycle, (digitalRead(DIR_PIN) ? "HIGH" : "LOW"));
+                  value, dutyCycle, (digitalRead(L_DIR_PIN) ? "HIGH" : "LOW"));
   }
 }
