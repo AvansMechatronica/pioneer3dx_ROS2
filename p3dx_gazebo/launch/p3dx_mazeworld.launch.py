@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
 from launch import LaunchDescription
 from launch.actions import (
     DeclareLaunchArgument,
     SetEnvironmentVariable,
     IncludeLaunchDescription,
     OpaqueFunction,
-    LogInfo,
 )
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
@@ -14,6 +12,8 @@ from launch_ros.substitutions import FindPackageShare
 from ament_index_python.packages import get_package_share_directory
 import os
 import xacro
+from launch.substitutions import Command
+
 
 
 def launch_setup(context, *args, **kwargs):
@@ -23,43 +23,35 @@ def launch_setup(context, *args, **kwargs):
     desc_pkg = get_package_share_directory('p3dx_robots_description')
     sim_pkg = get_package_share_directory('p3dx_gazebo')
 
-    # === Launch arguments (defer substitution evaluation) ===
-    urdf_file = LaunchConfiguration('urdf_gazebo')
-    world_file = LaunchConfiguration('world')
-    rviz_config_file = LaunchConfiguration('rviz_config')
-
-
-    print("DEBUG: world_file =", world_file.perform(context))
-    print("DEBUG: ros_gz_sim path =", PathJoinSubstitution([
-        FindPackageShare('ros_gz_sim'), 'launch', 'gz_sim.launch.py'
-    ]).perform(context))
+    # === Launch arguments ===
+    urdf_file = LaunchConfiguration('urdf_gazebo').perform(context)
+    world_file = LaunchConfiguration('world').perform(context)
+    rviz_config_file = LaunchConfiguration('rviz_config').perform(context)
 
     # === Process the URDF/Xacro ===
-    urdf_path = urdf_file.perform(context)
-    if urdf_path.endswith('.xacro'):
-        robot_description = xacro.process_file(urdf_path).toxml()
+    if urdf_file.endswith('.xacro'):
+        robot_description = xacro.process_file(urdf_file).toxml()
     else:
-        with open(urdf_path, 'r') as f:
+        with open(urdf_file, 'r') as f:
             robot_description = f.read()
 
+
+    desc_pkg_gazebo = desc_pkg + "/.."
     # === Gazebo resource path ===
-    desc_pkg_gazebo = os.path.join(desc_pkg, "..")
     gz_resource_path = SetEnvironmentVariable(
         name='GZ_SIM_RESOURCE_PATH',
-        value=f"{desc_pkg_gazebo}:{os.environ.get('GZ_SIM_RESOURCE_PATH', '')}"
+        value=f"{desc_pkg_gazebo}:{os.environ.get('GZ_SIM_RESOURCE_PATH','')}"
     )
 
     # === Launch Gazebo Ignition ===
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            PathJoinSubstitution([
-                FindPackageShare('ros_gz_sim'),
-                'launch',
-                'gz_sim.launch.py'
-            ])
+            PathJoinSubstitution([FindPackageShare('ros_gz_sim'), 'launch', 'gz_sim.launch.py'])
         ),
-        launch_arguments={'gz_args': [f'-r -v 4 ', world_file]}.items(),
+        launch_arguments={'gz_args': f'-r -v 4 {world_file}'}.items(),
     )
+
+
 
     # === Robot State Publisher ===
     robot_state_publisher = Node(
@@ -77,7 +69,9 @@ def launch_setup(context, *args, **kwargs):
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
-        arguments=['-name', 'pioneer3dx', '-topic', 'robot_description'],
+        arguments=['-name', 'pioneer3dx', 
+                    '-topic', 'robot_description'],
+                    #'-z', '1'],
         output='screen',
     )
 
@@ -86,17 +80,50 @@ def launch_setup(context, *args, **kwargs):
         package='ros_gz_bridge',
         executable='parameter_bridge',
         name='ros_gz_bridge_all',
-        arguments=[
-            '/model/pioneer3dx/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
-            '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
-            '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
-        ],
-        remappings=[
-            ('/model/pioneer3dx/cmd_vel', '/cmd_vel'),
-            ('/world/maze/model/pioneer3dx/joint_state', '/joint_states'),
-        ],
+    arguments=[
+        # cmd_vel (ROS → Gazebo)
+        '/model/pioneer3dx/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
+        # enable (ROS → Gazebo)
+        #'/model/pioneer3dx/enable@std_msgs/msg/Bool]gz.msgs.Boolean',
+        # odometry (Gazebo → ROS)
+        #'/world/maze/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+        # joint states (Gazebo → ROS)
+        '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
+        # lidar (Gazebo → ROS)
+        '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
+        # simulation clock (Gazebo → ROS)
+        #'/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
+    ],
+    remappings=[
+        # (Optional) Simplify names for ROS side
+        ('/model/pioneer3dx/cmd_vel', '/cmd_vel'),
+#        ('/world/maze/model/pioneer3dx/odometry', '/odom'),
+        ('/world/maze/model/pioneer3dx/joint_state', '/joint_states'),
+#        ('/model/pioneer3dx/enable', '/enable'),
+    ],
+    parameters=[
+    #    {'use_sim_time': 'true'}
+    ],
         output='screen',
     )
+
+
+    # RPLIDAR static transforms
+    robot_name = 'pioneer3dx'
+    rplidar_stf = Node(
+            name='rplidar_stf',
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            output='screen',
+            arguments=[
+                '0', '0', '0', '0', '0', '0.0',
+#                'rplidar_link', [robot_name, '/rplidar_link/rplidar']],
+                'rplidar_link', 'pioneer3dx/rplidar_link/rplidar'],
+            remappings=[
+                ('/tf', 'tf'),
+                ('/tf_static', 'tf_static'),
+            ]
+        )
 
     # === RViz2 ===
     rviz_node = Node(
@@ -108,13 +135,14 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{'use_sim_time': True}],
     )
 
-    # === Return actions ===
+
     return [
         gz_resource_path,
         gazebo_launch,
         robot_state_publisher,
         spawn_robot,
         ros_gz_bridge,
+        rplidar_stf,
         rviz_node,
     ]
 
@@ -124,7 +152,7 @@ def generate_launch_description():
     desc_pkg = get_package_share_directory('p3dx_robots_description')
     sim_pkg = get_package_share_directory('p3dx_gazebo')
 
-    # === Declare launch arguments ===
+    # Declare arguments
     world_arg = DeclareLaunchArgument(
         'world',
         default_value=os.path.join(sim_pkg, 'worlds', 'maze.world'),
@@ -137,13 +165,13 @@ def generate_launch_description():
         description='Path to robot URDF or Xacro file',
     )
 
+
     rviz_arg = DeclareLaunchArgument(
         'rviz_config',
         default_value=os.path.join(sim_pkg, 'rviz', 'p3dx_default.rviz'),
         description='Path to RViz configuration file',
     )
 
-    # === Combine into launch description ===
     return LaunchDescription([
         world_arg,
         urdf_arg,
