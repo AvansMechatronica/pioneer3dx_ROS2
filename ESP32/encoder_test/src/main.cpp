@@ -11,7 +11,7 @@
 #define R_ENCODER_PINA   21  //Encoder Output of pin1 must connected with intreput pin of Esp32.
 #define R_ENCODER_PINB   19
 
-#define R_CHANNEL         1
+//#define R_CHANNEL         1
 
 #if defined(R_CHANNEL)
 #undef L_PWM_PIN        
