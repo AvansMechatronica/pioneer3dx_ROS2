@@ -20,7 +20,7 @@ Odometry::Odometry():
     heading_(0.0)
 {
     odom_msg_.header.frame_id = micro_ros_string_utilities_set(odom_msg_.header.frame_id, "odom");
-    odom_msg_.child_frame_id = micro_ros_string_utilities_set(odom_msg_.child_frame_id, "base_footprint");
+    odom_msg_.child_frame_id = micro_ros_string_utilities_set(odom_msg_.child_frame_id, "p3dx_base");
 }
 
 void Odometry::update(float vel_dt, float linear_vel_x, float linear_vel_y, float angular_vel_z)

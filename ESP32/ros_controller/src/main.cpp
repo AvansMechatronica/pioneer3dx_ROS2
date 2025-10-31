@@ -228,7 +228,7 @@ struct timespec getTime() {
 //function which publishes wheel odometry.
 void publishData() {
   odom_msg = odometry.getData();
-  ;
+
 
   struct timespec time_stamp = getTime();
 
@@ -337,6 +337,17 @@ void setup() {
 
 
   WiFi.setHostname("p3dx_controller");
+
+  bool force_network_configure;
+  force_network_configure = !digitalRead(SELECT_WIFI_CONFIG_MODE_PIN);
+
+  NETWORK_CONFIG networkConfig;
+  wifiUp = configureNetwork(force_network_configure, &networkConfig);
+  if(!wifiUp){
+    tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\n");
+
+  };
+
   set_microros_wifi_transports(wifiSSID, wifiPass, AGENT_IP_ADDRESS, (size_t)PORT);
 #else
   Serial.begin(115200);

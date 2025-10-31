@@ -8,7 +8,6 @@
   <xacro:property name="wheel_radius" value="0.12"/>
   <!-- 0.09765-->
   <xacro:property name="wheel_width" value="0.04"/>
-  <!-- 0.34 -->
   <xacro:property name="caster_wheel_radius" value="0.0375"/>
   <xacro:property name="caster_wheel_width" value="0.01"/>
 
@@ -32,7 +31,7 @@
 
 
   <!-- Base link -->
-  <link name="base_link"/>
+  <link name="p3dx_base"/>
 
   <!-- Chassis -->
   <link name="chassis">
@@ -56,7 +55,7 @@
   </link>
 
   <joint name="chassis_joint" type="fixed">
-    <parent link="base_link"/>
+    <parent link="p3dx_base"/>
     <child link="chassis"/>
     <origin xyz="-0.045 0 0.148" rpy="0 0 0"/>
   </joint>
@@ -78,7 +77,7 @@
   </link>
 
   <joint name="base_top_joint" type="fixed">
-    <parent link="base_link"/>
+    <parent link="p3dx_base"/>
     <child link="top_plate"/>
    <origin xyz="-0.045 0 0.234" rpy="0 0 0"/>
   </joint>
@@ -98,7 +97,7 @@
   </link>
 
   <joint name="base_front_joint" type="fixed">
-    <parent link="base_link"/>
+    <parent link="p3dx_base"/>
     <child link="front_sonar"/>
     <origin xyz="-0.198 0 0.208" rpy="0 0 0"/>
   </joint>
@@ -118,7 +117,7 @@
   </link>
 
   <joint name="base_back_joint" type="fixed">
-    <parent link="base_link"/>
+    <parent link="p3dx_base"/>
     <child link="back_sonar"/>
     <origin xyz="0.109 0 0.209" rpy="0 0 0"/>
   </joint>
@@ -138,7 +137,7 @@
   </link>
 
   <joint name="base_caster_swivel_joint" type="fixed">
-    <parent link="base_link"/>
+    <parent link="p3dx_base"/>
     <child link="caster_swivel"/>
     <origin xyz="-0.185 0 0.055" rpy="0 0 0"/>
   </joint>
@@ -197,7 +196,7 @@
     </link>
 
     <joint name="${prefix}_hub_joint" type="fixed">
-      <parent link="base_link"/>
+      <parent link="p3dx_base"/>
       <child link="${prefix}_hub"/>
       <origin xyz="0 ${y_offset} ${wheel_radius}" rpy="0 0 0"/>
     </joint>
@@ -248,7 +247,7 @@
   <xacro:wheel prefix="left" y_offset="${base_width/2}"/>
   <xacro:wheel prefix="right" y_offset="${-base_width/2}"/>
 
-  <xacro:rplidar name="rplidar" parent_link="base_link">
+  <xacro:rplidar name="rplidar" parent_link="p3dx_base">
     <origin xyz="${rplidar_x_offset} ${rplidar_y_offset} ${rplidar_z_offset}"
             rpy="0 0 ${pi/2}"/>
   </xacro:rplidar>
@@ -263,7 +262,7 @@
       <wheel_separation>${base_width}</wheel_separation>
       <wheel_radius>${wheel_radius}</wheel_radius>
       <!--
-      <base_frame>${base_link}</base_frame>
+      <base_frame>${p3dx_base}</base_frame>
       <publish_rate>50</publish_rate>
       <publish_joint_states>true</publish_joint_states>
       -->

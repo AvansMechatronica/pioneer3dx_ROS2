@@ -6,12 +6,10 @@ def generate_launch_description():
         Node(
             package='micro_ros_agent',
             executable='micro_ros_agent',
-            name='micro_ros_agent_usb',
+            name='micro_ros_agent',
             output='screen',
-            arguments=['serial', 
-                       '--dev', '/dev/ttyUSB0', 
-                       '-b', '115200',
+            arguments=['udp4', 
+                       '--port', '8888',
                        '-v', '6'   # Verbosity level (1–6)]
         )
     ])
-
