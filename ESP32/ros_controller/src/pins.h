@@ -13,4 +13,13 @@
 #define R_ENCODER_PINA   23  //Encoder Output of pin1 must connected with intreput pin of Esp32.
 #define R_ENCODER_PINB   15
 
+#define BUMPER_FRONT_RIGHT_PIN 34
+#define BUMPER_FRONT_LEFT_PIN  35   
+#define BUMPER_REAR_RIGHT_PIN 39
+#define BUMPER_REAR_LEFT_PIN 36
+
+#define MOTOR_ENABLE_PIN 14
+#define MOTOR_ENABLE        HIGH
+#define MOTOR_DISABLE       LOW 
+
 #endif

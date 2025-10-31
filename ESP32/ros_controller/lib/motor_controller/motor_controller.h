@@ -14,7 +14,7 @@
 #endif
 
 #ifndef TICK_PER_REVOLUTION
-#define TICK_PER_REVOLUTION 1000
+#define TICK_PER_REVOLUTION 19150
 #endif
 
 #ifndef CLOCK_WISE
@@ -30,7 +30,7 @@
 #endif
 
 #ifndef MAX_PWM
-#define MAX_PWM 255
+#define MAX_PWM ((2^PWM_RESOLUTION)-1)
 #endif
 
 class MotorController {

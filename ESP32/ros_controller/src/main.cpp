@@ -14,8 +14,9 @@
 #include <nav_msgs/msg/odometry.h>
 #include <geometry_msgs/msg/twist.h>
 #include <geometry_msgs/msg/vector3.h>
+#include <sensor_msgs/msg/joint_state.h>
 
-//#include <p3dx_interfaces/msg/bumper_state.h>
+#include <p3dx_interfaces/msg/bumper_state.h>
 
 
 #include "motor_controller.h"
@@ -65,6 +66,7 @@ rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
 rcl_publisher_t odom_publisher;
+rcl_publisher_t joint_state_publisher;
 rcl_publisher_t error_publisher;
 rcl_publisher_t battery_voltage_publisher;
 //rcl_publisher_t bumper_state_publisher;
@@ -75,8 +77,12 @@ nav_msgs__msg__Odometry odom_msg;
 std_msgs__msg__Bool error_msg;
 std_msgs__msg__Bool reset_msg;
 std_msgs__msg__Float32 battery_voltage_msg;
+sensor_msgs__msg__JointState joint_state_msg;
 //p3dx_interfaces_msg_bumper_state bumper_state;
 
+
+float prev_rpm_l;
+float prev_rpm_r;
 
 rcl_timer_t timer;
 rcl_timer_t ControlTimer;
@@ -112,11 +118,27 @@ void error_loop() {
 
 void cmd_vel_subscription_callback(const void* msgin) {
   prev_cmd_time = millis();
+
+  const geometry_msgs__msg__Twist* msg = 
+      static_cast<const geometry_msgs__msg__Twist*>(msgin);
+
+  twist_msg = *msg;  //  copy the data
+
 }
 
 void reset_subscription_callback(const void* msgin) {
+  const std_msgs__msg__Bool* msg = 
+      static_cast<const std_msgs__msg__Bool*>(msgin);
+  if (msg->data == true) {
+    if(digitalRead(BUMPER_FRONT_RIGHT_PIN)==HIGH &&
+      digitalRead(BUMPER_FRONT_LEFT_PIN)==HIGH  &&
+      digitalRead(BUMPER_REAR_RIGHT_PIN)==HIGH  &&
+      digitalRead(BUMPER_REAR_LEFT_PIN)==HIGH){
+      digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+      error_msg.data = false;
+    }
+  }
 }
-
 
 
 
@@ -130,6 +152,11 @@ struct timespec getTime() {
   return tp;
 }
 
+// Corresponding joint positions and velocities
+double pos_left = 0.0;
+double pos_right = 0.0;
+double last_time = 0.0;
+
 //function which publishes wheel odometry.
 void publishData() {
   // odometry data publish
@@ -141,13 +168,99 @@ void publishData() {
   RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
 
   // error data publish
-  error_msg.data = false;
   RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
 
   // battery voltage publish
   float battery_voltage = 0;//analogRead(BATTERY_VOLTAGE_PIN) * (5.0 / 1023.0) * ((R1 + R2) / R2);  
   battery_voltage_msg.data = battery_voltage;
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
+
+  float current_rpm_l = leftWheel.getRpm();
+  float current_rpm_r = rightWheel.getRpm();
+
+
+  int32_t delta_left = current_rpm_l - prev_rpm_l;
+  int32_t delta_right = current_rpm_r - prev_rpm_r;
+
+  // Incremental wheel rotation in radians
+  double delta_theta_left = 2.0 * M_PI * ((double)delta_left / TICK_PER_REVOLUTION);
+  double delta_theta_right = 2.0 * M_PI * ((double)delta_right / TICK_PER_REVOLUTION);
+
+  // Update wheel angles (positions)
+  pos_left += delta_theta_left;
+  pos_right += delta_theta_right;
+
+
+  uint64_t now_ms = rmw_uros_epoch_millis();
+  double current_time = now_ms / 1000.0;
+
+  double dt = current_time - last_time;
+  if (last_time == 0.0) dt = 0.1;  // fallback for first loop
+
+  last_time = current_time;
+
+
+  // Angular velocities (rad/s)
+  float vel_left = delta_theta_left / dt;
+  float vel_right = delta_theta_right / dt;
+
+  prev_rpm_l = current_rpm_l;
+  prev_rpm_r = current_rpm_r;
+
+  // Update data
+  joint_state_msg.header.stamp.sec = (int32_t)(rmw_uros_epoch_millis() / 1000);
+  joint_state_msg.header.stamp.nanosec = (uint32_t)((rmw_uros_epoch_millis() % 1000) * 1000000);
+
+  joint_state_msg.position.data[0] = pos_left;
+  joint_state_msg.position.data[1] = pos_right;
+
+  joint_state_msg.velocity.data[0] = vel_left;
+  joint_state_msg.velocity.data[1] = pos_right;
+
+  // Publish
+  rcl_publish(&joint_state_publisher, &joint_state_msg, NULL);
+
+}
+
+void setup_joint_state_msg()
+{
+    // Initialize message memory
+    sensor_msgs__msg__JointState__init(&joint_state_msg);
+
+    // Two joints: left_wheel and right_wheel
+    joint_state_msg.name.size = 3;
+    joint_state_msg.name.capacity = 3;
+    joint_state_msg.name.data = (rosidl_runtime_c__String*)malloc(3 * sizeof(rosidl_runtime_c__String));
+
+    rosidl_runtime_c__String__init(&joint_state_msg.name.data[0]);
+    rosidl_runtime_c__String__assign(&joint_state_msg.name.data[0], "left_wheel_joint");
+
+    rosidl_runtime_c__String__init(&joint_state_msg.name.data[1]);
+    rosidl_runtime_c__String__assign(&joint_state_msg.name.data[1], "right_wheel_joint");
+
+    rosidl_runtime_c__String__init(&joint_state_msg.name.data[2]);
+    rosidl_runtime_c__String__assign(&joint_state_msg.name.data[2], "caster_swivel_hubcap_joint");
+
+
+    // Allocate arrays for positions, velocities, efforts
+    joint_state_msg.position.size = 3;
+    joint_state_msg.position.capacity = 3;
+    joint_state_msg.position.data = (double*)malloc(3 * sizeof(double));
+
+    joint_state_msg.velocity.size = 2;
+    joint_state_msg.velocity.capacity = 3;
+    joint_state_msg.velocity.data = (double*)malloc(3 * sizeof(double));
+
+    joint_state_msg.effort.size = 3;
+    joint_state_msg.effort.capacity = 3;
+    joint_state_msg.effort.data = (double*)malloc(3 * sizeof(double));
+
+    joint_state_msg.effort.data[0] = 0.0;
+    joint_state_msg.effort.data[1] = 0.0;
+    joint_state_msg.effort.data[2] = 0.0;
+
+    joint_state_msg.position.data[2] = 0.0; // Caster joint position
+    joint_state_msg.velocity.data[2] = 0.0; // Caster joint velocity
 
 }
 
@@ -221,6 +334,10 @@ void syncTime() {
   time_offset = ros_time_ms - now;
 }
 
+void bumber_hit(){
+  digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+  error_msg.data = true;
+}
 
 
 #define NODE_NAME "p3dx_controller"
@@ -248,6 +365,10 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(leftWheel.EncoderPinB), updateEncoderL, RISING);
   attachInterrupt(digitalPinToInterrupt(rightWheel.EncoderPinA), updateEncoderR, RISING);
 
+
+  prev_rpm_l = leftWheel.getRpm();
+  prev_rpm_r = rightWheel.getRpm();
+
 #if defined(WIFI)
 
 
@@ -274,6 +395,26 @@ void setup() {
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
+
+  pinMode(MOTOR_ENABLE_PIN, OUTPUT);
+  digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+  pinMode(BUMPER_FRONT_RIGHT_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_RIGHT_PIN), bumber_hit, FALLING);
+  pinMode(BUMPER_FRONT_LEFT_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_LEFT_PIN), bumber_hit, FALLING); 
+  pinMode(BUMPER_REAR_RIGHT_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_RIGHT_PIN), bumber_hit, FALLING);
+  pinMode(BUMPER_REAR_LEFT_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_LEFT_PIN), bumber_hit, FALLING);
+  if(digitalRead(BUMPER_FRONT_RIGHT_PIN)==HIGH &&
+     digitalRead(BUMPER_FRONT_LEFT_PIN)==HIGH  &&
+     digitalRead(BUMPER_REAR_RIGHT_PIN)==HIGH  &&
+     digitalRead(BUMPER_REAR_LEFT_PIN)==HIGH){
+    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+    error_msg.data = false;
+  }
+
+
 
   delay(2000);
 
@@ -320,6 +461,16 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "battery_voltage"));
 
+    // Create publisher
+  RCCHECK(rclc_publisher_init_default(
+        &joint_state_publisher,
+        &node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
+        "/joint_states"));
+
+    // Prepare message memory
+    setup_joint_state_msg();
+  
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
   //Here I had set SamplingT=10 Which means at every 10 milliseconds MotorControll_timerCallback function is called
