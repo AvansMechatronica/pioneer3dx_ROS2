@@ -1,15 +1,6 @@
 #include <Arduino.h>
+#include "pins.h"
 
-// --- Rotary encoder pinnen ---
-#define L_PWM_PIN        32
-#define L_DIR_PIN        33
-#define L_ENCODER_PINA   25  //Encoder Output of pin1 must connected with intreput pin of Esp32.
-#define L_ENCODER_PINB   26
-//right wheel
-#define R_PWM_PIN        23
-#define R_DIR_PIN        22
-#define R_ENCODER_PINA   21  //Encoder Output of pin1 must connected with intreput pin of Esp32.
-#define R_ENCODER_PINB   19
 
 //#define R_CHANNEL         1
 

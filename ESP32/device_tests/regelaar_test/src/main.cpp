@@ -1,10 +1,6 @@
 #include <Arduino.h>
+#include "pins.h"
 
-// ====== Pin-definities ======
-#define ENCODER_PIN_A 32
-#define ENCODER_PIN_B 33
-#define PWM_PIN 25
-#define DIR_PIN 26
 
 // ====== PWM-configuratie ======
 const int pwmChannel = 0;
