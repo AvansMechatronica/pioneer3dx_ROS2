@@ -8,10 +8,15 @@
 
 #include <geometry_msgs/msg/twist.h>
 #include <std_msgs/msg/int32.h>
+#include <std_msgs/msg/bool.h>
+#include <std_msgs/msg/float32.h>
 #include <odometry.h>
 #include <nav_msgs/msg/odometry.h>
 #include <geometry_msgs/msg/twist.h>
 #include <geometry_msgs/msg/vector3.h>
+
+//#include <p3dx_interfaces/msg/bumper_state.h>
+
 
 #include "motor_controller.h"
 #include "pins.h"
@@ -51,16 +56,28 @@
 
 
 
-rcl_subscription_t subscriber;
+rcl_subscription_t cmd_vel_subscriber;
+rcl_subscription_t reset_subscriber;
+
 geometry_msgs__msg__Twist twist_msg;
 rclc_executor_t executor;
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
 rcl_publisher_t odom_publisher;
-std_msgs__msg__Int32 encodervalue_l;
-std_msgs__msg__Int32 encodervalue_r;
+rcl_publisher_t error_publisher;
+rcl_publisher_t battery_voltage_publisher;
+//rcl_publisher_t bumper_state_publisher;
+std_msgs__msg__Int32 encodervalue_l_msg;
+std_msgs__msg__Int32 encodervalue_r_msg;
 nav_msgs__msg__Odometry odom_msg;
+
+std_msgs__msg__Bool error_msg;
+std_msgs__msg__Bool reset_msg;
+std_msgs__msg__Float32 battery_voltage_msg;
+//p3dx_interfaces_msg_bumper_state bumper_state;
+
+
 rcl_timer_t timer;
 rcl_timer_t ControlTimer;
 unsigned long long time_offset = 0;
@@ -93,9 +110,15 @@ void error_loop() {
 }
 
 
-void subscription_callback(const void* msgin) {
+void cmd_vel_subscription_callback(const void* msgin) {
   prev_cmd_time = millis();
 }
+
+void reset_subscription_callback(const void* msgin) {
+}
+
+
+
 
 struct timespec getTime() {
   struct timespec tp = { 0 };
@@ -109,14 +132,23 @@ struct timespec getTime() {
 
 //function which publishes wheel odometry.
 void publishData() {
+  // odometry data publish
   odom_msg = odometry.getData();
 
-
   struct timespec time_stamp = getTime();
-
   odom_msg.header.stamp.sec = time_stamp.tv_sec;
   odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
   RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+
+  // error data publish
+  error_msg.data = false;
+  RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
+
+  // battery voltage publish
+  float battery_voltage = 0;//analogRead(BATTERY_VOLTAGE_PIN) * (5.0 / 1023.0) * ((R1 + R2) / R2);  
+  battery_voltage_msg.data = battery_voltage;
+  RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
+
 }
 
 
@@ -168,7 +200,7 @@ void updateEncoderL() {
     leftWheel.EncoderCount.data--;
   else
     leftWheel.EncoderCount.data++;
-  encodervalue_l = leftWheel.EncoderCount;
+  encodervalue_l_msg = leftWheel.EncoderCount;
 }
 
 //interrupt function for right wheel encoder
@@ -177,7 +209,7 @@ void updateEncoderR() {
     rightWheel.EncoderCount.data++;
   else
     rightWheel.EncoderCount.data--;
-  encodervalue_r = rightWheel.EncoderCount;
+  encodervalue_r_msg = rightWheel.EncoderCount;
 }
 
 void syncTime() {
@@ -253,18 +285,40 @@ void setup() {
   // create node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
-  // create subscriber for cmd_vel topic
+  // create cmd_vel_subscriber for cmd_vel topic
   RCCHECK(rclc_subscription_init_default(
-    &subscriber,
+    &cmd_vel_subscriber,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
     "cmd_vel"));
+
+  // create reset_subscriber for reset topic
+  RCCHECK(rclc_subscription_init_default(
+    &reset_subscriber,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    "reset"));
+  
   //create a odometry publisher
   RCCHECK(rclc_publisher_init_default(
     &odom_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
     "odom/unfiltered"));
+
+  //create a error publisher
+  RCCHECK(rclc_publisher_init_default(
+    &error_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
+    "error"));
+
+  //create a battery_voltage publisher
+  RCCHECK(rclc_publisher_init_default(
+    &battery_voltage_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
+    "battery_voltage"));
 
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
@@ -277,8 +331,9 @@ void setup() {
     MotorControll_timerCallback));
 
   // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 2, &allocator));
-  RCCHECK(rclc_executor_add_subscription(&executor, &subscriber, &twist_msg, &subscription_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
+  RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
+  RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
   // RCCHECK(rclc_executor_add_timer(&executor, &timer));
   RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
 

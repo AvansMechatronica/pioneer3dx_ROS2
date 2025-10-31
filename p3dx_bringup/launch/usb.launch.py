@@ -11,7 +11,8 @@ def generate_launch_description():
             arguments=['serial', 
                        '--dev', '/dev/ttyUSB0', 
                        '-b', '115200',
-                       '-v', '6'   # Verbosity level (1–6)]
+                       '-v', '4'   # Verbosity level (1–6)
+                       ],
         )
     ])
 

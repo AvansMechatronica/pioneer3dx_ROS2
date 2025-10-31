@@ -10,6 +10,7 @@ def generate_launch_description():
             output='screen',
             arguments=['udp4', 
                        '--port', '8888',
-                       '-v', '6'   # Verbosity level (1–6)]
+                       '-v', '5'   # Verbosity level (1–6)
+                       ],
         )
     ])
