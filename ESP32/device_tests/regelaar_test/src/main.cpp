@@ -64,6 +64,7 @@ unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
 unsigned long prev_odom_update = 0;
 
+float setpoint = 0.0;
 
 //creating objects for right wheel and left wheel
 MotorController wheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB);
@@ -105,16 +106,10 @@ struct timespec getTime() {
 
 //function which controlles the motor, callled every 10ms
 void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
-  float linearVelocity;
-  float angularVelocity;
-  //linear velocity and angular velocity send cmd_vel topic
-  linearVelocity = twist_msg.linear.x;
-  angularVelocity = twist_msg.angular.z;
-  //linear and angular velocities are converted to wheel and rightwheel velocities
-  float vL = (linearVelocity - (angularVelocity * 1 / 2)) * 20;
+
   //pid controlled is used for generating the pwm signal
-  float actuating_signal_LW = wheel.pid(vL);
-  if (vL == 0) {
+  float actuating_signal_LW = wheel.pid(setpoint);
+  if (setpoint == 0) {
     wheel.stop();
     actuating_signal_LW = 0;
   } else {
@@ -143,9 +138,11 @@ void syncTime() {
 }
 
 
-
-
 bool errorLedState = false;
+
+void executerTask(void *pvParameters);
+void inputTask(void *pvParameters);
+
 
 void setup() {
   // Configure serial transport
@@ -188,11 +185,65 @@ void setup() {
   // RCCHECK(rclc_executor_add_timer(&executor, &timer));
   RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
 
+
+    // Create Task 1
+  xTaskCreate(
+    executerTask,                // Function that implements the task
+    "executerTask",              // Name of the task (for debugging)
+    2048,                 // Stack size in words (not bytes)
+    NULL,                 // Task input parameter
+    1,                    // Priority (higher = more important)
+    NULL                  // Task handle
+  );
+
+  // Create Task 2
+  xTaskCreatePinnedToCore(
+    inputTask,                // Function that implements the task
+    "inputTask",              // Name of the task
+    2048,                 // Stack size
+    NULL,                 // Parameter
+    1,                    // Priority
+    NULL,                 // Task handle
+    1                     // Core ID (0 or 1)
+  );
 }
 
 void loop() {
+    delay(100);
   // put your main code here, to run repeatedly:
-  delay(100);
-  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 }
+
+// Define Task 1
+void executerTask(void *pvParameters) {
+  (void) pvParameters;
+
+  for (;;) {
+    vTaskDelay(100 / portTICK_PERIOD_MS);  // Delay 1.5 seconds
+    RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+  }
+}
+
+// Define Task 2
+void inputTask(void *pvParameters) {
+  (void) pvParameters;
+
+  for (;;) {
+    vTaskDelay(1500 / portTICK_PERIOD_MS);  // Delay 1.5 seconds
+
+
+    if (Serial.available() > 0) {
+      String input = Serial.readStringUntil('\n');
+      input.trim();
+      float value = input.toFloat();
+
+      if (value < -1) value = -1;
+      if (value > 1) value = 1;
+      setpoint = value;
+
+      Serial.printf("Invoer: %d\n",  value);
+    }
+  }
+}
+
+
 

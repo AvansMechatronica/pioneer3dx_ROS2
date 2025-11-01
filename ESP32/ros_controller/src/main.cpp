@@ -16,7 +16,7 @@
 #include <geometry_msgs/msg/vector3.h>
 #include <sensor_msgs/msg/joint_state.h>
 
-#include <p3dx_interfaces/msg/bumper_state.h>
+#include <p3dx_interfaces/msg/bumpers.h>
 
 
 #include "motor_controller.h"
@@ -65,20 +65,22 @@ rclc_executor_t executor;
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
+
 rcl_publisher_t odom_publisher;
 rcl_publisher_t joint_state_publisher;
 rcl_publisher_t error_publisher;
 rcl_publisher_t battery_voltage_publisher;
-//rcl_publisher_t bumper_state_publisher;
+rcl_publisher_t bumpers_publisher;
+
 std_msgs__msg__Int32 encodervalue_l_msg;
 std_msgs__msg__Int32 encodervalue_r_msg;
 nav_msgs__msg__Odometry odom_msg;
-
 std_msgs__msg__Bool error_msg;
 std_msgs__msg__Bool reset_msg;
 std_msgs__msg__Float32 battery_voltage_msg;
 sensor_msgs__msg__JointState joint_state_msg;
-//p3dx_interfaces_msg_bumper_state bumper_state;
+p3dx_interfaces__msg__Bumpers  bumper_msg;
+
 
 
 float prev_rpm_l;
@@ -199,7 +201,6 @@ void publishData() {
 
   last_time = current_time;
 
-
   // Angular velocities (rad/s)
   float vel_left = delta_theta_left / dt;
   float vel_right = delta_theta_right / dt;
@@ -217,8 +218,16 @@ void publishData() {
   joint_state_msg.velocity.data[0] = vel_left;
   joint_state_msg.velocity.data[1] = pos_right;
 
-  // Publish
+  // Publish jointstates
   rcl_publish(&joint_state_publisher, &joint_state_msg, NULL);
+
+  bumper_msg.front_right = !digitalRead(BUMPER_FRONT_RIGHT_PIN);
+  bumper_msg.front_left = !digitalRead(BUMPER_FRONT_LEFT_PIN);
+  bumper_msg.rear_right = !digitalRead(BUMPER_REAR_RIGHT_PIN);
+  bumper_msg.rear_left = !digitalRead(BUMPER_REAR_LEFT_PIN);
+
+  // Publish bumpers
+  rcl_publish(&bumpers_publisher, &bumper_msg, NULL);
 
 }
 
@@ -446,6 +455,13 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
     "odom/unfiltered"));
+
+  //create a bumper publisher
+  RCCHECK(rclc_publisher_init_default(
+    &bumpers_publisher,
+    &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(p3dx_interfaces, msg, Bumpers),
+    "bumpers"));
 
   //create a error publisher
   RCCHECK(rclc_publisher_init_default(
