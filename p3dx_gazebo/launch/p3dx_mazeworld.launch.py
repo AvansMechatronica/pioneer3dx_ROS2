@@ -86,19 +86,20 @@ def launch_setup(context, *args, **kwargs):
         # enable (ROS → Gazebo)
         #'/model/pioneer3dx/enable@std_msgs/msg/Bool]gz.msgs.Boolean',
         # odometry (Gazebo → ROS)
-        #'/world/maze/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+        '/world/maze/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
         # joint states (Gazebo → ROS)
         '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
         # lidar (Gazebo → ROS)
         '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
         # simulation clock (Gazebo → ROS)
-        #'/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
+        '/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
     ],
     remappings=[
         # (Optional) Simplify names for ROS side
         ('/model/pioneer3dx/cmd_vel', '/cmd_vel'),
-#        ('/world/maze/model/pioneer3dx/odometry', '/odom'),
+        ('/world/maze/model/pioneer3dx/odometry', '/odom'),
         ('/world/maze/model/pioneer3dx/joint_state', '/joint_states'),
+        ('/lidar', '/scan'),
 #        ('/model/pioneer3dx/enable', '/enable'),
     ],
     parameters=[
