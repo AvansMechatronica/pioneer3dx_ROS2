@@ -1,22 +1,36 @@
-# Railtrack
-### Modular & low-cost model RailTrack Control System 
-___Note: This repository is currently under construcion. All code works, except documentation is not completed. It wil follow soon. Once the documentation is ready it will be possible to send issus about the system through this github repository.___
+# Commands
+Clone repository
+```
+mkdir pioneer_ws/src -p
+git clone .....
+```
 
-Welcome to this modular model railway control system. This system makes it possible to control turnout and locomotives from a graphical user panel. The system is modular and can control both classic turnouts and digitally controlled turnouts. 
+Buid workspace
+```
+cd ~/pioneer_ws/
+rosdep update
+rosdep install --from-paths src/pioneer3dx_ROS2/p3dx --ignore-src -y
+colcon build --symlink-install
+source install/setup.bash
+```
 
-This system has the following features:
+Start simualtor
+```
+ros2 launch p3dx_gazebo p3dx_mazeworld.launch.py 
+```
 
-* Standardization through use of ROS2([Robot Operating System - Humble](https://docs.ros.org/en/humble/index.html)) as middelware system
-* Low-costs by using ESP32 components
-* Scalable to the wishes of the individual user
-* Easy to configure using simple json configuration files
-* Integratable with Marklin Central/Digital Station throug the Marklin CAN bus
-* Easy to adapt to "Railboxs"(Boosters) from other manufactures as Marklin
 
-_My apologies for my English language. This documentation provides a brief description of the system setup. Let the internet help you when a configuration goes wrong. Usually the answer can be found there._
+On remote computer
+```
+ros2 launch p3dx_navigation slam.launch.py
+```
 
-![Image](images/SystemArchitecture.jpg)
+```
+ros2 launch p3dx_navigation slam.launch.py sync:=false
+```
 
-_Note: The "[Digital Connector Box 60116](https://www.maerklin.de/en/products/details/article/60116)"(or simular) from Marklin is called in this documentation "Railbox"_
+```
+ros2 launch p3dx_navigation localization.launch.py map:=/home/gerard/pioneer_ws/src/pioneer3dx_ROS2/p3dx_navigation/maps/maze.yaml
+```
 
 

@@ -6,7 +6,7 @@
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'ROS2 Railtrack'
+project = 'ROS2 Pioneer 3DX'
 copyright = 'Gerard Harkema'
 author = 'Gerard Harkema'
 release = '0.1'
@@ -37,7 +37,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
-html_logo = "_static/logo.png"
+html_logo = "_static/avans-hogeschool.png"
 
 myst_enable_extensions = ["html_admonition", "html_image"]
 
