@@ -13,7 +13,7 @@
 #include <string>
 #include <iostream>
 
-//#define DEBUG
+#define DEBUG
 #ifdef DEBUG
 #define DEBUG_PRINT(fmt, ...) \
     do { \
@@ -170,7 +170,7 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
   else {
     // Connect to Wi-Fi network with WIFI_SSID and password
     WiFi.mode(WIFI_AP);
-    const char *ap_name = "Railtrack Wifi";
+    const char *ap_name = "Pioneer3DX";
     DEBUG_PRINT("Setting AP (Access Point)\n");
 
     // NULL sets an open Access Point

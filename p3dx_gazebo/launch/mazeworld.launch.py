@@ -15,7 +15,6 @@ import xacro
 from launch.substitutions import Command
 
 
-
 def launch_setup(context, *args, **kwargs):
     """Executed at runtime when the launch context exists."""
 
