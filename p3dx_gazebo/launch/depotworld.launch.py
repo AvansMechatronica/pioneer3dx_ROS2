@@ -15,7 +15,6 @@ import xacro
 from launch.substitutions import Command
 
 
-
 def launch_setup(context, *args, **kwargs):
     """Executed at runtime when the launch context exists."""
 
@@ -27,6 +26,7 @@ def launch_setup(context, *args, **kwargs):
     urdf_file = LaunchConfiguration('urdf_gazebo').perform(context)
     world_file = LaunchConfiguration('world').perform(context)
     rviz_config_file = LaunchConfiguration('rviz_config').perform(context)
+    use_sim_time = LaunchConfiguration('use_sim_time')#.perform(context)
 
     # === Process the URDF/Xacro ===
     if urdf_file.endswith('.xacro'):
@@ -52,7 +52,6 @@ def launch_setup(context, *args, **kwargs):
     )
 
 
-
     # === Robot State Publisher ===
     robot_state_publisher = Node(
         package='robot_state_publisher',
@@ -60,7 +59,7 @@ def launch_setup(context, *args, **kwargs):
         name='robot_state_publisher',
         output='screen',
         parameters=[
-            {'use_sim_time': True},
+            {'use_sim_time': use_sim_time},
             {'robot_description': robot_description},
         ],
     )
@@ -104,7 +103,7 @@ def launch_setup(context, *args, **kwargs):
 #        ('/model/pioneer3dx/enable', '/enable'),
     ],
     parameters=[
-    #    {'use_sim_time': 'true'}
+        {'use_sim_time': use_sim_time},
     ],
         output='screen',
     )
@@ -126,9 +125,6 @@ def launch_setup(context, *args, **kwargs):
             ]
         )
 
-
-
-
     # === RViz2 ===
     rviz_node = Node(
         package='rviz2',
@@ -136,7 +132,7 @@ def launch_setup(context, *args, **kwargs):
         name='rviz2',
         output='screen',
         arguments=['-d', rviz_config_file],
-        parameters=[{'use_sim_time': True}],
+        parameters=[{'use_sim_time': use_sim_time}],
     )
 
 
@@ -159,7 +155,7 @@ def generate_launch_description():
     # Declare arguments
     world_arg = DeclareLaunchArgument(
         'world',
-        default_value=os.path.join(sim_pkg, 'worlds', 'maze.world'),
+        default_value=os.path.join(sim_pkg, 'worlds', 'depot.world'),
         description='Path to Gazebo Ignition world file',
     )
 
@@ -169,16 +165,23 @@ def generate_launch_description():
         description='Path to robot URDF or Xacro file',
     )
 
-
     rviz_arg = DeclareLaunchArgument(
         'rviz_config',
         default_value=os.path.join(sim_pkg, 'rviz', 'p3dx_default.rviz'),
         description='Path to RViz configuration file',
     )
 
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true'
+    )
+
+
     return LaunchDescription([
         world_arg,
         urdf_arg,
         rviz_arg,
+        use_sim_time_arg,
         OpaqueFunction(function=launch_setup),
     ])

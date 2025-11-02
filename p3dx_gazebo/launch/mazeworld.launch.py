@@ -27,6 +27,7 @@ def launch_setup(context, *args, **kwargs):
     urdf_file = LaunchConfiguration('urdf_gazebo').perform(context)
     world_file = LaunchConfiguration('world').perform(context)
     rviz_config_file = LaunchConfiguration('rviz_config').perform(context)
+    use_sim_time = LaunchConfiguration('use_sim_time')#.perform(context)
 
     # === Process the URDF/Xacro ===
     if urdf_file.endswith('.xacro'):
@@ -52,7 +53,6 @@ def launch_setup(context, *args, **kwargs):
     )
 
 
-
     # === Robot State Publisher ===
     robot_state_publisher = Node(
         package='robot_state_publisher',
@@ -60,19 +60,16 @@ def launch_setup(context, *args, **kwargs):
         name='robot_state_publisher',
         output='screen',
         parameters=[
-            {'use_sim_time': True},
+            {'use_sim_time': use_sim_time},
             {'robot_description': robot_description},
         ],
     )
 
     # === Spawn robot in Gazebo ===
-    sdf_robot_description_file = os.path.join(sim_pkg, 'models', 'robots', 'pioneer3dx_w_sensors.sdf.xacro')
-    sdf_robot_description = Command(['xacro ', sdf_robot_description_file])
     spawn_robot = Node(
         package='ros_gz_sim',
         executable='create',
         arguments=['-name', 'pioneer3dx', 
-        #            '-string', sdf_robot_description],
                     '-topic', 'robot_description'],
                     #'-z', '1'],
         output='screen',
@@ -87,26 +84,47 @@ def launch_setup(context, *args, **kwargs):
         # cmd_vel (ROS → Gazebo)
         '/model/pioneer3dx/cmd_vel@geometry_msgs/msg/Twist]gz.msgs.Twist',
         # enable (ROS → Gazebo)
-        '/model/pioneer3dx/enable@std_msgs/msg/Bool]gz.msgs.Boolean',
+        #'/model/pioneer3dx/enable@std_msgs/msg/Bool]gz.msgs.Boolean',
         # odometry (Gazebo → ROS)
-        '/world/maze/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+        '/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
         # joint states (Gazebo → ROS)
         '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
+        # lidar (Gazebo → ROS)
+        '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
         # simulation clock (Gazebo → ROS)
-        #'/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
+#        '/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
+        '/clock' + '@rosgraph_msgs/msg/Clock' + '[gz.msgs.Clock',
     ],
     remappings=[
         # (Optional) Simplify names for ROS side
         ('/model/pioneer3dx/cmd_vel', '/cmd_vel'),
-        ('/world/maze/model/pioneer3dx/odometry', '/odom'),
+        ('/model/pioneer3dx/odometry', '/odom'),
         ('/world/maze/model/pioneer3dx/joint_state', '/joint_states'),
-        ('/model/pioneer3dx/enable', '/enable'),
+        ('/lidar', '/scan'),
+#        ('/model/pioneer3dx/enable', '/enable'),
     ],
     parameters=[
-    #    {'use_sim_time': 'true'}
+        {'use_sim_time': use_sim_time},
     ],
         output='screen',
     )
+
+
+    # RPLIDAR static transforms
+    robot_name = 'pioneer3dx'
+    rplidar_stf = Node(
+            name='rplidar_stf',
+            package='tf2_ros',
+            executable='static_transform_publisher',
+            output='screen',
+            arguments=[
+                '0', '0', '0', '0', '0', '0.0',
+                'rplidar_link', f'{robot_name}/rplidar_link/rplidar'],
+            remappings=[
+                ('/tf', 'tf'),
+                ('/tf_static', 'tf_static'),
+            ]
+        )
 
     # === RViz2 ===
     rviz_node = Node(
@@ -115,7 +133,7 @@ def launch_setup(context, *args, **kwargs):
         name='rviz2',
         output='screen',
         arguments=['-d', rviz_config_file],
-        parameters=[{'use_sim_time': True}],
+        parameters=[{'use_sim_time': use_sim_time}],
     )
 
 
@@ -125,6 +143,7 @@ def launch_setup(context, *args, **kwargs):
         robot_state_publisher,
         spawn_robot,
         ros_gz_bridge,
+        rplidar_stf,
         rviz_node,
     ]
 
@@ -137,7 +156,7 @@ def generate_launch_description():
     # Declare arguments
     world_arg = DeclareLaunchArgument(
         'world',
-        default_value=os.path.join(sim_pkg, 'worlds', 'warehouse.world'),
+        default_value=os.path.join(sim_pkg, 'worlds', 'maze.world'),
         description='Path to Gazebo Ignition world file',
     )
 
@@ -147,16 +166,23 @@ def generate_launch_description():
         description='Path to robot URDF or Xacro file',
     )
 
-
     rviz_arg = DeclareLaunchArgument(
         'rviz_config',
         default_value=os.path.join(sim_pkg, 'rviz', 'p3dx_default.rviz'),
         description='Path to RViz configuration file',
     )
 
+    use_sim_time_arg = DeclareLaunchArgument(
+        'use_sim_time',
+        default_value='true',
+        description='Use simulation (Gazebo) clock if true'
+    )
+
+
     return LaunchDescription([
         world_arg,
         urdf_arg,
         rviz_arg,
+        use_sim_time_arg,
         OpaqueFunction(function=launch_setup),
     ])
