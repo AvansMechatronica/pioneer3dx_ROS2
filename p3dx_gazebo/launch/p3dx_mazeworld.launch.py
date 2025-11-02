@@ -92,7 +92,8 @@ def launch_setup(context, *args, **kwargs):
         # lidar (Gazebo → ROS)
         '/lidar@sensor_msgs/msg/LaserScan[gz.msgs.LaserScan',
         # simulation clock (Gazebo → ROS)
-        '/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
+#        '/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
+        '/clock' + '@rosgraph_msgs/msg/Clock' + '[gz.msgs.Clock',
     ],
     remappings=[
         # (Optional) Simplify names for ROS side

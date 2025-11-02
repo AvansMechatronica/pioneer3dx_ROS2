@@ -1,4 +1,5 @@
 
+#ifdef WIFI
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
@@ -101,7 +102,7 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
 // Initialize WiFi
 bool testWifi() {
   if(ssid=="" || pass=="" || ros_agent_ipPath=="" || ros_agent_port==""){
-    DEBUG_PRINT("Undefined SSID, Password, microROS server IP address or Port\n");
+    DEBUG_PRINT("Undefined WIFI_SSID, Password, microROS server IP address or Port\n");
     return false;
   }
 
@@ -167,7 +168,7 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     return true;
   }
   else {
-    // Connect to Wi-Fi network with SSID and password
+    // Connect to Wi-Fi network with WIFI_SSID and password
     WiFi.mode(WIFI_AP);
     const char *ap_name = "Railtrack Wifi";
     DEBUG_PRINT("Setting AP (Access Point)\n");
@@ -196,7 +197,7 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
           // HTTP POST ssid value
           if (p->name() == PARAM_INPUT_1) {
             ssid = p->value().c_str();
-            DEBUG_PRINT("SSID set to: %s\n", ssid );
+            DEBUG_PRINT("WIFI_SSID set to: %s\n", ssid );
             // Write file to save value
             writeFile(LittleFS, ssidPath, ssid.c_str());
           }
@@ -234,4 +235,4 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
   }
   return false;
 }
-
+#endif

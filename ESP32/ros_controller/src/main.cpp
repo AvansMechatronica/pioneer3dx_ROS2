@@ -18,16 +18,20 @@
 
 #include <p3dx_interfaces/msg/bumpers.h>
 
+#include "wifi_network_config.h"
 
 #include "motor_controller.h"
 #include "pins.h"
 
+#include <Adafruit_GFX.h> // Core graphics library
+#include <Fonts/FreeSansBold9pt7b.h>
+//#include <Fonts/Tiny3x3a2pt7b.h>
+#include <Adafruit_ST7735.h> // Hardware-specific library
+#include <SPI.h>
+#include "tft_printf.h"
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
 
-// No used
-//#define L_ENA_PIN        25
-//#define R_ENA_PIN         5
 
 //parameters of the robot
 #define WHEELS_Y_DISTANCE       (float)0.34 //in meters
@@ -98,7 +102,9 @@ Odometry odometry;
 MotorController leftWheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB);
 MotorController rightWheel(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB);
 
-#define LED_PIN 2
+Adafruit_ST7735 *tft;
+
+
 #define RCCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
@@ -111,6 +117,8 @@ MotorController rightWheel(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PI
   }
 
 void error_loop() {
+  tft_printf(ST77XX_BLUE, "Faital Error\n");
+
   while (1) {
     digitalWrite(LED_PIN, !digitalRead(LED_PIN));
     delay(100);
@@ -354,17 +362,65 @@ void bumber_hit(){
 
 bool errorLedState = false;
 
+void init_display(){
+  tft = new Adafruit_ST7735(DISPLAY_CS_PIN, DISPLAY_DC_PIN, DISPLAY_RST_PIN);
+  tft_prinft_begin(tft);
+
+  tft->initR(INITR_GREENTAB);
+  tft->fillScreen(ST77XX_BLACK);
+  tft->setRotation(3);
+  tft->setFont(&FreeSansBold9pt7b);
+  //tft->setFont(&Tiny3x3a2pt7b);
+  tft->fillScreen(ST77XX_BLACK);
+  tft->setTextColor(ST77XX_CYAN);
+  tft->setTextSize(1);
+  tft->setCursor(1, 22);
+  tft->println("DCC/MM Control");
+}
+
+char* convertToCamelCase(const char *input) {
+    int i, j;
+    int len = strlen(input);
+    char *output = (char *)malloc((len + 1) * sizeof(char));
+    
+    if(output == NULL) {
+        Serial.printf("Error allocating memory\n");
+        error_loop();
+    }
+
+    // Kopieer de originele string naar de uitvoerstring
+    strcpy(output, input);
+
+    // Loop door de uitvoerstring en converteer naar camel case
+    for (i = 0; i < len; i++) {
+        if (output[i] == '_') {
+            // Verwijder de underscore
+            for (j = i; j < len; j++) {
+                output[j] = output[j + 1];
+            }
+            // Converteer het volgende teken naar hoofdletter
+            output[i] = toupper(output[i]);
+            // Verlaag de lengte van de string
+            len--;
+        }
+    }
+    return output;
+}
 
 
 #if defined(WIFI)
-  String wifiSSID = SSID;
-  String wifiPass = SSID_PASSWORD;
+  String wifiWIFI_SSID = WIFI_SSID;
+  String wifiPass = WIFI_PASSWORD;
 #endif
 
 void setup() {
   // Configure serial transport
   Serial.begin(115200);
 
+  init_display();
+
+
+  tft_printf(ST77XX_MAGENTA, "Pioneer 3DX\nController\nStarted\n");
 
   //initializing the pid constants
   leftWheel.setPIDvalues(KP_L, KI_L, KD_L);
@@ -387,13 +443,23 @@ void setup() {
   force_network_configure = !digitalRead(SELECT_WIFI_CONFIG_MODE_PIN);
 
   NETWORK_CONFIG networkConfig;
-  wifiUp = configureNetwork(force_network_configure, &networkConfig);
+  bool wifiUp = configureNetwork(force_network_configure, &networkConfig);
   if(!wifiUp){
     tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\n");
 
   };
 
-  set_microros_wifi_transports(wifiSSID, wifiPass, AGENT_IP_ADDRESS, (size_t)PORT);
+  const char *host_name = convertToCamelCase(NODE_NAME);
+  Serial.printf("hostname :%s\n", host_name);
+  WiFi.setHostname(NODE_NAME);
+
+  WiFi.setHostname("P3dxController");
+  set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
+                               const_cast<char*>(networkConfig.password.c_str()), 
+                               networkConfig.microros_agent_ip_address,
+                               networkConfig.microros_agent_port);
+  tft_printf(ST77XX_MAGENTA, "WiFi Connected\n");
+  delay(2000);
 #else
   Serial.begin(115200);
   set_microros_serial_transports(Serial);
@@ -423,14 +489,21 @@ void setup() {
     error_msg.data = false;
   }
 
-
-
   delay(2000);
 
   allocator = rcl_get_default_allocator();
 
+  if(rclc_support_init(&support, 0, NULL, &allocator)){
+    tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nCheck network\nsettings\n");
+    while(true){};
+  }
+
+
   //create init_options
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
+  if(rclc_support_init(&support, 0, NULL, &allocator)){
+    tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nCheck network\nsettings\n");
+    while(true){};
+  }
 
   // create node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
@@ -503,6 +576,7 @@ void setup() {
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
   // RCCHECK(rclc_executor_add_timer(&executor, &timer));
   RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
+  tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
 
 }
 

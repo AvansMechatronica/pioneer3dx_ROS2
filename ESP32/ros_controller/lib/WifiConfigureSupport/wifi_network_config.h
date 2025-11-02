@@ -1,6 +1,7 @@
 #ifndef NETWORK_CONFIG_H
 #define NETWORK_CONFIG_H
 
+#ifdef WIFI
 
 typedef struct{
   String ssid;
@@ -11,4 +12,5 @@ typedef struct{
 
 bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig);
 
+#endif
 #endif

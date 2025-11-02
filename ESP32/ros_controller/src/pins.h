@@ -22,4 +22,13 @@
 #define MOTOR_ENABLE        HIGH
 #define MOTOR_DISABLE       LOW 
 
+#define SELECT_WIFI_CONFIG_MODE_PIN 13
+
+#define DISPLAY_CS_PIN    5
+#define DISPLAY_DC_PIN    17
+#define DISPLAY_RST_PIN   16
+
+#define LED_PIN 2
+
+
 #endif
