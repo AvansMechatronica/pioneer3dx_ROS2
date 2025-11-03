@@ -30,7 +30,7 @@
 #endif
 
 #ifndef MAX_PWM
-#define MAX_PWM ((2^PWM_RESOLUTION)-1)
+#define MAX_PWM ((1 << PWM_RESOLUTION) - 1)
 #endif
 
 class MotorController {
@@ -56,15 +56,18 @@ public:
   float kd;
   float error;
   float previousError = 0;
+  float wheel_radius;
 
   MotorController(int8_t ledcChannel,
                   int8_t PwmPin, 
                   int8_t DirPin, 
                   int8_t EncoderA, 
-                  int8_t EncoderB);
+                  int8_t EncoderB,
+                  float wheel_radius
+                  );
 
   void setPIDvalues(float proportionalGain, float integralGain, float derivativeGain);
-  float getRpm();
+  float getVelocity();
   float pid(float setpoint);
   void moveBase(float ActuatingSignal);
   void stop();

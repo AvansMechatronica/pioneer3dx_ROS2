@@ -19,5 +19,9 @@
 			"path": "device_tests/rplidar_test_b"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"files.associations": {
+			"cmath": "cpp"
+		}
+	}
 }

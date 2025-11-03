@@ -6,7 +6,7 @@
 #define CLOCK_WISE            HIGH
 #define COUNTER_CLOCK_WISE    LOW
 
-//#define R_CHANNEL         1
+#define R_CHANNEL         1
 
 #if defined(R_CHANNEL)
 #undef L_PWM_PIN        

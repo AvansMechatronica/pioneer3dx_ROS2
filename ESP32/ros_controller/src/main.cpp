@@ -27,7 +27,7 @@
 #include <Fonts/FreeSansBold9pt7b.h>
 //#include <Fonts/Tiny3x3a2pt7b.h>
 #include <Adafruit_ST7735.h> // Hardware-specific library
-#include <SPI.h>
+//#include <SPI.h>
 #include "tft_printf.h"
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
@@ -180,13 +180,17 @@ void publishData() {
   // error data publish
   RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
 
+#define R1 330000.0f // Resistor R1 value in ohms
+#define R2 100000.0f  // Resistor R2 value in ohms
+
   // battery voltage publish
-  float battery_voltage = 0;//analogRead(BATTERY_VOLTAGE_PIN) * (5.0 / 1023.0) * ((R1 + R2) / R2);  
-  battery_voltage_msg.data = battery_voltage;
+
+  float battery_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);  
+  battery_voltage_msg.data = battery_voltage * 3.1 * 2; //3.1 is factor determined by P3dx voltage divider, R1 = R2 = 100k ohm
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
 
-  float current_rpm_l = leftWheel.getRpm();
-  float current_rpm_r = rightWheel.getRpm();
+  float current_rpm_l = leftWheel.getVelocity();
+  float current_rpm_r = rightWheel.getVelocity();
 
 
   int32_t delta_left = current_rpm_l - prev_rpm_l;
@@ -306,8 +310,8 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   }
   //odometry
   //current wheel rpm is calculated
-  float currentRpmL = leftWheel.getRpm();
-  float currentRpmR = rightWheel.getRpm();
+  float currentRpmL = leftWheel.getVelocity();
+  float currentRpmR = rightWheel.getVelocity();
   float average_rps_x = ((float)(currentRpmL + currentRpmR) / 2) / 60.0;  // RPM
   float linear_x = average_rps_x * WHEELS_CIRCUMFERENCE;                  // m/s
   float average_rps_a = ((float)(-currentRpmL + currentRpmR) / 2) / 60.0;
@@ -363,19 +367,31 @@ void bumber_hit(){
 bool errorLedState = false;
 
 void init_display(){
-  tft = new Adafruit_ST7735(DISPLAY_CS_PIN, DISPLAY_DC_PIN, DISPLAY_RST_PIN);
+
+  #if 0
+  Serial.printf("MOSI: %i\n", MOSI);
+  Serial.printf("MISO: %i\n", MISO);
+  Serial.printf("SCK: %i\n", SCK);
+  Serial.printf("SS: %i\n", SS); 
+  #endif
+
+  tft = new Adafruit_ST7735(DISPLAY_CS_PIN, DISPLAY_RS_DC_PIN, DISPLAY_RST_PIN);
   tft_prinft_begin(tft);
 
   tft->initR(INITR_GREENTAB);
   tft->fillScreen(ST77XX_BLACK);
-  tft->setRotation(3);
+
+  tft->setRotation(1);
   tft->setFont(&FreeSansBold9pt7b);
   //tft->setFont(&Tiny3x3a2pt7b);
   tft->fillScreen(ST77XX_BLACK);
   tft->setTextColor(ST77XX_CYAN);
   tft->setTextSize(1);
   tft->setCursor(1, 22);
-  tft->println("DCC/MM Control");
+  tft->println("P3DX Control");
+
+    Serial.printf("Ready"); 
+
 }
 
 char* convertToCamelCase(const char *input) {
@@ -417,9 +433,12 @@ void setup() {
   // Configure serial transport
   Serial.begin(115200);
 
+  pinMode(BATTERY_VOLTAGE_PIN, INPUT);
+  analogReadResolution(10);
+
   init_display();
 
-
+#if 1
   tft_printf(ST77XX_MAGENTA, "Pioneer 3DX\nController\nStarted\n");
 
   //initializing the pid constants
@@ -431,8 +450,8 @@ void setup() {
   attachInterrupt(digitalPinToInterrupt(rightWheel.EncoderPinA), updateEncoderR, RISING);
 
 
-  prev_rpm_l = leftWheel.getRpm();
-  prev_rpm_r = rightWheel.getRpm();
+  prev_rpm_l = leftWheel.getVelocity();
+  prev_rpm_r = rightWheel.getVelocity();
 
 #if defined(WIFI)
 
@@ -493,16 +512,12 @@ void setup() {
 
   allocator = rcl_get_default_allocator();
 
-  if(rclc_support_init(&support, 0, NULL, &allocator)){
-    tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nCheck network\nsettings\n");
-    while(true){};
-  }
-
 
   //create init_options
   if(rclc_support_init(&support, 0, NULL, &allocator)){
-    tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nCheck network\nsettings\n");
-    while(true){};
+    tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nRestarting...\n");
+      delay(3000);
+      ESP.restart();
   }
 
   // create node
@@ -578,11 +593,15 @@ void setup() {
   RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
 
+
+#endif
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   delay(100);
+#if 1
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+#endif
 }
 

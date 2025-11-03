@@ -5,12 +5,12 @@
 //Left wheel
 #define L_PWM_PIN        26
 #define L_DIR_PIN        27
-#define L_ENCODER_PINA   18  //Encoder Output of pin1 must connected with intreput pin of Esp32.
+#define L_ENCODER_PINA   39  //Encoder Output of pin1 must connected with intreput pin of Esp32.
 #define L_ENCODER_PINB   21
 //right wheel
 #define R_PWM_PIN        33
 #define R_DIR_PIN        32
-#define R_ENCODER_PINA   23  //Encoder Output of pin1 must connected with intreput pin of Esp32.
+#define R_ENCODER_PINA   36  //Encoder Output of pin1 must connected with intreput pin of Esp32.
 #define R_ENCODER_PINB   15
 
 #define BUMPER_FRONT_RIGHT_PIN 34
@@ -25,10 +25,14 @@
 #define SELECT_WIFI_CONFIG_MODE_PIN 13
 
 #define DISPLAY_CS_PIN    5
-#define DISPLAY_DC_PIN    17
-#define DISPLAY_RST_PIN   16
+#define DISPLAY_RS_DC_PIN 12
+#define DISPLAY_RST_PIN   13
+#define DISPLAY_CLK_PIN   18
+#define DISPLAY_SDA_PIN   23
+#define DISPLAY_MISO_PIN  19 // Not used
 
 #define LED_PIN 2
 
+#define BATTERY_VOLTAGE_PIN 4
 
 #endif

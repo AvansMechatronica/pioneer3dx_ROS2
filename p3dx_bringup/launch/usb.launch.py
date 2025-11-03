@@ -9,7 +9,7 @@ def generate_launch_description():
             name='micro_ros_agent_usb',
             output='screen',
             arguments=['serial', 
-                       '--dev', '/dev/ttyUSB0', 
+                       '--dev', '/dev/ttyUSB1', 
                        '-b', '115200',
                        '-v', '4'   # Verbosity level (1–6)
                        ],

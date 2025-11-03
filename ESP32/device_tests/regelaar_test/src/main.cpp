@@ -33,13 +33,10 @@
 
 #define THRESHOLD   0
 //pid constants of left wheel
-#define KP_L        (float)1.8
-#define KI_L        (float)5
+#define KP_L        (float)500
+#define KI_L        (float)50
 #define KD_L        (float)0.1
-//pid constants of right wheel
-#define KP_R        (float)1.8
-#define KI_R        (float)5
-#define KD_R        (float)0.1
+
 
 //pwm parameters setup
 //#define PWM_FRQUENCY 30000
@@ -67,7 +64,7 @@ unsigned long prev_odom_update = 0;
 float setpoint = 0.0;
 
 //creating objects for right wheel and left wheel
-MotorController wheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB);
+MotorController wheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, WHEELS_RADIUS);
 
 #define LED_PIN 2
 #define RCCHECK(fn) \
@@ -102,21 +99,6 @@ struct timespec getTime() {
   tp.tv_nsec = (now % 1000) * 1000000;
   return tp;
 }
-
-
-//function which controlles the motor, callled every 10ms
-void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
-
-  //pid controlled is used for generating the pwm signal
-  float actuating_signal_LW = wheel.pid(setpoint);
-  if (setpoint == 0) {
-    wheel.stop();
-    actuating_signal_LW = 0;
-  } else {
-    wheel.moveBase(actuating_signal_LW);
-  }
-}
-
 
 
 //interrupt function for left wheel encoder.
@@ -157,35 +139,13 @@ void setup() {
 
   Serial.begin(115200);
 
-  allocator = rcl_get_default_allocator();
-
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
   delay(2000);
 
-  allocator = rcl_get_default_allocator();
 
-  //create init_options
-  RCCHECK(rclc_support_init(&support, 0, NULL, &allocator));
-
-
-  //timer function for controlling the motor base. At every samplingT time
-  //MotorControll_timerCallback function is called
-  //Here I had set SamplingT=10 Which means at every 10 milliseconds MotorControll_timerCallback function is called
-  const unsigned int samplingT = 20;
-  RCCHECK(rclc_timer_init_default(
-    &ControlTimer,
-    &support,
-    RCL_MS_TO_NS(samplingT),
-    MotorControll_timerCallback));
-
-  // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 1, &allocator));
-  // RCCHECK(rclc_executor_add_timer(&executor, &timer));
-  RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
-
-
+#if 1
     // Create Task 1
   xTaskCreate(
     executerTask,                // Function that implements the task
@@ -206,6 +166,7 @@ void setup() {
     NULL,                 // Task handle
     1                     // Core ID (0 or 1)
   );
+#endif
 }
 
 void loop() {
@@ -218,11 +179,20 @@ void executerTask(void *pvParameters) {
   (void) pvParameters;
 
   for (;;) {
-    vTaskDelay(100 / portTICK_PERIOD_MS);  // Delay 1.5 seconds
-    RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+    vTaskDelay(10 / portTICK_PERIOD_MS);  // Delay 10 milli seconds
+    //pid controlled is used for generating the pwm signal
+    float actuating_signal_LW = wheel.pid(setpoint);
+//    if (setpoint == 0) {
+//      wheel.stop();
+//      actuating_signal_LW = 0;
+//    } else {
+      wheel.moveBase(actuating_signal_LW);
+//    }
   }
 }
 
+
+#define V_MAX 0.4 // m/s
 // Define Task 2
 void inputTask(void *pvParameters) {
   (void) pvParameters;
@@ -234,11 +204,12 @@ void inputTask(void *pvParameters) {
     if (Serial.available() > 0) {
       String input = Serial.readStringUntil('\n');
       input.trim();
-      float value = input.toFloat();
+      int value = input.toInt();
 
-      if (value < -1) value = -1;
-      if (value > 1) value = 1;
-      setpoint = value;
+      if (value < -100) value = -100;
+      if (value > 100) value = 100;
+      setpoint = (float)value/100.0 * V_MAX; // convert to ticks/s
+      prev_cmd_time = millis();
 
       Serial.printf("Invoer: %d\n",  value);
     }
