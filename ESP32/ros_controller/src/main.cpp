@@ -291,7 +291,7 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   float linearVelocity;
   float angularVelocity;
 
-  if(millis() - prev_cmd_time > 100) {
+  if((millis() - prev_cmd_time) > 100) {
     twist_msg.linear.x = 0;
     twist_msg.angular.z = 0;
   }
