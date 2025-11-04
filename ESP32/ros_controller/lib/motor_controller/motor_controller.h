@@ -40,7 +40,7 @@ public:
   int8_t Dir;
   int8_t EncoderPinA;
   int8_t EncoderPinB;
-  std_msgs__msg__Int32 EncoderCount;
+  int64_t *encoderCount;
   volatile long CurrentPosition;
   volatile long PreviousPosition;
   volatile long CurrentTime;
@@ -63,6 +63,7 @@ public:
                   int8_t DirPin, 
                   int8_t EncoderA, 
                   int8_t EncoderB,
+                  int64_t *encoderCount,
                   float wheel_radius
                   );
 
@@ -71,6 +72,10 @@ public:
   float pid(float setpoint);
   void moveBase(float ActuatingSignal);
   void stop();
+
+private:
+  float getVelocityInt();
+  float current_velocity;
 };
 
 #endif // MOTOR_CONTROLLER_H

@@ -32,6 +32,7 @@
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
 
+//ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.4, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 10
 
 //parameters of the robot
 #define WHEELS_Y_DISTANCE       (float)0.34 //in meters
@@ -44,12 +45,12 @@
 
 #define THRESHOLD   0
 //pid constants of left wheel
-#define KP_L        (float)1.8
-#define KI_L        (float)5
+#define KP_L        (float)30
+#define KI_L        (float)80
 #define KD_L        (float)0.1
 //pid constants of right wheel
-#define KP_R        (float)1.8
-#define KI_R        (float)5
+#define KP_R        (float)30
+#define KI_R       (float)80
 #define KD_R        (float)0.1
 
 //pwm parameters setup
@@ -76,15 +77,14 @@ rcl_publisher_t error_publisher;
 rcl_publisher_t battery_voltage_publisher;
 rcl_publisher_t bumpers_publisher;
 
-std_msgs__msg__Int32 encodervalue_l_msg;
-std_msgs__msg__Int32 encodervalue_r_msg;
 nav_msgs__msg__Odometry odom_msg;
 std_msgs__msg__Bool error_msg;
 std_msgs__msg__Bool reset_msg;
 std_msgs__msg__Float32 battery_voltage_msg;
 sensor_msgs__msg__JointState joint_state_msg;
 p3dx_interfaces__msg__Bumpers  bumper_msg;
-
+int64_t encodervalue_l = 0;
+int64_t encodervalue_r = 0;
 
 
 float prev_rpm_l;
@@ -99,8 +99,8 @@ Odometry odometry;
 
 
 //creating objects for right wheel and left wheel
-MotorController leftWheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB);
-MotorController rightWheel(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB);
+MotorController leftWheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
+MotorController rightWheel(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB, &encodervalue_r, WHEELS_RADIUS);
 
 Adafruit_ST7735 *tft;
 
@@ -286,6 +286,8 @@ void setup_joint_state_msg()
 }
 
 
+int i=0;
+
 //function which controlles the motor, callled every 10ms
 void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   float linearVelocity;
@@ -300,20 +302,29 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   linearVelocity = twist_msg.linear.x;
   angularVelocity = twist_msg.angular.z;
   //linear and angular velocities are converted to leftwheel and rightwheel velocities
-  float vL = (linearVelocity - (angularVelocity * 1 / 2)) * 20;
-  float vR = (linearVelocity + (angularVelocity * 1 / 2)) * 20;
+  float vL = (linearVelocity - ((WHEELS_Y_DISTANCE/2.0) * angularVelocity));
+  float vR = (linearVelocity + ((WHEELS_Y_DISTANCE/2.0) * angularVelocity));
+
   //pid controlled is used for generating the pwm signal
-  float actuating_signal_LW = leftWheel.pid(vL);
+  float actuating_signal_LW = leftWheel.pid(-vL);
   float actuating_signal_RW = rightWheel.pid(vR);
+  if(i % 10 == 0){
+    tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
+  }
+  i++;
+#if 0
   if (vL == 0 && vR == 0) {
     leftWheel.stop();
     rightWheel.stop();
     actuating_signal_LW = 0;
     actuating_signal_RW = 0;
   } else {
+#endif
     rightWheel.moveBase(actuating_signal_RW);
     leftWheel.moveBase(actuating_signal_LW);
-  }
+//  }
+
+
   //odometry
   //current wheel rpm is calculated
   float currentRpmL = leftWheel.getVelocity();
@@ -337,19 +348,17 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
 //interrupt function for left wheel encoder.
 void updateEncoderL() {
   if (digitalRead(leftWheel.EncoderPinA) == digitalRead(leftWheel.EncoderPinB))
-    leftWheel.EncoderCount.data--;
+    encodervalue_l--;
   else
-    leftWheel.EncoderCount.data++;
-  encodervalue_l_msg = leftWheel.EncoderCount;
+    encodervalue_l++;
 }
 
 //interrupt function for right wheel encoder
 void updateEncoderR() {
   if (digitalRead(rightWheel.EncoderPinA) == digitalRead(rightWheel.EncoderPinB))
-    rightWheel.EncoderCount.data++;
+    encodervalue_r--;
   else
-    rightWheel.EncoderCount.data--;
-  encodervalue_r_msg = rightWheel.EncoderCount;
+    encodervalue_r++;
 }
 
 void syncTime() {
@@ -453,11 +462,11 @@ void setup() {
 
   //initializing interrupt functions for counting the encoder tick values
   attachInterrupt(digitalPinToInterrupt(leftWheel.EncoderPinB), updateEncoderL, RISING);
-  attachInterrupt(digitalPinToInterrupt(rightWheel.EncoderPinA), updateEncoderR, RISING);
+  attachInterrupt(digitalPinToInterrupt(rightWheel.EncoderPinB), updateEncoderR, RISING);
 
 
-  prev_rpm_l = leftWheel.getVelocity();
-  prev_rpm_r = rightWheel.getVelocity();
+  //prev_rpm_l = leftWheel.getVelocity();
+  //prev_rpm_r = rightWheel.getVelocity();
 
 #if defined(WIFI)
 

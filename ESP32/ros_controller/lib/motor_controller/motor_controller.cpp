@@ -1,10 +1,13 @@
 #include "motor_controller.h"
 
+//#define DEBUG_MOTOR_CONTROLLER
+
 MotorController::MotorController(int8_t ledcChannel,
                                  int8_t PwmPin, 
                                  int8_t DirPin, 
                                  int8_t EncoderA, 
                                  int8_t EncoderB,
+                                 int64_t *encoderCount,
                                  float wheel_radius) {
   this->ledcChannel = ledcChannel;
   this->Pwm = PwmPin;
@@ -23,6 +26,7 @@ MotorController::MotorController(int8_t ledcChannel,
   this->CurrentTime = millis();
   this->PreviousTimeForError = millis();
   this->CurrentTimeforError = millis();
+  this->encoderCount = encoderCount;
 
   pinMode(Pwm, OUTPUT);
   pinMode(Dir, OUTPUT);
@@ -42,10 +46,10 @@ void MotorController::setPIDvalues(float proportionalGain, float integralGain, f
   kd = derivativeGain;
 }
 
-float MotorController::getVelocity(){// returns linear velocity in m/s
-  CurrentPosition = EncoderCount.data;
+float MotorController::getVelocityInt(){// returns linear velocity in m/s
+  CurrentPosition = *encoderCount;
   CurrentTime = millis();
-  float delta1 = ((float)CurrentTime - PreviousTime) / 1.0e3;
+  float delta1 = ((float)CurrentTime - PreviousTime) / 1.0e3; //convert to seconds
   float velocity = ((float)CurrentPosition - PreviousPosition) / delta1; // in ticks per second
 
   float rpm = (velocity / TICK_PER_REVOLUTION) * 60; // convert to rpm
@@ -56,27 +60,38 @@ float MotorController::getVelocity(){// returns linear velocity in m/s
   return (rpmFilt * wheel_radius * 2 * 3.14) / 60;  // return linear velocity in m/s
 }
 
+float MotorController::getVelocity(){
+  return current_velocity;
+}
+
+#ifdef DEBUG_MOTOR_CONTROLLER
 int i = 0;
+#endif
 
 float MotorController::pid(float setpoint) {
-  float current_rpm = getVelocity();
+  current_velocity = getVelocityInt();
+#ifdef DEBUG_MOTOR_CONTROLLER
   if((i % 100) == 0){
-    Serial.printf("%i, Setpoint: %.2f | RPM: %.2f\n", i /100, setpoint, current_rpm);
+    Serial.printf("%i, Setpoint: %.2f | RPM: %.2f\n", i /100, setpoint, current_velocity);
   }
   i++;
+#endif
   CurrentTimeforError = millis();
   float delta2 = ((float)CurrentTimeforError - PreviousTimeForError) / 1.0e3;
-  error = setpoint - current_rpm;
+  error = setpoint - current_velocity;
   eintegral = eintegral + (error * delta2);
   ederivative = (error - previousError) / delta2;
   float control_signal = (kp * error) + (ki * eintegral) + (kd * ederivative);
 
   previousError = error;
   PreviousTimeForError = CurrentTimeforError;
+
+  #ifdef DEBUG_MOTOR_CONTROLLER
   if((i % 100) == 0){
     Serial.printf("** Error: %.2f | Integral: %.2f | Derivative: %.2f\n", error, eintegral, ederivative);
     Serial.printf("** control signal: %.2f\n", control_signal);
   }
+#endif
   return control_signal;
 }
 
@@ -89,10 +104,11 @@ void MotorController::moveBase(float ActuatingSignal) {
   if (ActuatingSignal < -100.0f) ActuatingSignal = -100.0f;
 
   // Afdrukken om de 100 cycli
+#ifdef DEBUG_MOTOR_CONTROLLER
   if ((i % 100) == 0) {
     Serial.printf("-- 1. Actuating Signal: %.2f\n", ActuatingSignal);
   }
-
+#endif
   // Richting bepalen en PWM duty cycle berekenen
   int dutyCycle = 0;
   if (ActuatingSignal > 0) {
@@ -103,18 +119,20 @@ void MotorController::moveBase(float ActuatingSignal) {
     dutyCycle = (int)(-ActuatingSignal / 100.0f * MAX_PWM);
   }
 
+#ifdef DEBUG_MOTOR_CONTROLLER
   // Debug print
   if ((i % 100) == 0) {
     Serial.printf("-- 1. Duty Cycle before limit: %d\n", dutyCycle);
   }
-
+#endif
   // Veiligheidslimiet
   if (dutyCycle > MAX_PWM) dutyCycle = MAX_PWM;
 
+#ifdef DEBUG_MOTOR_CONTROLLER
   if ((i % 100) == 0) {
     Serial.printf("-- 2. PWM value after limit: %d\n", dutyCycle);
   }
-
+#endif
   // Schrijf PWM-waarde uit naar de motor driver
   ledcWrite(this->ledcChannel, dutyCycle);
 }

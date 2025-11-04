@@ -15,6 +15,26 @@
 #include "motor_controller.h"
 #include "pins.h"
 
+#define R_CHANNEL         1
+
+#if defined(R_CHANNEL)
+#undef L_PWM_PIN        
+#undef L_DIR_PIN        
+#undef L_ENCODER_PINA   
+#undef L_ENCODER_PINB
+
+//#undef CLOCK_WISE
+//#undef COUNTER_CLOCK_WISE
+
+#define L_PWM_PIN        R_PWM_PIN
+#define L_DIR_PIN        R_DIR_PIN
+#define L_ENCODER_PINA   R_ENCODER_PINA
+#define L_ENCODER_PINB   R_ENCODER_PINB
+
+//#define CLOCK_WISE            HIGH
+//#define COUNTER_CLOCK_WISE    LOW
+
+#endif
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
 
@@ -33,8 +53,8 @@
 
 #define THRESHOLD   0
 //pid constants of left wheel
-#define KP_L        (float)500
-#define KI_L        (float)50
+#define KP_L        (float)30
+#define KI_L        (float)80
 #define KD_L        (float)0.1
 
 
@@ -53,18 +73,18 @@ rclc_executor_t executor;
 rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
-std_msgs__msg__Int32 encodervalue_l;
-std_msgs__msg__Int32 encodervalue_r;
 rcl_timer_t timer;
 rcl_timer_t ControlTimer;
 unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
 unsigned long prev_odom_update = 0;
 
+int64_t encodervalue_l;
+
 float setpoint = 0.0;
 
 //creating objects for right wheel and left wheel
-MotorController wheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, WHEELS_RADIUS);
+MotorController wheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
 
 #define LED_PIN 2
 #define RCCHECK(fn) \
@@ -104,10 +124,9 @@ struct timespec getTime() {
 //interrupt function for left wheel encoder.
 void updateEncoder() {
   if (digitalRead(wheel.EncoderPinA) == digitalRead(wheel.EncoderPinB))
-    wheel.EncoderCount.data--;
+    encodervalue_l--;
   else
-    wheel.EncoderCount.data++;
-  encodervalue_l = wheel.EncoderCount;
+    encodervalue_l++;
 }
 
 void syncTime() {
@@ -192,7 +211,7 @@ void executerTask(void *pvParameters) {
 }
 
 
-#define V_MAX 0.4 // m/s
+#define V_MAX 0.8 // m/s
 // Define Task 2
 void inputTask(void *pvParameters) {
   (void) pvParameters;
