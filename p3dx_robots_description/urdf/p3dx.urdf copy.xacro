@@ -267,7 +267,19 @@
 
   <!-- DiffDrive Plugin -->
   <gazebo>
-
+    <plugin 
+      filename="gz-sim-diff-drive-system"
+      name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>${base_width}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <!--
+      <base_frame>${p3dx_base}</base_frame>
+      <publish_rate>50</publish_rate>
+      <publish_joint_states>true</publish_joint_states>
+      -->
+    </plugin>
 <!--
     <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"> 
       <render_engine>ogre2</render_engine>
