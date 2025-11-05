@@ -152,6 +152,7 @@ void setup() {
 
   //initializing the pid constants
   wheel.setPIDvalues(KP_L, KI_L, KD_L);
+  wheel.enable();
 
   //initializing interrupt functions for counting the encoder tick values
   attachInterrupt(digitalPinToInterrupt(wheel.EncoderPinB), updateEncoder, RISING);
@@ -162,10 +163,7 @@ void setup() {
   digitalWrite(LED_PIN, HIGH);
 
   delay(2000);
-
-
-#if 1
-    // Create Task 1
+   // Create Task 1
   xTaskCreate(
     executerTask,                // Function that implements the task
     "executerTask",              // Name of the task (for debugging)
@@ -185,7 +183,6 @@ void setup() {
     NULL,                 // Task handle
     1                     // Core ID (0 or 1)
   );
-#endif
 }
 
 void loop() {
@@ -201,12 +198,7 @@ void executerTask(void *pvParameters) {
     vTaskDelay(10 / portTICK_PERIOD_MS);  // Delay 10 milli seconds
     //pid controlled is used for generating the pwm signal
     float actuating_signal_LW = wheel.pid(setpoint);
-//    if (setpoint == 0) {
-//      wheel.stop();
-//      actuating_signal_LW = 0;
-//    } else {
-      wheel.moveBase(actuating_signal_LW);
-//    }
+    wheel.moveBase(actuating_signal_LW);
   }
 }
 

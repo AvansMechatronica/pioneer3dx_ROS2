@@ -1,6 +1,6 @@
 #include "motor_controller.h"
 
-//#define DEBUG_MOTOR_CONTROLLER
+
 
 MotorController::MotorController(int8_t ledcChannel,
                                  int8_t PwmPin, 
@@ -65,16 +65,16 @@ float MotorController::getVelocity(){
 }
 
 #ifdef DEBUG_MOTOR_CONTROLLER
-int i = 0;
+int display_interval_counter = 0;
 #endif
 
 float MotorController::pid(float setpoint) {
   current_velocity = getVelocityInt();
 #ifdef DEBUG_MOTOR_CONTROLLER
-  if((i % 100) == 0){
-    Serial.printf("%i, Setpoint: %.2f | RPM: %.2f\n", i /100, setpoint, current_velocity);
+  if((display_interval_counter % 100) == 0){
+    Serial.printf("%i: Setpoint: %.2f | RPM: %.2f\n",  display_interval_counter/100, setpoint, current_velocity);
   }
-  i++;
+  display_interval_counter++;
 #endif
   CurrentTimeforError = millis();
   if(!enabled){
@@ -90,54 +90,55 @@ float MotorController::pid(float setpoint) {
   PreviousTimeForError = CurrentTimeforError;
 
   #ifdef DEBUG_MOTOR_CONTROLLER
-  if((i % 100) == 0){
-    Serial.printf("** Error: %.2f | Integral: %.2f | Derivative: %.2f\n", error, eintegral, ederivative);
-    Serial.printf("** control signal: %.2f\n", control_signal);
+  if((display_interval_counter % 100) == 0){
+    Serial.printf("-- Error: %.2f | Integral: %.2f | Derivative: %.2f\n", error, eintegral, ederivative);
+    Serial.printf("-- control signal: %.2f\n", control_signal);
   }
 #endif
   return control_signal;
 }
 
 void MotorController::moveBase(float ActuatingSignal) {
-  static int i = 0;  // tel hoe vaak de functie wordt aangeroepen
-  i++;
 
   // Beperk de waarde van het regelsignaal
-  if (ActuatingSignal > 100.0f) ActuatingSignal = 100.0f;
-  if (ActuatingSignal < -100.0f) ActuatingSignal = -100.0f;
+  if(enabled){
 
-  // Afdrukken om de 100 cycli
-#ifdef DEBUG_MOTOR_CONTROLLER
-  if ((i % 100) == 0) {
-    Serial.printf("-- 1. Actuating Signal: %.2f\n", ActuatingSignal);
-  }
-#endif
-  // Richting bepalen en PWM duty cycle berekenen
-  int dutyCycle = 0;
-  if (ActuatingSignal > 0) {
-    digitalWrite(Dir, CLOCK_WISE);  // zorg dat dit HIGH/LOW is
-    dutyCycle = (int)(ActuatingSignal / 100.0f * MAX_PWM);
-  } else {
-    digitalWrite(Dir, COUNTER_CLOCK_WISE);
-    dutyCycle = (int)(-ActuatingSignal / 100.0f * MAX_PWM);
-  }
+    if (ActuatingSignal > 100.0f) ActuatingSignal = 100.0f;
+    if (ActuatingSignal < -100.0f) ActuatingSignal = -100.0f;
 
+    // Afdrukken om de 100 cycli
 #ifdef DEBUG_MOTOR_CONTROLLER
-  // Debug print
-  if ((i % 100) == 0) {
-    Serial.printf("-- 1. Duty Cycle before limit: %d\n", dutyCycle);
-  }
+    if ((display_interval_counter % 100) == 0) {
+      Serial.printf("-- Actuating Signal: %.2f\n", ActuatingSignal);
+    }
 #endif
-  // Veiligheidslimiet
-  if (dutyCycle > MAX_PWM) dutyCycle = MAX_PWM;
+    // Richting bepalen en PWM duty cycle berekenen
+    int dutyCycle = 0;
+    if (ActuatingSignal > 0) {
+      digitalWrite(Dir, CLOCK_WISE);  // zorg dat dit HIGH/LOW is
+      dutyCycle = (int)(ActuatingSignal / 100.0f * MAX_PWM);
+    } else {
+      digitalWrite(Dir, COUNTER_CLOCK_WISE);
+      dutyCycle = (int)(-ActuatingSignal / 100.0f * MAX_PWM);
+    }
 
 #ifdef DEBUG_MOTOR_CONTROLLER
-  if ((i % 100) == 0) {
-    Serial.printf("-- 2. PWM value after limit: %d\n", dutyCycle);
-  }
+    // Debug print
+    if ((display_interval_counter % 100) == 0) {
+      Serial.printf("-- Duty Cycle before limit: %d\n", dutyCycle);
+    }
 #endif
-  // Schrijf PWM-waarde uit naar de motor driver
-  ledcWrite(this->ledcChannel, dutyCycle);
+    // Veiligheidslimiet
+    if (dutyCycle > MAX_PWM) dutyCycle = MAX_PWM;
+
+#ifdef DEBUG_MOTOR_CONTROLLER
+    if ((display_interval_counter % 100) == 0) {
+      Serial.printf("-- PWM value after limit: %d\n", dutyCycle);
+    }
+#endif
+    // Schrijf PWM-waarde uit naar de motor driver
+    ledcWrite(this->ledcChannel, dutyCycle);
+  }
 }
 
 

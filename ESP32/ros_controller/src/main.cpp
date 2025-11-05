@@ -16,7 +16,7 @@
 #include <geometry_msgs/msg/vector3.h>
 #include <sensor_msgs/msg/joint_state.h>
 
-#if defined(DHANDLE_BUMPERS)
+#if defined(HANDLE_BUMPERS)
 #include <p3dx_interfaces/msg/bumpers.h>
 #endif
 
@@ -77,7 +77,7 @@ rcl_publisher_t odom_publisher;
 rcl_publisher_t joint_state_publisher;
 rcl_publisher_t error_publisher;
 rcl_publisher_t battery_voltage_publisher;
-#if defined(DHANDLE_BUMPERS)
+#if defined(HANDLE_BUMPERS)
 rcl_publisher_t bumpers_publisher;
 #endif
 
@@ -86,7 +86,7 @@ std_msgs__msg__Bool error_msg;
 std_msgs__msg__Bool reset_msg;
 std_msgs__msg__Float32 battery_voltage_msg;
 sensor_msgs__msg__JointState joint_state_msg;
-#if defined(DHANDLE_BUMPERS)
+#if defined(HANDLE_BUMPERS)
 p3dx_interfaces__msg__Bumpers  bumper_msg;
 #endif
 int64_t encodervalue_l = 0;
@@ -127,7 +127,6 @@ void microros_error_handler() {
     tft_printf(ST77XX_BLUE, "Fatal Error\n\nRestarting...\n");
     delay(3000);
     ESP.restart();
-
 }
 
 
@@ -140,6 +139,8 @@ void cmd_vel_subscription_callback(const void* msgin) {
   if(error_msg.data == false){
     if(!motors_enabled){
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+      leftWheel.enable();
+      rightWheel.enable();
       motors_enabled = true;
       tft_printf(ST77XX_MAGENTA, "Motors Enabled\n");
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
@@ -227,7 +228,6 @@ void publishData() {
   pos_left += delta_theta_left;
   pos_right += delta_theta_right;
 
-
   uint64_t now_ms = rmw_uros_epoch_millis();
   double current_time = now_ms / 1000.0;
 
@@ -256,7 +256,7 @@ void publishData() {
   // Publish jointstates
   rcl_publish(&joint_state_publisher, &joint_state_msg, NULL);
 
-#if defined(DHANDLE_BUMPERS)
+#if defined(HANDLE_BUMPERS)
   bumper_msg.front_right = !digitalRead(BUMPER_FRONT_RIGHT_PIN);
   bumper_msg.front_left = !digitalRead(BUMPER_FRONT_LEFT_PIN);
   bumper_msg.rear_right = !digitalRead(BUMPER_REAR_RIGHT_PIN);
@@ -319,11 +319,19 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   float angularVelocity;
 
   if((millis() - prev_cmd_time) > 100) {
-    twist_msg.linear.x = 0;
-    twist_msg.angular.z = 0;
-    tft_printf(ST77XX_MAGENTA, "Motor Stop\nNo cmd_vel\nReceived\n");
-    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+    if(motors_enabled) {
+
+      twist_msg.linear.x = 0;
+      twist_msg.angular.z = 0;
+      tft_printf(ST77XX_MAGENTA, "Motor Stop\nNo cmd_vel\nReceived\n");
+      digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+      motors_enabled = false;
+      leftWheel.disable();
+      rightWheel.disable();
+    }  
+    return;
   }
+
 
   //linear velocity and angular velocity send cmd_vel topic
   linearVelocity = twist_msg.linear.x;
@@ -339,18 +347,9 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
     tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
   }
   display_interval_counter ++;
-#if 0
-  if (vL == 0 && vR == 0) {
-    leftWheel.stop();
-    rightWheel.stop();
-    actuating_signal_LW = 0;
-    actuating_signal_RW = 0;
-  } else {
-#endif
-    rightWheel.moveBase(actuating_signal_RW);
-    leftWheel.moveBase(actuating_signal_LW);
-//  }
 
+  rightWheel.moveBase(actuating_signal_RW);
+  leftWheel.moveBase(actuating_signal_LW);
 
   //odometry
   //current wheel rpm is calculated
@@ -397,12 +396,14 @@ void syncTime() {
   time_offset = ros_time_ms - now;
 }
 
+#if defined(HANDLE_BUMPERS)
 void bumber_hit(){
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
   tft_printf(ST77XX_BLUE, "Bumper Hit!\nMotors Disabled\n");
   motors_enabled = false; 
   error_msg.data = true;
 }
+#endif
 
 
 #define NODE_NAME "p3dx_controller"
@@ -497,8 +498,6 @@ void setup() {
   //prev_rpm_r = rightWheel.getVelocity();
 
 #if defined(WIFI)
-
-
   WiFi.setHostname("p3dx_controller");
 
   bool force_network_configure;
@@ -528,7 +527,6 @@ void setup() {
   delay(2000);
 #endif
 
-  allocator = rcl_get_default_allocator();
 
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
@@ -536,10 +534,10 @@ void setup() {
   pinMode(MOTOR_ENABLE_PIN, OUTPUT);
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
 
-  pinMode(RESET_ERROR_PIN, INPUT);
-  attachInterrupt(digitalPinToInterrupt(RESET_ERROR_PIN), reset_by_button, FALLING);
+  // pinMode(RESET_ERROR_PIN, INPUT);
+  // attachInterrupt(digitalPinToInterrupt(RESET_ERROR_PIN), reset_by_button, FALLING);
 
-#if defined(DHANDLE_BUMPERS)
+#if defined(HANDLE_BUMPERS)
   pinMode(BUMPER_FRONT_RIGHT_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_RIGHT_PIN), bumber_hit, FALLING);
   pinMode(BUMPER_FRONT_LEFT_PIN, INPUT);
@@ -554,10 +552,20 @@ void setup() {
      digitalRead(BUMPER_REAR_LEFT_PIN)==HIGH){
     digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
     error_msg.data = false;
+    motors_enabled = true;
+    leftWheel.enable();
+    rightWheel.enable();
+  }
+  else{
+    motors_enabled = false; 
+    error_msg.data = true;
   }
 #else
     digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
-    error_msg.data = false; 
+    leftWheel.enable();
+    rightWheel.enable();
+    error_msg.data = false;
+    motors_enabled = true;
 #endif
 
   delay(2000);
@@ -582,6 +590,7 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist),
     "cmd_vel"));
 
+
   // create reset_subscriber for reset topic
   RCCHECK(rclc_subscription_init_default(
     &reset_subscriber,
@@ -597,13 +606,13 @@ void setup() {
     "odom/unfiltered"));
 
   //create a bumper publisher
-  #if defined(DHANDLE_BUMPERS)
+#if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_publisher_init_default(
     &bumpers_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(p3dx_interfaces, msg, Bumpers),
     "bumpers"));
-  
+#endif  
 
   //create a error publisher
   RCCHECK(rclc_publisher_init_default(
@@ -628,18 +637,17 @@ void setup() {
 
     // Prepare message memory
     setup_joint_state_msg();
-  
+
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
   //Here I had set SamplingT=10 Which means at every 10 milliseconds MotorControll_timerCallback function is called
   const unsigned int samplingT = 20;
-#if defined(DHANDLE_BUMPERS)
+
   RCCHECK(rclc_timer_init_default(
     &ControlTimer,
     &support,
     RCL_MS_TO_NS(samplingT),
     MotorControll_timerCallback));
-#endif
 
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
@@ -648,9 +656,6 @@ void setup() {
   // RCCHECK(rclc_executor_add_timer(&executor, &timer));
   RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
-
-
-#endif
 }
 
 void loop() {
