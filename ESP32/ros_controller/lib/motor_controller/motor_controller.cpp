@@ -77,6 +77,9 @@ float MotorController::pid(float setpoint) {
   i++;
 #endif
   CurrentTimeforError = millis();
+  if(!enabled){
+    return 0.0f;
+  }
   float delta2 = ((float)CurrentTimeforError - PreviousTimeForError) / 1.0e3;
   error = setpoint - current_velocity;
   eintegral = eintegral + (error * delta2);
@@ -138,7 +141,12 @@ void MotorController::moveBase(float ActuatingSignal) {
 }
 
 
-void MotorController::stop() {
+void MotorController::disable() {
   ledcWrite(this->ledcChannel, 0);
   digitalWrite(Dir, LOW);
+  enabled = false;
+}
+
+void MotorController::enable() {
+  enabled = true;
 }

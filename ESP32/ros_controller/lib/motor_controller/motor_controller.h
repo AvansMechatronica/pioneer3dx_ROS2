@@ -57,6 +57,7 @@ public:
   float error;
   float previousError = 0;
   float wheel_radius;
+  bool enabled = false;
 
   MotorController(int8_t ledcChannel,
                   int8_t PwmPin, 
@@ -71,7 +72,8 @@ public:
   float getVelocity();
   float pid(float setpoint);
   void moveBase(float ActuatingSignal);
-  void stop();
+  void disable();
+  void enable();
 
 private:
   float getVelocityInt();

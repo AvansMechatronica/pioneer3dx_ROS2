@@ -16,7 +16,9 @@
 #include <geometry_msgs/msg/vector3.h>
 #include <sensor_msgs/msg/joint_state.h>
 
+#if defined(DHANDLE_BUMPERS)
 #include <p3dx_interfaces/msg/bumpers.h>
+#endif
 
 #include "wifi_network_config.h"
 
@@ -75,16 +77,21 @@ rcl_publisher_t odom_publisher;
 rcl_publisher_t joint_state_publisher;
 rcl_publisher_t error_publisher;
 rcl_publisher_t battery_voltage_publisher;
+#if defined(DHANDLE_BUMPERS)
 rcl_publisher_t bumpers_publisher;
+#endif
 
 nav_msgs__msg__Odometry odom_msg;
 std_msgs__msg__Bool error_msg;
 std_msgs__msg__Bool reset_msg;
 std_msgs__msg__Float32 battery_voltage_msg;
 sensor_msgs__msg__JointState joint_state_msg;
+#if defined(DHANDLE_BUMPERS)
 p3dx_interfaces__msg__Bumpers  bumper_msg;
+#endif
 int64_t encodervalue_l = 0;
 int64_t encodervalue_r = 0;
+bool motors_enabled = false;
 
 
 float prev_rpm_l;
@@ -108,21 +115,19 @@ Adafruit_ST7735 *tft;
 #define RCCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { error_loop(); } \
+    if ((temp_rc != RCL_RET_OK)) { microros_error_handler(); } \
   }
 #define RCSOFTCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { error_loop(); } \
+    if ((temp_rc != RCL_RET_OK)) { microros_error_handler(); } \
   }
 
-void error_loop() {
-  tft_printf(ST77XX_BLUE, "Faital Error\n");
+void microros_error_handler() {
+    tft_printf(ST77XX_BLUE, "Fatal Error\n\nRestarting...\n");
+    delay(3000);
+    ESP.restart();
 
-  while (1) {
-    digitalWrite(LED_PIN, !digitalRead(LED_PIN));
-    delay(100);
-  }
 }
 
 
@@ -132,14 +137,19 @@ void cmd_vel_subscription_callback(const void* msgin) {
   const geometry_msgs__msg__Twist* msg = 
       static_cast<const geometry_msgs__msg__Twist*>(msgin);
 
+  if(error_msg.data == false){
+    if(!motors_enabled){
+      digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+      motors_enabled = true;
+      tft_printf(ST77XX_MAGENTA, "Motors Enabled\n");
+      digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+    }
+  }
   twist_msg = *msg;  //  copy the data
-
 }
 
-void reset_subscription_callback(const void* msgin) {
-  const std_msgs__msg__Bool* msg = 
-      static_cast<const std_msgs__msg__Bool*>(msgin);
-  if (msg->data == true) {
+void reset_by_button(){
+#if defined(HANDLE_BUMPERS)
     if(digitalRead(BUMPER_FRONT_RIGHT_PIN)==HIGH &&
       digitalRead(BUMPER_FRONT_LEFT_PIN)==HIGH  &&
       digitalRead(BUMPER_REAR_RIGHT_PIN)==HIGH  &&
@@ -147,6 +157,19 @@ void reset_subscription_callback(const void* msgin) {
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
       error_msg.data = false;
     }
+#endif
+}
+
+void reset_subscription_callback(const void* msgin) {
+  const std_msgs__msg__Bool* msg = 
+      static_cast<const std_msgs__msg__Bool*>(msgin);
+  if (msg->data == true) {
+#if defined(HANDLE_BUMPERS)
+  reset_by_button();
+#else
+    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+    error_msg.data = false; 
+#endif
   }
 }
 
@@ -233,6 +256,7 @@ void publishData() {
   // Publish jointstates
   rcl_publish(&joint_state_publisher, &joint_state_msg, NULL);
 
+#if defined(DHANDLE_BUMPERS)
   bumper_msg.front_right = !digitalRead(BUMPER_FRONT_RIGHT_PIN);
   bumper_msg.front_left = !digitalRead(BUMPER_FRONT_LEFT_PIN);
   bumper_msg.rear_right = !digitalRead(BUMPER_REAR_RIGHT_PIN);
@@ -240,6 +264,7 @@ void publishData() {
 
   // Publish bumpers
   rcl_publish(&bumpers_publisher, &bumper_msg, NULL);
+#endif
 
 }
 
@@ -286,7 +311,7 @@ void setup_joint_state_msg()
 }
 
 
-int i=0;
+int display_interval_counter=0;
 
 //function which controlles the motor, callled every 10ms
 void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
@@ -296,6 +321,8 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   if((millis() - prev_cmd_time) > 100) {
     twist_msg.linear.x = 0;
     twist_msg.angular.z = 0;
+    tft_printf(ST77XX_MAGENTA, "Motor Stop\nNo cmd_vel\nReceived\n");
+    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
   }
 
   //linear velocity and angular velocity send cmd_vel topic
@@ -308,10 +335,10 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   //pid controlled is used for generating the pwm signal
   float actuating_signal_LW = leftWheel.pid(-vL);
   float actuating_signal_RW = rightWheel.pid(vR);
-  if(i % 10 == 0){
+  if(display_interval_counter % 10 == 0){
     tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
   }
-  i++;
+  display_interval_counter ++;
 #if 0
   if (vL == 0 && vR == 0) {
     leftWheel.stop();
@@ -372,6 +399,8 @@ void syncTime() {
 
 void bumber_hit(){
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+  tft_printf(ST77XX_BLUE, "Bumper Hit!\nMotors Disabled\n");
+  motors_enabled = false; 
   error_msg.data = true;
 }
 
@@ -416,7 +445,7 @@ char* convertToCamelCase(const char *input) {
     
     if(output == NULL) {
         Serial.printf("Error allocating memory\n");
-        error_loop();
+        microros_error_handler();
     }
 
     // Kopieer de originele string naar de uitvoerstring
@@ -453,7 +482,6 @@ void setup() {
 
   init_display();
 
-#if 1
   tft_printf(ST77XX_MAGENTA, "Pioneer 3DX\nController\nStarted\n");
 
   //initializing the pid constants
@@ -507,6 +535,11 @@ void setup() {
 
   pinMode(MOTOR_ENABLE_PIN, OUTPUT);
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+
+  pinMode(RESET_ERROR_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(RESET_ERROR_PIN), reset_by_button, FALLING);
+
+#if defined(DHANDLE_BUMPERS)
   pinMode(BUMPER_FRONT_RIGHT_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_RIGHT_PIN), bumber_hit, FALLING);
   pinMode(BUMPER_FRONT_LEFT_PIN, INPUT);
@@ -522,6 +555,10 @@ void setup() {
     digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
     error_msg.data = false;
   }
+#else
+    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+    error_msg.data = false; 
+#endif
 
   delay(2000);
 
@@ -531,8 +568,8 @@ void setup() {
   //create init_options
   if(rclc_support_init(&support, 0, NULL, &allocator)){
     tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nRestarting...\n");
-      delay(3000);
-      ESP.restart();
+    delay(3000);
+    ESP.restart();
   }
 
   // create node
@@ -560,11 +597,13 @@ void setup() {
     "odom/unfiltered"));
 
   //create a bumper publisher
+  #if defined(DHANDLE_BUMPERS)
   RCCHECK(rclc_publisher_init_default(
     &bumpers_publisher,
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(p3dx_interfaces, msg, Bumpers),
     "bumpers"));
+  
 
   //create a error publisher
   RCCHECK(rclc_publisher_init_default(
@@ -594,11 +633,13 @@ void setup() {
   //MotorControll_timerCallback function is called
   //Here I had set SamplingT=10 Which means at every 10 milliseconds MotorControll_timerCallback function is called
   const unsigned int samplingT = 20;
+#if defined(DHANDLE_BUMPERS)
   RCCHECK(rclc_timer_init_default(
     &ControlTimer,
     &support,
     RCL_MS_TO_NS(samplingT),
     MotorControll_timerCallback));
+#endif
 
   // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));

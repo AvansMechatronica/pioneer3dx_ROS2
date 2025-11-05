@@ -1,8 +1,9 @@
 <?xml version="1.0"?>
 <robot name="pioneer3dx" xmlns:xacro="http://www.ros.org/wiki/xacro">
 
+<!--
   <xacro:include filename="$(find p3dx_robots_description)/urdf/sensors/rplidar.urdf.xacro" />
-
+-->
   <!-- Define robot constants -->
   <xacro:property name="base_width" value="0.34"/>
   <xacro:property name="wheel_radius" value="0.12"/>
@@ -246,27 +247,36 @@
 
   <xacro:wheel prefix="left" y_offset="${base_width/2}"/>
   <xacro:wheel prefix="right" y_offset="${-base_width/2}"/>
-
+<!--
   <xacro:rplidar name="rplidar" parent_link="p3dx_base">
     <origin xyz="${rplidar_x_offset} ${rplidar_y_offset} ${rplidar_z_offset}"
             rpy="0 0 ${pi/2}"/>
   </xacro:rplidar>
+-->
 
-  <gazebo>
-    <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
-      <parameters>$(find p3dx_create_control)/config/control.yaml</parameters>
-      <ros>
-        <remapping>~/odom:=odom</remapping>
-        <remapping>/tf:=tf</remapping>
-        <remapping>/tf_static:=tf_static</remapping>
-        <remapping>/diagnostics:=diagnostics</remapping>
-        <!--<namespace>$(arg namespace)</namespace>-->
-      </ros>
-    </plugin>
-  </gazebo>
 
   <!-- DiffDrive Plugin -->
   <gazebo>
+    <plugin 
+      filename="gz-sim-diff-drive-system"
+      name="gz::sim::systems::DiffDrive">
+      <left_joint>left_wheel_joint</left_joint>
+      <right_joint>right_wheel_joint</right_joint>
+      <wheel_separation>${base_width}</wheel_separation>
+      <wheel_radius>${wheel_radius}</wheel_radius>
+      <!--
+      <base_frame>${p3dx_base}</base_frame>
+      <publish_rate>50</publish_rate>
+      <publish_joint_states>true</publish_joint_states>
+      -->
+    </plugin>
+<!--
+    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"> 
+      <render_engine>ogre2</render_engine>
+    </plugin>
+-->
+
+    <!-- JointState Publisher -->
     <plugin
       name="gz::sim::systems::JointStatePublisher"
       filename="libgz-sim-joint-state-publisher-system.so">

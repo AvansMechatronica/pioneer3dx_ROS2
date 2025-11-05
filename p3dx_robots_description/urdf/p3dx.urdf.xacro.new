@@ -252,30 +252,21 @@
             rpy="0 0 ${pi/2}"/>
   </xacro:rplidar>
 
-
+  <gazebo>
+    <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+      <parameters>$(find p3dx_create_control)/config/control.yaml</parameters>
+      <ros>
+        <remapping>~/odom:=odom</remapping>
+        <remapping>/tf:=tf</remapping>
+        <remapping>/tf_static:=tf_static</remapping>
+        <remapping>/diagnostics:=diagnostics</remapping>
+        <!--<namespace>$(arg namespace)</namespace>-->
+      </ros>
+    </plugin>
+  </gazebo>
 
   <!-- DiffDrive Plugin -->
   <gazebo>
-    <plugin 
-      filename="gz-sim-diff-drive-system"
-      name="gz::sim::systems::DiffDrive">
-      <left_joint>left_wheel_joint</left_joint>
-      <right_joint>right_wheel_joint</right_joint>
-      <wheel_separation>${base_width}</wheel_separation>
-      <wheel_radius>${wheel_radius}</wheel_radius>
-      <!--
-      <base_frame>${p3dx_base}</base_frame>
-      <publish_rate>50</publish_rate>
-      <publish_joint_states>true</publish_joint_states>
-      -->
-    </plugin>
-<!--
-    <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"> 
-      <render_engine>ogre2</render_engine>
-    </plugin>
--->
-
-    <!-- JointState Publisher -->
     <plugin
       name="gz::sim::systems::JointStatePublisher"
       filename="libgz-sim-joint-state-publisher-system.so">
