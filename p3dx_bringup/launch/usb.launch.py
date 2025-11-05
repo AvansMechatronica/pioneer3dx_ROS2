@@ -17,8 +17,9 @@ def generate_launch_description():
     def launch_setup(context, *args, **kwargs):
         count = int(LaunchConfiguration('num_agents').perform(context))
         nodes = []
-        for i in range(count):
-            nodes.append(
+        if 0:
+            for i in range(count):
+                nodes.append(
                 Node(
                     package='micro_ros_agent',
                     executable='micro_ros_agent',
@@ -31,9 +32,24 @@ def generate_launch_description():
                         '-v', '4'
                     ],
                 )
+                )
+
+        for i in range(count):
+            nodes.append(
+                Node(
+                    package='micro_ros_agent',
+                    executable='micro_ros_agent',
+                    name=f'micro_ros_agent_usb_{i}',
+                    output='screen',
+                    arguments=[
+                        'serial',
+                        '--dev', f'/dev/ttyACM{i}',
+                        '-b', '115200',
+                        '-v', '4'
+                    ],
+                )
             )
         return nodes
-
     return LaunchDescription([
         num_agents_arg,
         OpaqueFunction(function=launch_setup)
