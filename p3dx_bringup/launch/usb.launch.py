@@ -17,7 +17,7 @@ def generate_launch_description():
     def launch_setup(context, *args, **kwargs):
         count = int(LaunchConfiguration('num_agents').perform(context))
         nodes = []
-        if 0:
+        if 1:
             for i in range(count):
                 nodes.append(
                 Node(

@@ -186,21 +186,19 @@ struct timespec getTime() {
   return tp;
 }
 
-// Corresponding joint positions and velocities
-double pos_left = 0.0;
-double pos_right = 0.0;
-double last_time = 0.0;
+
 
 //function which publishes wheel odometry.
 void publishData() {
   // odometry data publish
+#if 0
   odom_msg = odometry.getData();
 
   struct timespec time_stamp = getTime();
   odom_msg.header.stamp.sec = time_stamp.tv_sec;
   odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
   RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
-
+#endif
   // error data publish
   RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
 
@@ -212,49 +210,28 @@ void publishData() {
   float battery_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);  
   battery_voltage_msg.data = battery_voltage * 3.1 * 2; //3.1 is factor determined by P3dx voltage divider, R1 = R2 = 100k ohm
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
+#if 0
 
   float current_rpm_l = leftWheel.getVelocity();
   float current_rpm_r = rightWheel.getVelocity();
 
-
-  int32_t delta_left = current_rpm_l - prev_rpm_l;
-  int32_t delta_right = current_rpm_r - prev_rpm_r;
-
-  // Incremental wheel rotation in radians
-  double delta_theta_left = 2.0 * M_PI * ((double)delta_left / TICK_PER_REVOLUTION);
-  double delta_theta_right = 2.0 * M_PI * ((double)delta_right / TICK_PER_REVOLUTION);
-
-  // Update wheel angles (positions)
-  pos_left += delta_theta_left;
-  pos_right += delta_theta_right;
-
-  uint64_t now_ms = rmw_uros_epoch_millis();
-  double current_time = now_ms / 1000.0;
-
-  double dt = current_time - last_time;
-  if (last_time == 0.0) dt = 0.1;  // fallback for first loop
-
-  last_time = current_time;
-
-  // Angular velocities (rad/s)
-  float vel_left = delta_theta_left / dt;
-  float vel_right = delta_theta_right / dt;
-
-  prev_rpm_l = current_rpm_l;
-  prev_rpm_r = current_rpm_r;
-
+  double pos_left = encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI));
+  double pos_right = encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI));
   // Update data
+
   joint_state_msg.header.stamp.sec = (int32_t)(rmw_uros_epoch_millis() / 1000);
   joint_state_msg.header.stamp.nanosec = (uint32_t)((rmw_uros_epoch_millis() % 1000) * 1000000);
 
+  //Serial.printf("Pos L: %.2f, Pos R: %.2f, Vel L: %.2f, Vel R: %.2f\n", pos_left, pos_right, vel_left, vel_right);
   joint_state_msg.position.data[0] = pos_left;
-  joint_state_msg.position.data[1] = pos_right;
+  joint_state_msg.position.data[1] = -pos_right;
 
-  joint_state_msg.velocity.data[0] = vel_left;
-  joint_state_msg.velocity.data[1] = pos_right;
+  joint_state_msg.velocity.data[0] = current_rpm_l;//vel_left;
+  joint_state_msg.velocity.data[1] = -current_rpm_r;//vel_right;
 
   // Publish jointstates
-  rcl_publish(&joint_state_publisher, &joint_state_msg, NULL);
+  RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
+#endif
 
 #if defined(HANDLE_BUMPERS)
   bumper_msg.front_right = !digitalRead(BUMPER_FRONT_RIGHT_PIN);
@@ -263,7 +240,7 @@ void publishData() {
   bumper_msg.rear_left = !digitalRead(BUMPER_REAR_LEFT_PIN);
 
   // Publish bumpers
-  rcl_publish(&bumpers_publisher, &bumper_msg, NULL);
+  RCSOFTCHECK(rcl_publish(&bumpers_publisher, &bumper_msg, NULL));
 #endif
 
 }
@@ -272,6 +249,8 @@ void setup_joint_state_msg()
 {
     // Initialize message memory
     sensor_msgs__msg__JointState__init(&joint_state_msg);
+
+    joint_state_msg.header.frame_id.data = "p3dx_base";
 
     // Two joints: left_wheel and right_wheel
     joint_state_msg.name.size = 3;
@@ -293,7 +272,7 @@ void setup_joint_state_msg()
     joint_state_msg.position.capacity = 3;
     joint_state_msg.position.data = (double*)malloc(3 * sizeof(double));
 
-    joint_state_msg.velocity.size = 2;
+    joint_state_msg.velocity.size = 3;
     joint_state_msg.velocity.capacity = 3;
     joint_state_msg.velocity.data = (double*)malloc(3 * sizeof(double));
 
@@ -313,6 +292,7 @@ void setup_joint_state_msg()
 
 int display_interval_counter=0;
 
+
 //function which controlles the motor, callled every 10ms
 void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   float linearVelocity;
@@ -320,7 +300,6 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
 
   if((millis() - prev_cmd_time) > 100) {
     if(motors_enabled) {
-
       twist_msg.linear.x = 0;
       twist_msg.angular.z = 0;
       tft_printf(ST77XX_MAGENTA, "Motor Stop\nNo cmd_vel\nReceived\n");
@@ -329,10 +308,7 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
       leftWheel.disable();
       rightWheel.disable();
     }  
-    return;
   }
-
-
   //linear velocity and angular velocity send cmd_vel topic
   linearVelocity = twist_msg.linear.x;
   angularVelocity = twist_msg.angular.z;
@@ -343,13 +319,14 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   //pid controlled is used for generating the pwm signal
   float actuating_signal_LW = leftWheel.pid(-vL);
   float actuating_signal_RW = rightWheel.pid(vR);
-  if(display_interval_counter % 10 == 0){
+  if(display_interval_counter % 10 == 0 && motors_enabled){
     tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
   }
   display_interval_counter ++;
 
   rightWheel.moveBase(actuating_signal_RW);
   leftWheel.moveBase(actuating_signal_LW);
+
 
   //odometry
   //current wheel rpm is calculated
@@ -550,23 +527,20 @@ void setup() {
      digitalRead(BUMPER_FRONT_LEFT_PIN)==HIGH  &&
      digitalRead(BUMPER_REAR_RIGHT_PIN)==HIGH  &&
      digitalRead(BUMPER_REAR_LEFT_PIN)==HIGH){
-    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
     error_msg.data = false;
-    motors_enabled = true;
-    leftWheel.enable();
-    rightWheel.enable();
   }
   else{
-    motors_enabled = false; 
     error_msg.data = true;
   }
 #else
-    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
-    leftWheel.enable();
-    rightWheel.enable();
     error_msg.data = false;
-    motors_enabled = true;
+
 #endif
+
+  digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+  leftWheel.disable();
+  rightWheel.disable();
+  motors_enabled = false;
 
   delay(2000);
 
@@ -661,8 +635,6 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   delay(100);
-#if 1
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
-#endif
 }
 

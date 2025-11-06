@@ -38,6 +38,6 @@
 
 #define LED_PIN 2
 
-#define BATTERY_VOLTAGE_PIN 4
+#define BATTERY_VOLTAGE_PIN 34 // ADC pin to read battery voltage
 
 #endif

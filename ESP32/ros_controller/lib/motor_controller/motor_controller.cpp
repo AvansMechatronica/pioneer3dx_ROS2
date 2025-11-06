@@ -60,6 +60,7 @@ float MotorController::getVelocityInt(){// returns linear velocity in m/s
   return (rpmFilt * wheel_radius * 2 * 3.14) / 60;  // return linear velocity in m/s
 }
 
+
 float MotorController::getVelocity(){
   return current_velocity;
 }
@@ -78,6 +79,9 @@ float MotorController::pid(float setpoint) {
 #endif
   CurrentTimeforError = millis();
   if(!enabled){
+    previousError = 0;
+    eintegral = 0;
+    PreviousTimeForError = CurrentTimeforError;
     return 0.0f;
   }
   float delta2 = ((float)CurrentTimeforError - PreviousTimeForError) / 1.0e3;
