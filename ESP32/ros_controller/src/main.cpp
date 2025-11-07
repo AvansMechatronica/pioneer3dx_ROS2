@@ -98,7 +98,14 @@ float prev_rpm_l;
 float prev_rpm_r;
 
 rcl_timer_t timer;
-rcl_timer_t ControlTimer;
+rcl_timer_t motorControlTimer;
+rcl_timer_t publishOdomTimer;
+rcl_timer_t publishErrorTimer;
+rcl_timer_t publishBatteryTimer;
+rcl_timer_t publishJointStateTimer;
+#if defined(HANDLE_BUMPERS)
+rcl_timer_t publishBumpersTimer;
+#endif
 unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
 unsigned long prev_odom_update = 0;
@@ -115,16 +122,17 @@ Adafruit_ST7735 *tft;
 #define RCCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { microros_error_handler(); } \
+    if ((temp_rc != RCL_RET_OK)) { Serial.printf("Fatal Error, line %i, ", __LINE__); microros_error_handler(__LINE__); } \
   }
 #define RCSOFTCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { microros_error_handler(); } \
+    if ((temp_rc != RCL_RET_OK)) { Serial.printf("Fatal Error, line %i, ", __LINE__);microros_error_handler(__LINE__); } \
   }
 
-void microros_error_handler() {
-    tft_printf(ST77XX_BLUE, "Fatal Error\n\nRestarting...\n");
+void microros_error_handler(int line) {
+    Serial.printf("Restarting...\n");
+    tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\n,Line: %d", line);
     delay(3000);
     ESP.restart();
 }
@@ -174,8 +182,6 @@ void reset_subscription_callback(const void* msgin) {
   }
 }
 
-
-
 struct timespec getTime() {
   struct timespec tp = { 0 };
   // add time difference between uC time and ROS time to
@@ -186,32 +192,23 @@ struct timespec getTime() {
   return tp;
 }
 
-
-
-//function which publishes wheel odometry.
-void publishData() {
-  // odometry data publish
-#if 0
-  odom_msg = odometry.getData();
-
-  struct timespec time_stamp = getTime();
-  odom_msg.header.stamp.sec = time_stamp.tv_sec;
-  odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
-#endif
-  // error data publish
-  RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
+void publishError_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+    RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
+}
 
 #define R1 330000.0f // Resistor R1 value in ohms
 #define R2 100000.0f  // Resistor R2 value in ohms
+
+void publishBattery_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
 
   // battery voltage publish
 
   float battery_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);  
   battery_voltage_msg.data = battery_voltage * 3.1 * 2; //3.1 is factor determined by P3dx voltage divider, R1 = R2 = 100k ohm
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
-#if 0
+}
 
+void publishJointState_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   float current_rpm_l = leftWheel.getVelocity();
   float current_rpm_r = rightWheel.getVelocity();
 
@@ -219,8 +216,11 @@ void publishData() {
   double pos_right = encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI));
   // Update data
 
-  joint_state_msg.header.stamp.sec = (int32_t)(rmw_uros_epoch_millis() / 1000);
-  joint_state_msg.header.stamp.nanosec = (uint32_t)((rmw_uros_epoch_millis() % 1000) * 1000000);
+  struct timespec time_stamp = getTime();
+  joint_state_msg.header.stamp.sec = time_stamp.tv_sec;
+  joint_state_msg.header.stamp.nanosec = time_stamp.tv_nsec;
+//  joint_state_msg.header.stamp.sec = (int32_t)(rmw_uros_epoch_millis() / 1000);
+//  joint_state_msg.header.stamp.nanosec = (uint32_t)((rmw_uros_epoch_millis() % 1000) * 1000000);
 
   //Serial.printf("Pos L: %.2f, Pos R: %.2f, Vel L: %.2f, Vel R: %.2f\n", pos_left, pos_right, vel_left, vel_right);
   joint_state_msg.position.data[0] = pos_left;
@@ -231,9 +231,21 @@ void publishData() {
 
   // Publish jointstates
   RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
-#endif
+}
+
+//function which publishes wheel odometry.
+void publishOdom_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+
+  // odometry publish
+  odom_msg = odometry.getData();
+  struct timespec time_stamp = getTime();
+  odom_msg.header.stamp.sec = time_stamp.tv_sec;
+  odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
+  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+}
 
 #if defined(HANDLE_BUMPERS)
+void publishBumpers_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
   bumper_msg.front_right = !digitalRead(BUMPER_FRONT_RIGHT_PIN);
   bumper_msg.front_left = !digitalRead(BUMPER_FRONT_LEFT_PIN);
   bumper_msg.rear_right = !digitalRead(BUMPER_REAR_RIGHT_PIN);
@@ -241,9 +253,8 @@ void publishData() {
 
   // Publish bumpers
   RCSOFTCHECK(rcl_publish(&bumpers_publisher, &bumper_msg, NULL));
-#endif
-
 }
+#endif
 
 void setup_joint_state_msg()
 {
@@ -288,10 +299,8 @@ void setup_joint_state_msg()
     joint_state_msg.velocity.data[2] = 0.0; // Caster joint velocity
 
 }
-
-
+//counter for controlling the display update rate
 int display_interval_counter=0;
-
 
 //function which controlles the motor, callled every 10ms
 void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
@@ -345,7 +354,7 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
     linear_x,
     linear_y,
     angular_z);
-  publishData();
+//  publishData();
 }
 
 //interrupt function for left wheel encoder.
@@ -423,7 +432,7 @@ char* convertToCamelCase(const char *input) {
     
     if(output == NULL) {
         Serial.printf("Error allocating memory\n");
-        microros_error_handler();
+        microros_error_handler(__LINE__);
     }
 
     // Kopieer de originele string naar de uitvoerstring
@@ -546,7 +555,6 @@ void setup() {
 
   allocator = rcl_get_default_allocator();
 
-
   //create init_options
   if(rclc_support_init(&support, 0, NULL, &allocator)){
     tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nRestarting...\n");
@@ -609,8 +617,8 @@ void setup() {
         ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
         "/joint_states"));
 
-    // Prepare message memory
-    setup_joint_state_msg();
+  // Prepare message memory
+  setup_joint_state_msg();
 
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
@@ -618,17 +626,54 @@ void setup() {
   const unsigned int samplingT = 20;
 
   RCCHECK(rclc_timer_init_default(
-    &ControlTimer,
+    &motorControlTimer,
     &support,
     RCL_MS_TO_NS(samplingT),
     MotorControll_timerCallback));
 
-  // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 3, &allocator));
+  RCCHECK(rclc_timer_init_default(
+    &publishOdomTimer,
+    &support,
+    RCL_MS_TO_NS(100),
+    publishOdom_timerCallBack));
+
+  RCCHECK(rclc_timer_init_default(
+    &publishErrorTimer,
+    &support,
+    RCL_MS_TO_NS(100),
+    publishError_timerCallBack));
+
+  RCCHECK(rclc_timer_init_default(
+    &publishBatteryTimer,
+    &support,
+    RCL_MS_TO_NS(100),
+    publishBattery_timerCallBack));
+
+  RCCHECK(rclc_timer_init_default(
+    &publishJointStateTimer,
+    &support,
+    RCL_MS_TO_NS(100),
+    publishJointState_timerCallBack));
+
+#if defined(HANDLE_BUMPERS)
+  RCCHECK(rclc_timer_init_default(
+    &publishBumpersTimer,
+    &support,
+    RCL_MS_TO_NS(100),
+    publishBumpers_timerCallBack));
+#endif
+    // create executor
+  RCCHECK(rclc_executor_init(&executor, &support.context, 9, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
-  // RCCHECK(rclc_executor_add_timer(&executor, &timer));
-  RCCHECK(rclc_executor_add_timer(&executor, &ControlTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &publishOdomTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &publishErrorTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &publishBatteryTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &publishJointStateTimer));
+#if defined(HANDLE_BUMPERS)
+  RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
+#endif
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
 }
 
