@@ -15,7 +15,7 @@
   <depend>gz_ros2_control</depend>
   <depend>tf2_ros</depend>
   <depend>rviz2</depend>
-  <depend>gz_ros2_control</depend>
+
 
   <depend>slam_toolbox</depend>
   <depend>nav2_bringup</depend>

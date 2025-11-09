@@ -467,7 +467,7 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: p3dx_base
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:
@@ -517,7 +517,7 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 518.9854125976562
+      Scale: 194.41867065429688
       Target Frame: <Fixed Frame>
       Value: TopDownOrtho (rviz_default_plugins)
       X: 0.008168329484760761

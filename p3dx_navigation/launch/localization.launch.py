@@ -35,19 +35,19 @@ ARGUMENTS = [
 
 
 def generate_launch_description():
-    pkg_turtlebot4_navigation = get_package_share_directory('p3dx_navigation')
+    p3dx_navigation = get_package_share_directory('p3dx_navigation')
     pkg_nav2_bringup = get_package_share_directory('nav2_bringup')
 
     localization_params_arg = DeclareLaunchArgument(
         'params',
         default_value=PathJoinSubstitution(
-            [pkg_turtlebot4_navigation, 'config', 'localization.yaml']),
+            [p3dx_navigation, 'config', 'localization.yaml']),
         description='Localization parameters')
 
     map_arg = DeclareLaunchArgument(
         'map',
         default_value=PathJoinSubstitution(
-            [pkg_turtlebot4_navigation, 'maps', 'warehouse.yaml']),
+            [p3dx_navigation, 'maps', 'warehouse.yaml']),
         description='Full path to map yaml file to load')
 
     namespace = LaunchConfiguration('namespace')

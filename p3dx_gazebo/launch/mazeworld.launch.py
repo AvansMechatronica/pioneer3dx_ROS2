@@ -136,6 +136,15 @@ def launch_setup(context, *args, **kwargs):
     )
 
 
+    map_tf = Node(
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        name='map',
+        output='screen',
+        arguments=['0', '0', '0', '0', '0', '0', "map", "p3dx_base"],
+        parameters=[{'use_sim_time': use_sim_time}],
+    )
+
     return [
         gz_resource_path,
         gazebo_launch,
@@ -144,6 +153,7 @@ def launch_setup(context, *args, **kwargs):
         ros_gz_bridge,
         rplidar_stf,
         rviz_node,
+#        map_tf
     ]
 
 

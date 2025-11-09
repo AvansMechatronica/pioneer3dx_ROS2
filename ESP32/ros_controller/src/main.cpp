@@ -86,6 +86,7 @@ std_msgs__msg__Bool error_msg;
 std_msgs__msg__Bool reset_msg;
 std_msgs__msg__Float32 battery_voltage_msg;
 sensor_msgs__msg__JointState joint_state_msg;
+
 #if defined(HANDLE_BUMPERS)
 p3dx_interfaces__msg__Bumpers  bumper_msg;
 #endif
@@ -133,7 +134,7 @@ Adafruit_ST7735 *tft;
 void microros_error_handler(int line) {
     Serial.printf("Restarting...\n");
     tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\n,Line: %d", line);
-    delay(3000);
+    delay(5000);
     ESP.restart();
 }
 
@@ -209,6 +210,7 @@ void publishBattery_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
 }
 
 void publishJointState_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+  #if 0
   float current_rpm_l = leftWheel.getVelocity();
   float current_rpm_r = rightWheel.getVelocity();
 
@@ -228,7 +230,7 @@ void publishJointState_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 
   joint_state_msg.velocity.data[0] = current_rpm_l;//vel_left;
   joint_state_msg.velocity.data[1] = -current_rpm_r;//vel_right;
-
+#endif
   // Publish jointstates
   RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
 }
@@ -256,29 +258,25 @@ void publishBumpers_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 }
 #endif
 
+
+
 void setup_joint_state_msg()
 {
-    // Initialize message memory
+    // 1. Init JointState message
     sensor_msgs__msg__JointState__init(&joint_state_msg);
 
-    joint_state_msg.header.frame_id.data = "p3dx_base";
+    // 2. Init and set header.frame_id safely
+    rosidl_runtime_c__String__init(&joint_state_msg.header.frame_id);
+    micro_ros_string_utilities_set(joint_state_msg.header.frame_id, "p3dx_base");
 
-    // Two joints: left_wheel and right_wheel
-    joint_state_msg.name.size = 3;
-    joint_state_msg.name.capacity = 3;
-    joint_state_msg.name.data = (rosidl_runtime_c__String*)malloc(3 * sizeof(rosidl_runtime_c__String));
+    // 3. Initialize name sequence with 3 joints
+    rosidl_runtime_c__String__Sequence__init(&joint_state_msg.name, 3);
 
-    rosidl_runtime_c__String__init(&joint_state_msg.name.data[0]);
     rosidl_runtime_c__String__assign(&joint_state_msg.name.data[0], "left_wheel_joint");
-
-    rosidl_runtime_c__String__init(&joint_state_msg.name.data[1]);
     rosidl_runtime_c__String__assign(&joint_state_msg.name.data[1], "right_wheel_joint");
-
-    rosidl_runtime_c__String__init(&joint_state_msg.name.data[2]);
     rosidl_runtime_c__String__assign(&joint_state_msg.name.data[2], "caster_swivel_hubcap_joint");
 
-
-    // Allocate arrays for positions, velocities, efforts
+    // 4. Initialize position, velocity, effort arrays safely
     joint_state_msg.position.size = 3;
     joint_state_msg.position.capacity = 3;
     joint_state_msg.position.data = (double*)malloc(3 * sizeof(double));
@@ -291,14 +289,22 @@ void setup_joint_state_msg()
     joint_state_msg.effort.capacity = 3;
     joint_state_msg.effort.data = (double*)malloc(3 * sizeof(double));
 
-    joint_state_msg.effort.data[0] = 0.0;
-    joint_state_msg.effort.data[1] = 0.0;
-    joint_state_msg.effort.data[2] = 0.0;
+    // Check malloc success
+    if (!joint_state_msg.position.data || !joint_state_msg.velocity.data || !joint_state_msg.effort.data) {
+        // handle allocation failure
+        // (for example, print error and return)
+        //Serial.printf("Error allocating memory for joint_state_msg arrays\n");
+        return;
+    }
 
-    joint_state_msg.position.data[2] = 0.0; // Caster joint position
-    joint_state_msg.velocity.data[2] = 0.0; // Caster joint velocity
-
+    // 5. Initialize all values to 0
+    for (int i = 0; i < 3; i++) {
+        joint_state_msg.position.data[i] = 0.0;
+        joint_state_msg.velocity.data[i] = 0.0;
+        joint_state_msg.effort.data[i] = 0.0;
+    }
 }
+
 //counter for controlling the display update rate
 int display_interval_counter=0;
 
@@ -610,6 +616,8 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "battery_voltage"));
 
+  // Prepare message memory
+  setup_joint_state_msg();
     // Create publisher
   RCCHECK(rclc_publisher_init_default(
         &joint_state_publisher,
@@ -617,14 +625,10 @@ void setup() {
         ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
         "/joint_states"));
 
-  // Prepare message memory
-  setup_joint_state_msg();
-
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
   //Here I had set SamplingT=10 Which means at every 10 milliseconds MotorControll_timerCallback function is called
   const unsigned int samplingT = 20;
-
   RCCHECK(rclc_timer_init_default(
     &motorControlTimer,
     &support,
@@ -649,12 +653,13 @@ void setup() {
     RCL_MS_TO_NS(100),
     publishBattery_timerCallBack));
 
+#if 0
   RCCHECK(rclc_timer_init_default(
     &publishJointStateTimer,
     &support,
     RCL_MS_TO_NS(100),
     publishJointState_timerCallBack));
-
+#endif
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_timer_init_default(
     &publishBumpersTimer,
@@ -670,7 +675,7 @@ void setup() {
   RCCHECK(rclc_executor_add_timer(&executor, &publishOdomTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &publishErrorTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &publishBatteryTimer));
-  RCCHECK(rclc_executor_add_timer(&executor, &publishJointStateTimer));
+//  RCCHECK(rclc_executor_add_timer(&executor, &publishJointStateTimer));
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
