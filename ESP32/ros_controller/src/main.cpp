@@ -100,13 +100,9 @@ float prev_rpm_r;
 
 rcl_timer_t timer;
 rcl_timer_t motorControlTimer;
-rcl_timer_t publishOdomTimer;
-rcl_timer_t publishErrorTimer;
-rcl_timer_t publishBatteryTimer;
-rcl_timer_t publishJointStateTimer;
-#if defined(HANDLE_BUMPERS)
-rcl_timer_t publishBumpersTimer;
-#endif
+rcl_timer_t lowSpeedPublisherTimer;
+rcl_timer_t highSpeedPublisherTimer;
+
 unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
 unsigned long prev_odom_update = 0;
@@ -193,15 +189,14 @@ struct timespec getTime() {
   return tp;
 }
 
-void publishError_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+void errorPublisher() {
     RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
 }
 
 #define R1 330000.0f // Resistor R1 value in ohms
 #define R2 100000.0f  // Resistor R2 value in ohms
 
-void publishBattery_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-
+void batteryPublisher(){
   // battery voltage publish
 
   float battery_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);  
@@ -209,10 +204,9 @@ void publishBattery_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
 }
 
-void publishJointState_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-  #if 0
-  float current_rpm_l = leftWheel.getVelocity();
-  float current_rpm_r = rightWheel.getVelocity();
+void jointstatePublisher(){
+  double current_rpm_l = leftWheel.getVelocity();
+  double current_rpm_r = rightWheel.getVelocity();
 
   double pos_left = encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI));
   double pos_right = encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI));
@@ -221,8 +215,6 @@ void publishJointState_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
   struct timespec time_stamp = getTime();
   joint_state_msg.header.stamp.sec = time_stamp.tv_sec;
   joint_state_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-//  joint_state_msg.header.stamp.sec = (int32_t)(rmw_uros_epoch_millis() / 1000);
-//  joint_state_msg.header.stamp.nanosec = (uint32_t)((rmw_uros_epoch_millis() % 1000) * 1000000);
 
   //Serial.printf("Pos L: %.2f, Pos R: %.2f, Vel L: %.2f, Vel R: %.2f\n", pos_left, pos_right, vel_left, vel_right);
   joint_state_msg.position.data[0] = pos_left;
@@ -230,13 +222,16 @@ void publishJointState_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 
   joint_state_msg.velocity.data[0] = current_rpm_l;//vel_left;
   joint_state_msg.velocity.data[1] = -current_rpm_r;//vel_right;
-#endif
   // Publish jointstates
-  RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
+
+// Waarom gaat deze fout !!!
+
+  //RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
+//
 }
 
 //function which publishes wheel odometry.
-void publishOdom_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+void odomPublisher() {
 
   // odometry publish
   odom_msg = odometry.getData();
@@ -247,7 +242,7 @@ void publishOdom_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
 }
 
 #if defined(HANDLE_BUMPERS)
-void publishBumpers_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
+void bumpersPunblisher()
   bumper_msg.front_right = !digitalRead(BUMPER_FRONT_RIGHT_PIN);
   bumper_msg.front_left = !digitalRead(BUMPER_FRONT_LEFT_PIN);
   bumper_msg.rear_right = !digitalRead(BUMPER_REAR_RIGHT_PIN);
@@ -257,6 +252,23 @@ void publishBumpers_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
   RCSOFTCHECK(rcl_publish(&bumpers_publisher, &bumper_msg, NULL));
 }
 #endif
+
+
+
+void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+
+  batteryPublisher();
+  errorPublisher();
+
+#if defined(HANDLE_BUMPERS)
+  bumpersPunblisher();
+#endif
+}
+
+void highSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+  odomPublisher();
+  jointstatePublisher();
+}
 
 
 
@@ -636,46 +648,25 @@ void setup() {
     MotorControll_timerCallback));
 
   RCCHECK(rclc_timer_init_default(
-    &publishOdomTimer,
+    &lowSpeedPublisherTimer,
     &support,
-    RCL_MS_TO_NS(100),
-    publishOdom_timerCallBack));
+    RCL_MS_TO_NS(1000),
+    lowSpeedPublisher_timerCallBack));
 
   RCCHECK(rclc_timer_init_default(
-    &publishErrorTimer,
+    &highSpeedPublisherTimer,
     &support,
     RCL_MS_TO_NS(100),
-    publishError_timerCallBack));
+    highSpeedPublisher_timerCallBack));
 
-  RCCHECK(rclc_timer_init_default(
-    &publishBatteryTimer,
-    &support,
-    RCL_MS_TO_NS(100),
-    publishBattery_timerCallBack));
 
-#if 0
-  RCCHECK(rclc_timer_init_default(
-    &publishJointStateTimer,
-    &support,
-    RCL_MS_TO_NS(100),
-    publishJointState_timerCallBack));
-#endif
-#if defined(HANDLE_BUMPERS)
-  RCCHECK(rclc_timer_init_default(
-    &publishBumpersTimer,
-    &support,
-    RCL_MS_TO_NS(100),
-    publishBumpers_timerCallBack));
-#endif
     // create executor
   RCCHECK(rclc_executor_init(&executor, &support.context, 9, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
-  RCCHECK(rclc_executor_add_timer(&executor, &publishOdomTimer));
-  RCCHECK(rclc_executor_add_timer(&executor, &publishErrorTimer));
-  RCCHECK(rclc_executor_add_timer(&executor, &publishBatteryTimer));
-//  RCCHECK(rclc_executor_add_timer(&executor, &publishJointStateTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
