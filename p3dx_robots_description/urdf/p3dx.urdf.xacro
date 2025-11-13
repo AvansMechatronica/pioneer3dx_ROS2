@@ -266,6 +266,28 @@
       <publish_rate>50</publish_rate>
       <publish_joint_states>true</publish_joint_states>
       -->
+
+      <!-- Limits -->
+      <max_wheel_torque>200</max_wheel_torque>
+      <max_wheel_acceleration>10.0</max_wheel_acceleration>
+
+      <!-- Topic -->
+      <topic>cmd_vel</topic>
+      <odom_topic>odom</odom_topic>
+      <odometry_source>world</odometry_source>
+      <odom_publish_frequency>30</odom_publish_frequency>
+      <tf_topic>tf</tf_topic>
+
+      <!-- Frames -->
+      <frame_id>odom</frame_id>
+      <child_frame_id>p3dx_base</child_frame_id>
+
+      <!-- Output -->
+      <publish_odom>true</publish_odom>
+      <publish_odom_tf>true</publish_odom_tf>
+      <publish_wheel_tf>true</publish_wheel_tf>
+      <publish_wheel_joints>true</publish_wheel_joints>
+
     </plugin>
 <!--
     <plugin filename="gz-sim-sensors-system" name="gz::sim::systems::Sensors"> 

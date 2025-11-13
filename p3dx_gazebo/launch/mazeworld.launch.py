@@ -69,9 +69,13 @@ def launch_setup(context, *args, **kwargs):
         package='ros_gz_sim',
         executable='create',
         arguments=['-name', 'pioneer3dx', 
-                    '-topic', 'robot_description'],
-                    #'-z', '1'],
+                    '-topic', 'robot_description',
+                    '-allow_renaming', 'true',
+        ],
         output='screen',
+        parameters=[
+            {'use_sim_time': use_sim_time},
+        ]
     )
 
     # === ROS–Gazebo bridge ===
@@ -93,6 +97,7 @@ def launch_setup(context, *args, **kwargs):
         # simulation clock (Gazebo → ROS)
 #        '/clock@rosgraph_msgs/msg/Clock@[gz.msgs.Clock',
         '/clock' + '@rosgraph_msgs/msg/Clock' + '[gz.msgs.Clock',
+        #'/tf@tf2_msgs/msg/TFMessage[gz.msgs.Pose_V',
     ],
     remappings=[
         # (Optional) Simplify names for ROS side
@@ -112,18 +117,21 @@ def launch_setup(context, *args, **kwargs):
     # RPLIDAR static transforms
     robot_name = 'pioneer3dx'
     rplidar_stf = Node(
-            name='rplidar_stf',
-            package='tf2_ros',
-            executable='static_transform_publisher',
-            output='screen',
-            arguments=[
-                '0', '0', '0', '0', '0', '0.0',
-                'rplidar_link', f'{robot_name}/rplidar_link/rplidar'],
-            remappings=[
-                ('/tf', 'tf'),
-                ('/tf_static', 'tf_static'),
-            ]
-        )
+        name='rplidar_stf',
+        package='tf2_ros',
+        executable='static_transform_publisher',
+        output='screen',
+        arguments=[
+            '0', '0', '0', '0', '0', '0.0',
+            'rplidar_link', f'{robot_name}/rplidar_link/rplidar'],
+        remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+        ],
+        parameters=[
+            {'use_sim_time': use_sim_time},
+        ],
+    )
 
     # === RViz2 ===
     rviz_node = Node(

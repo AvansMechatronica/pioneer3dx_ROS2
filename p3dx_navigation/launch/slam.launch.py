@@ -35,7 +35,7 @@ pkg_p3dx_navigation = get_package_share_directory('p3dx_navigation')
 pkg_slam_toolbox = get_package_share_directory('slam_toolbox')
 
 ARGUMENTS = [
-    DeclareLaunchArgument('use_sim_time', default_value='false',
+    DeclareLaunchArgument('use_sim_time', default_value='true',
                           choices=['true', 'false'],
                           description='Use sim time'),
     DeclareLaunchArgument('sync', default_value='true',

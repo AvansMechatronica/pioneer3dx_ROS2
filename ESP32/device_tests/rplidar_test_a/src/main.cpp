@@ -6,9 +6,11 @@
 // GND → GND, VCC → 5V
 // Motor-pin via transistor of MOSFET naar 5V (optioneel te schakelen)
 
-#define RPLIDAR_MOTOR 25   // optioneel: PWM of GPIO voor motor aan/uit
+#include "pins.h"
 
-HardwareSerial LIDARSerial(2); // Gebruik UART2
+
+HardwareSerial LIDARSerial(1); // Gebruik UART1
+
 
 void setup() {
   Serial.begin(115200);
@@ -16,10 +18,10 @@ void setup() {
   Serial.println("RPLIDAR A1M8 uitlezen gestart...");
 
   // Start hardware-serial voor de LIDAR
-  LIDARSerial.begin(115200, SERIAL_8N1, 16, 17);
+  LIDARSerial.begin(115200, SERIAL_8N1, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN);
 
-  pinMode(RPLIDAR_MOTOR, OUTPUT);
-  digitalWrite(RPLIDAR_MOTOR, HIGH); // motor aan
+  pinMode(RPLIDAR_MOTOR_PIN, OUTPUT);
+  digitalWrite(RPLIDAR_MOTOR_PIN, HIGH); // motor aan
   delay(1000);
 
   Serial.println("Verbinding maken met RPLIDAR...");
@@ -30,6 +32,7 @@ void setup() {
 }
 
 void loop() {
+
   static uint8_t buffer[5];
   static int index = 0;
 
@@ -61,4 +64,5 @@ void loop() {
       }
     }
   }
+
 }

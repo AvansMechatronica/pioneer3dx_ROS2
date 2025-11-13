@@ -36,6 +36,10 @@
 #define DISPLAY_SDA_PIN   23
 #define DISPLAY_MISO_PIN  19 // Not used
 
+#define RPLIDAR_TX_PIN      10 // Lidar side
+#define RPLIDAR_RX_PIN        9 // Lidar side
+#define RPLIDAR_MOTOR_PIN 25   // optioneel: PWM of GPIO voor motor aan/uit
+
 #define LED_PIN 2
 
 #define BATTERY_VOLTAGE_PIN 34 // ADC pin to read battery voltage

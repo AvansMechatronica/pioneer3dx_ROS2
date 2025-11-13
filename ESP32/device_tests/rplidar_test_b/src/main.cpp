@@ -1,11 +1,10 @@
 #include <Arduino.h>
+#include "pins.h"
 
 // --- Pinnen ---
-#define RPLIDAR_MOTOR 25
-#define LIDAR_RX 16
-#define LIDAR_TX 17
 
-HardwareSerial LIDARSerial(2); // UART2
+
+HardwareSerial LIDARSerial(1); // UART2
 
 // Motor PWM snelheid (0-100%)
 int motorSpeedPercent = 100;
@@ -24,11 +23,11 @@ void setup() {
   Serial.println("RPLIDAR A1M8 - Setup gestart");
 
   // Motor aansturen
-  pinMode(RPLIDAR_MOTOR, OUTPUT);
+  pinMode(RPLIDAR_MOTOR_PIN, OUTPUT);
   setupMotorPWM(motorSpeedPercent);
 
   // UART2 starten voor LIDAR
-  LIDARSerial.begin(115200, SERIAL_8N1, LIDAR_RX, LIDAR_TX);
+  LIDARSerial.begin(115200, SERIAL_8N1, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN);
   delay(1000);
 
   // Device info en health uitlezen
@@ -41,6 +40,7 @@ void setup() {
 
 // ------------------- Loop -------------------
 void loop() {
+#if 1
   // Lees data van LIDAR (5-byte frames voor standaard scan)
   if (LIDARSerial.available() >= 5) {
     uint8_t data[5];
@@ -58,6 +58,10 @@ void loop() {
       Serial.printf("Hoek: %6.2f°  |  Afstand: %6.1f mm\n", angle, distance);
     }
   }
+#else
+  delay(100);
+#endif
+
 }
 
 // ------------------- Functies -------------------
@@ -66,7 +70,7 @@ void setupMotorPWM(int percent) {
   if (percent < 0) percent = 0;
   if (percent > 100) percent = 100;
   // PWM via analogWrite (0-255)
-  analogWrite(RPLIDAR_MOTOR, map(percent, 0, 100, 0, 255));
+  analogWrite(RPLIDAR_MOTOR_PIN, map(percent, 0, 100, 0, 255));
   Serial.printf("Motor PWM ingesteld op %d%%\n", percent);
 }
 
