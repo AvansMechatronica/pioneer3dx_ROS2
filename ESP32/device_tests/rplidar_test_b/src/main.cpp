@@ -62,10 +62,10 @@ void setup() {
   lidar->startScan(false);
 }
 
-RplidarValue scanValue;
+RplidarMeasurement scanValue;
 // ------------------- Loop -------------------
 void loop() {
-#if 0
+#if 1
   if(lidar->getScanValue(&scanValue, 100)) {
     Serial.printf("Hoek: %6.2f°  |  Afstand: %6.1f mm\n", scanValue.angle, scanValue.distance);
   }

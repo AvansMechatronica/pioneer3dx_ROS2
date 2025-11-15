@@ -271,8 +271,10 @@ bool rplidar::getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms) {
     uint8_t descriptor[7];
     LIDARSerial->readBytes(descriptor, 7);
 
-    if (memcmp(descriptor, RPLIDAR_SAMPLERATE_DESCRIPTOR, 7) != 0)
+    if (memcmp(descriptor, RPLIDAR_SAMPLERATE_DESCRIPTOR, 7) != 0) {
+        DEBUG_PRINT("Descriptor mismatch\n");
         return false;
+    }
 
     while (LIDARSerial->available() < 4) {
         if (millis() - startTime > timeout_ms) return false;
@@ -288,6 +290,8 @@ bool rplidar::getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms) {
 }
 
 // Start scanning in standard or express mode
+
+#if 0
 void rplidar::startScan(bool express) {
     uint8_t cmd[2];
 
@@ -303,6 +307,50 @@ void rplidar::startScan(bool express) {
         DEBUG_PRINT("Express scan gestart\n");
     else
         DEBUG_PRINT("Standaard scan gestart\n");
+}
+#endif
+
+void rplidar::startScan(bool express, uint32_t timeout_ms) {
+    uint8_t cmd[2] = {
+        RPLIDAR_CMD_SYNC_BYTE,
+        express ? RPLIDAR_CMD_EXPRESS_SCAN : RPLIDAR_CMD_SCAN
+    };
+
+    // Clear any old data
+    LIDARSerial->flush();
+
+    // Verstuur scan commando
+    if (LIDARSerial->write(cmd, 2) != 2) {
+        DEBUG_PRINT("Fout: kon scan commando niet verzenden\n");
+        return;
+    }
+
+    if (!express) {
+        // Voor standaard SCAN, wacht op descriptor
+        uint32_t startTime = millis();
+        while (LIDARSerial->available() < 7) {
+            if (millis() - startTime > timeout_ms) {
+                DEBUG_PRINT("Timeout: geen SCAN descriptor ontvangen\n");
+                return;
+            }
+        }
+
+        uint8_t descriptor[7];
+        if (LIDARSerial->readBytes(descriptor, 7) != 7) {
+            DEBUG_PRINT("Fout bij lezen descriptor\n");
+            return;
+        }
+
+        // Optioneel: descriptor check (kan je aanpassen)
+        if(memcmp(descriptor, RPLIDAR_START_SCAN_DESCRIPTOR, 7) != 0) 
+            DEBUG_PRINT("Descriptor mismatch\n");
+    }
+
+    if (express) {
+        DEBUG_PRINT("Express scan gestart\n");
+    } else {
+        DEBUG_PRINT("Standaard scan gestart\n");
+    }
 }
 
 // Stop scanning
@@ -329,6 +377,7 @@ rcl_ret_t rplidar::publish() {
 #endif
 
 // Read one 5-byte scan measurement packet
+#if 0
 bool rplidar::getScanValue(RplidarValue* value, uint32_t timeout_ms) {
     uint32_t startTime = millis();
 
@@ -358,6 +407,36 @@ bool rplidar::getScanValue(RplidarValue* value, uint32_t timeout_ms) {
     value->angle = angle;
     value->distance = distance;
     value->quality = 0;
+
+    return true;
+}
+#endif
+
+bool rplidar::getScanValue(RplidarMeasurement* value, uint32_t timeout_ms) {
+    uint32_t startTime = millis();
+
+    // Wacht tot minstens 5 bytes beschikbaar zijn
+    while (LIDARSerial->available() < 5) {
+        if (millis() - startTime > timeout_ms) return false;
+    }
+
+    uint8_t data[5];
+    if (LIDARSerial->readBytes(data, 5) != 5) return false;
+
+    // --- Decodeer packet ---
+    uint8_t byte0 = data[0];
+    value->startFlag = byte0 & 0x1;             // S-bit
+    bool invertedFlag = (byte0 >> 1) & 0x1;    // !S
+    uint8_t checkBit = (byte0 >> 2) & 0x1;     // C-bit
+    value->quality = byte0 >> 2;               // kwaliteit (bovenste bits)
+
+    // hoek in Q6 (1/64 graden)
+    uint16_t angleQ6 = ((data[1] >> 1) | ((uint16_t)data[2] << 7));
+    value->angle = angleQ6 / 64.0f;
+
+    // afstand in Q2 (1/4 mm)
+    uint16_t distanceQ2 = data[3] | ((uint16_t)data[4] << 8);
+    value->distance = distanceQ2 / 4.0f;
 
     return true;
 }

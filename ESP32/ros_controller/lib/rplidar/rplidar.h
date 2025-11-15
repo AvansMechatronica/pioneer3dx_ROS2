@@ -102,6 +102,12 @@ static const uint8_t RPLIDAR_GET_LIDAR_CONF_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x00, 0x00, 0x00, 0x00, 0x20
 };
 
+static const uint8_t RPLIDAR_START_SCAN_DESCRIPTOR[7] = {
+    RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x05, 0x00, 0x00, 0x40, 0x81
+};
+
+
+
 // =============================================================
 // Data structures for responses
 // =============================================================
@@ -127,10 +133,11 @@ struct RplidarSampleRate {
 
 // Individual scan point
 typedef struct {
-    float distance; // in cm
-    float angle;    // in degrees
-    uint8_t quality; // quality flag
-} RplidarValue;
+    float angle;       // graden [0-360)
+    float distance;    // mm
+    uint8_t quality;   // reflectie kwaliteit
+    bool startFlag;    // S-bit: begin van nieuwe 360° scan
+} RplidarMeasurement;
 
 #define MAX_LIDAR_CONF_PAYLOAD 32
 
@@ -177,13 +184,13 @@ public:
     bool getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms = 100);
 
     // Starts scanning (normal or express)
-    void startScan(bool express);
+    void startScan(bool express, uint32_t timeout_ms = 100);
 
     // Reads the scan rate
     bool getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms = 100);
 
     // Reads 1 scan point
-    bool getScanValue(RplidarValue* value, uint32_t timeout_ms = 100);
+    bool getScanValue(RplidarMeasurement* value, uint32_t timeout_ms = 100);
 
     // Retrieves configuration block
     bool getLidarConf(uint8_t type, const uint8_t* requestPayload,
