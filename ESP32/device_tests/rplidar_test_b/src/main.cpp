@@ -1,20 +1,14 @@
 #include <Arduino.h>
 #include "pins.h"
+#include "rplidar.h"
 
-// --- Pinnen ---
 
 
-HardwareSerial LIDARSerial(1); // UART2
+rplidar* lidar;
 
 // Motor PWM snelheid (0-100%)
-int motorSpeedPercent = 100;
+int motorSpeedPercent = 50;
 
-// --- Functieprototypes ---
-void getDeviceInfo();
-void getDeviceHealth();
-void startScan(bool express);
-void stopScan();
-void setupMotorPWM(int percent);
 
 // ------------------- Setup -------------------
 void setup() {
@@ -22,94 +16,59 @@ void setup() {
   delay(500);
   Serial.println("RPLIDAR A1M8 - Setup gestart");
 
-  // Motor aansturen
-  pinMode(RPLIDAR_MOTOR_PIN, OUTPUT);
-  setupMotorPWM(motorSpeedPercent);
 
-  // UART2 starten voor LIDAR
-  LIDARSerial.begin(115200, SERIAL_8N1, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN);
+  lidar = new rplidar( RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN );
+
+  lidar->setupMotorPWM(motorSpeedPercent);
   delay(1000);
 
   // Device info en health uitlezen
-  getDeviceInfo();
-  getDeviceHealth();
+  RplidarInfo info;
+  if(lidar->getDeviceInfo(&info)){
+    Serial.println("Device info succesvol uitgelezen.");
+    Serial.printf("Model: %u\n", info.model);
+    Serial.printf("Firmware: %u.%u\n", info.firmware_major, info.firmware_minor);
+    Serial.printf("Hardware: %u\n", info.hardware);
+
+    Serial.print("Serial: ");
+    for (int i = 15; i >= 0; i--)   // reverse print
+        Serial.printf("%02X", info.serial[i]);
+    Serial.println();
+  } else {
+    Serial.println("Fout bij het uitlezen van device info.");
+    }
+
+  RplidarHealth health;
+
+  if(lidar->getDeviceHealth(&health)) {
+    Serial.println("Device health succesvol uitgelezen.");
+    Serial.printf("Status: %u\n", health.status);
+    Serial.printf("Error code: %u\n", health.error_code);
+  } else {
+    Serial.println("Fout bij het uitlezen van device health.");
+  } 
+
+  RplidarSampleRate sampleRate;
+  if(lidar->getSampleRate(&sampleRate)) {
+    Serial.println("Sample rate succesvol uitgelezen.");
+    Serial.printf("Standard scan: %u us\n", sampleRate.standardScan_us);
+    Serial.printf("Express scan: %u us\n", sampleRate.expressScan_us);
+  } else {
+    Serial.println("Fout bij het uitlezen van sample rate.");
+  }
 
   // Start scan (false = standaard scan, true = express scan)
-  startScan(false);
+  lidar->startScan(false);
 }
 
+RplidarValue scanValue;
 // ------------------- Loop -------------------
 void loop() {
 #if 1
-  // Lees data van LIDAR (5-byte frames voor standaard scan)
-  if (LIDARSerial.available() >= 5) {
-    uint8_t data[5];
-    LIDARSerial.readBytes(data, 5);
-
-    // Decodeer standaard scan frame
-    bool startFlag = data[0] & 0x01;
-    bool invertedFlag = (data[0] >> 1) & 0x01;
-    uint16_t angleQ6 = ((data[1] >> 1) | ((uint16_t)data[2] << 7));
-    float angle = angleQ6 / 64.0;
-    uint16_t distanceQ2 = (data[3] | (data[4] << 8));
-    float distance = distanceQ2 / 4.0;
-
-    if (distance > 0 && distance < 6000) { // 6 meter max
-      Serial.printf("Hoek: %6.2f°  |  Afstand: %6.1f mm\n", angle, distance);
-    }
+  if(lidar->getScanValue(&scanValue, 100)) {
+    Serial.printf("Hoek: %6.2f°  |  Afstand: %6.1f mm\n", scanValue.angle, scanValue.distance);
   }
-#else
-  delay(100);
 #endif
-
+  delay(10);
 }
 
-// ------------------- Functies -------------------
-
-void setupMotorPWM(int percent) {
-  if (percent < 0) percent = 0;
-  if (percent > 100) percent = 100;
-  // PWM via analogWrite (0-255)
-  analogWrite(RPLIDAR_MOTOR_PIN, map(percent, 0, 100, 0, 255));
-  Serial.printf("Motor PWM ingesteld op %d%%\n", percent);
-}
-
-void getDeviceInfo() {
-  byte cmd[2] = {0xA5, 0x50};
-  LIDARSerial.write(cmd, 2);
-  Serial.println("Device info opgevraagd");
-  delay(100);
-  while (LIDARSerial.available()) {
-    Serial.write(LIDARSerial.read()); // raw bytes
-  }
-  Serial.println();
-}
-
-void getDeviceHealth() {
-  byte cmd[2] = {0xA5, 0x52};
-  LIDARSerial.write(cmd, 2);
-  Serial.println("Device health opgevraagd");
-  delay(100);
-  while (LIDARSerial.available()) {
-    Serial.write(LIDARSerial.read());
-  }
-  Serial.println();
-}
-
-void startScan(bool express) {
-  if (express) {
-    byte expressScan[2] = {0xA5, 0xF0};
-    LIDARSerial.write(expressScan, 2);
-    Serial.println("Express scan gestart");
-  } else {
-    byte startScan[2] = {0xA5, 0x20};
-    LIDARSerial.write(startScan, 2);
-    Serial.println("Standaard scan gestart");
-  }
-}
-
-void stopScan() {
-  byte stopScan[2] = {0xA5, 0x25};
-  LIDARSerial.write(stopScan, 2);
-  Serial.println("Scan gestopt");
-}

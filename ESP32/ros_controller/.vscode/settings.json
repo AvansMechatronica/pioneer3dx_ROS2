@@ -3,5 +3,6 @@
     "array": "cpp",
     "string": "cpp",
     "string_view": "cpp"
-  }
+  },
+  "cmake.sourceDirectory": "/home/gerard/pioneer_ws/src/pioneer3dx_ROS2/ESP32/ros_controller/.pio/libdeps/eps32-upesy_wroom/Adafruit GFX Library"
 }

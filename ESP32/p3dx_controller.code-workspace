@@ -21,7 +21,8 @@
 	],
 	"settings": {
 		"files.associations": {
-			"cmath": "cpp"
+			"cmath": "cpp",
+			"*.xxx": "cpp"
 		}
 	}
 }

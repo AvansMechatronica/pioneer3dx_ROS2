@@ -31,6 +31,7 @@
 #include <Adafruit_ST7735.h> // Hardware-specific library
 //#include <SPI.h>
 #include "tft_printf.h"
+#include "rplidar.h"
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
 
@@ -110,11 +111,13 @@ Odometry odometry;
 
 
 //creating objects for right wheel and left wheel
-MotorController leftWheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
-MotorController rightWheel(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB, &encodervalue_r, WHEELS_RADIUS);
-
+#if 1
+MotorController *leftWheel;//(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
+MotorController *rightWheel;//(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB, &encodervalue_r, WHEELS_RADIUS);
+#endif
 Adafruit_ST7735 *tft;
 
+rplidar *lidar;
 
 #define RCCHECK(fn) \
   { \
@@ -144,8 +147,8 @@ void cmd_vel_subscription_callback(const void* msgin) {
   if(error_msg.data == false){
     if(!motors_enabled){
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
-      leftWheel.enable();
-      rightWheel.enable();
+      leftWheel->enable();
+      rightWheel->enable();
       motors_enabled = true;
       tft_printf(ST77XX_MAGENTA, "Motors Enabled\n");
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
@@ -205,8 +208,8 @@ void batteryPublisher(){
 }
 
 void jointstatePublisher(){
-  double current_rpm_l = leftWheel.getVelocity();
-  double current_rpm_r = rightWheel.getVelocity();
+  double current_rpm_l = leftWheel->getVelocity();
+  double current_rpm_r = rightWheel->getVelocity();
 
   double pos_left = encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI));
   double pos_right = encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI));
@@ -238,7 +241,7 @@ void odomPublisher() {
   struct timespec time_stamp = getTime();
   odom_msg.header.stamp.sec = time_stamp.tv_sec;
   odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+//  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
 }
 
 #if defined(HANDLE_BUMPERS)
@@ -259,6 +262,7 @@ void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 
   batteryPublisher();
   errorPublisher();
+//  lidar->publish();
 
 #if defined(HANDLE_BUMPERS)
   bumpersPunblisher();
@@ -332,8 +336,8 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
       tft_printf(ST77XX_MAGENTA, "Motor Stop\nNo cmd_vel\nReceived\n");
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
       motors_enabled = false;
-      leftWheel.disable();
-      rightWheel.disable();
+      leftWheel->disable();
+      rightWheel->disable();
     }  
   }
   //linear velocity and angular velocity send cmd_vel topic
@@ -344,21 +348,21 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   float vR = (linearVelocity + ((WHEELS_Y_DISTANCE/2.0) * angularVelocity));
 
   //pid controlled is used for generating the pwm signal
-  float actuating_signal_LW = leftWheel.pid(-vL);
-  float actuating_signal_RW = rightWheel.pid(vR);
+  float actuating_signal_LW = leftWheel->pid(-vL);
+  float actuating_signal_RW = rightWheel->pid(vR);
   if(display_interval_counter % 10 == 0 && motors_enabled){
     tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
   }
   display_interval_counter ++;
 
-  rightWheel.moveBase(actuating_signal_RW);
-  leftWheel.moveBase(actuating_signal_LW);
+  rightWheel->moveBase(actuating_signal_RW);
+  leftWheel->moveBase(actuating_signal_LW);
 
 
   //odometry
   //current wheel rpm is calculated
-  float currentRpmL = leftWheel.getVelocity();
-  float currentRpmR = rightWheel.getVelocity();
+  float currentRpmL = leftWheel->getVelocity();
+  float currentRpmR = rightWheel->getVelocity();
   float average_rps_x = ((float)(currentRpmL + currentRpmR) / 2) / 60.0;  // RPM
   float linear_x = average_rps_x * WHEELS_CIRCUMFERENCE;                  // m/s
   float average_rps_a = ((float)(-currentRpmL + currentRpmR) / 2) / 60.0;
@@ -377,7 +381,7 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
 
 //interrupt function for left wheel encoder.
 void updateEncoderL() {
-  if (digitalRead(leftWheel.EncoderPinA) == digitalRead(leftWheel.EncoderPinB))
+  if (digitalRead(leftWheel->EncoderPinA) == digitalRead(leftWheel->EncoderPinB))
     encodervalue_l--;
   else
     encodervalue_l++;
@@ -385,7 +389,7 @@ void updateEncoderL() {
 
 //interrupt function for right wheel encoder
 void updateEncoderR() {
-  if (digitalRead(rightWheel.EncoderPinA) == digitalRead(rightWheel.EncoderPinB))
+  if (digitalRead(rightWheel->EncoderPinA) == digitalRead(rightWheel->EncoderPinB))
     encodervalue_r--;
   else
     encodervalue_r++;
@@ -478,29 +482,40 @@ char* convertToCamelCase(const char *input) {
   String wifiPass = WIFI_PASSWORD;
 #endif
 
+
+
 void setup() {
   // Configure serial transport
   Serial.begin(115200);
+  delay(500);
+  Serial.println("RPLIDAR A1M8 - Setup gestart");
 
+
+  #if 0
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
+  #endif
 
   init_display();
 
   tft_printf(ST77XX_MAGENTA, "Pioneer 3DX\nController\nStarted\n");
+  #if 1
+
+  leftWheel = new MotorController(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
+  rightWheel = new MotorController(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB, &encodervalue_r, WHEELS_RADIUS);
+
 
   //initializing the pid constants
-  leftWheel.setPIDvalues(KP_L, KI_L, KD_L);
-  rightWheel.setPIDvalues(KP_R, KI_R, KD_R);
+  leftWheel->setPIDvalues(KP_L, KI_L, KD_L);
+  rightWheel->setPIDvalues(KP_R, KI_R, KD_R);
 
   //initializing interrupt functions for counting the encoder tick values
-  attachInterrupt(digitalPinToInterrupt(leftWheel.EncoderPinB), updateEncoderL, RISING);
-  attachInterrupt(digitalPinToInterrupt(rightWheel.EncoderPinB), updateEncoderR, RISING);
+//  attachInterrupt(digitalPinToInterrupt(leftWheel->EncoderPinB), updateEncoderL, RISING);
+//  attachInterrupt(digitalPinToInterrupt(rightWheel->EncoderPinB), updateEncoderR, RISING);
 
 
-  //prev_rpm_l = leftWheel.getVelocity();
-  //prev_rpm_r = rightWheel.getVelocity();
-
+  prev_rpm_l = leftWheel->getVelocity();
+  prev_rpm_r = rightWheel->getVelocity();
 #if defined(WIFI)
   WiFi.setHostname("p3dx_controller");
 
@@ -565,8 +580,8 @@ void setup() {
 #endif
 
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
-  leftWheel.disable();
-  rightWheel.disable();
+  leftWheel->disable();
+  rightWheel->disable();
   motors_enabled = false;
 
   delay(2000);
@@ -582,6 +597,9 @@ void setup() {
 
   // create node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
+
+  lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+
 
   // create cmd_vel_subscriber for cmd_vel topic
   RCCHECK(rclc_subscription_init_default(
@@ -664,18 +682,21 @@ void setup() {
   RCCHECK(rclc_executor_init(&executor, &support.context, 9, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+//  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
-  RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
+//  RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
+#endif
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   delay(100);
+#if 1
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+#endif
 }
 
