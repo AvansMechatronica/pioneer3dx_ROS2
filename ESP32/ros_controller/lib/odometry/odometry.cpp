@@ -1,82 +1,93 @@
-// Copyright (c) 2021 Juan Miguel Jimeno
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// =============================================================
+// odometry.cpp 
+// =============================================================
+// Author: Gerard Harkema
+// Date: November 2025
+// Description: RPLIDAR interface implementation for ESP32 with micro-ROS
+// License: CC BY-NC-SA 4.0
+// Note: Comments added for clarity and explanation.
 
 #include "odometry.h"
 
-Odometry::Odometry():
+// Constructor initializes odometry state and sets up the ROS2 publisher
+Odometry::Odometry(const rcl_node_t *node):
     x_pos_(0.0),
     y_pos_(0.0),
     heading_(0.0)
 {
-    odom_msg_.header.frame_id = micro_ros_string_utilities_set(odom_msg_.header.frame_id, "odom");
-    odom_msg_.child_frame_id = micro_ros_string_utilities_set(odom_msg_.child_frame_id, "p3dx_base");
+    // Create the odometry publisher (micro-ROS)
+    rclc_publisher_init_default(
+        &odom_publisher,
+        node,
+        ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
+        "odom/unfiltered");
+
+    // Set frame identifiers
+    odom_msg.header.frame_id = micro_ros_string_utilities_set(odom_msg.header.frame_id, "odom");
+    odom_msg.child_frame_id = micro_ros_string_utilities_set(odom_msg.child_frame_id, "p3dx_base");
 }
 
+// =============================================================
+// Odometry update
+// Computes position and orientation based on velocity inputs
+// =============================================================
 void Odometry::update(float vel_dt, float linear_vel_x, float linear_vel_y, float angular_vel_z)
 {
-    float delta_heading = angular_vel_z * vel_dt; //radians
+    // Change in heading (yaw) in radians
+    float delta_heading = angular_vel_z * vel_dt;
+
+    // Cache cos/sin of current heading
     float cos_h = cos(heading_);
     float sin_h = sin(heading_);
-    float delta_x = (linear_vel_x * cos_h - linear_vel_y * sin_h) * vel_dt; //m
-    float delta_y = (linear_vel_x * sin_h + linear_vel_y * cos_h) * vel_dt; //m
 
-    //calculate current position of the robot
+    // Compute robot-relative motion transformed to world frame
+    float delta_x = (linear_vel_x * cos_h - linear_vel_y * sin_h) * vel_dt;
+    float delta_y = (linear_vel_x * sin_h + linear_vel_y * cos_h) * vel_dt;
+
+    // Integrate position
     x_pos_ += delta_x;
     y_pos_ += delta_y;
     heading_ += delta_heading;
 
-    //calculate robot's heading in quaternion angle
-    //ROS has a function to calculate yaw in quaternion angle
+    // Convert Euler heading to quaternion
     float q[4];
     euler_to_quat(0, 0, heading_, q);
 
-    //robot's position in x,y, and z
-    odom_msg_.pose.pose.position.x = x_pos_;
-    odom_msg_.pose.pose.position.y = y_pos_;
-    odom_msg_.pose.pose.position.z = 0.0;
+    // Fill pose fields
+    odom_msg.pose.pose.position.x = x_pos_;
+    odom_msg.pose.pose.position.y = y_pos_;
+    odom_msg.pose.pose.position.z = 0.0; // Robot stays on ground
 
-    //robot's heading in quaternion
-    odom_msg_.pose.pose.orientation.x = (double) q[1];
-    odom_msg_.pose.pose.orientation.y = (double) q[2];
-    odom_msg_.pose.pose.orientation.z = (double) q[3];
-    odom_msg_.pose.pose.orientation.w = (double) q[0];
+    // Orientation (quaternion)
+    odom_msg.pose.pose.orientation.x = (double) q[1];
+    odom_msg.pose.pose.orientation.y = (double) q[2];
+    odom_msg.pose.pose.orientation.z = (double) q[3];
+    odom_msg.pose.pose.orientation.w = (double) q[0];
 
-    odom_msg_.pose.covariance[0] = 0.001;
-    odom_msg_.pose.covariance[7] = 0.001;
-    odom_msg_.pose.covariance[35] = 0.001;
+    // Pose covariance (small uncertainty)
+    odom_msg.pose.covariance[0] = 0.001;
+    odom_msg.pose.covariance[7] = 0.001;
+    odom_msg.pose.covariance[35] = 0.001;
 
-    //linear speed from encoders
-    odom_msg_.twist.twist.linear.x = linear_vel_x;
-    odom_msg_.twist.twist.linear.y = linear_vel_y;
-    odom_msg_.twist.twist.linear.z = 0.0;
+    // Twist (velocities)
+    odom_msg.twist.twist.linear.x = linear_vel_x;
+    odom_msg.twist.twist.linear.y = linear_vel_y;
+    odom_msg.twist.twist.linear.z = 0.0;
 
-    //angular speed from encoders
-    odom_msg_.twist.twist.angular.x = 0.0;
-    odom_msg_.twist.twist.angular.y = 0.0;
-    odom_msg_.twist.twist.angular.z = angular_vel_z;
+    odom_msg.twist.twist.angular.x = 0.0;
+    odom_msg.twist.twist.angular.y = 0.0;
+    odom_msg.twist.twist.angular.z = angular_vel_z;
 
-    odom_msg_.twist.covariance[0] = 0.0001;
-    odom_msg_.twist.covariance[7] = 0.0001;
-    odom_msg_.twist.covariance[35] = 0.0001;
+    // Twist covariance
+    odom_msg.twist.covariance[0] = 0.0001;
+    odom_msg.twist.covariance[7] = 0.0001;
+    odom_msg.twist.covariance[35] = 0.0001;
 }
 
-nav_msgs__msg__Odometry Odometry::getData()
-{
-    return odom_msg_;
-} 
-
-const void Odometry::euler_to_quat(float roll, float pitch, float yaw, float* q) 
+// =============================================================
+// Convert Euler angles (roll, pitch, yaw) to quaternion order: [w, x, y, z]
+// =============================================================
+const void Odometry::euler_to_quat(float roll, float pitch, float yaw, float* q)
 {
     float cy = cos(yaw * 0.5);
     float sy = sin(yaw * 0.5);
@@ -85,8 +96,20 @@ const void Odometry::euler_to_quat(float roll, float pitch, float yaw, float* q)
     float cr = cos(roll * 0.5);
     float sr = sin(roll * 0.5);
 
-    q[0] = cy * cp * cr + sy * sp * sr;
-    q[1] = cy * cp * sr - sy * sp * cr;
-    q[2] = sy * cp * sr + cy * sp * cr;
-    q[3] = sy * cp * cr - cy * sp * sr;
+    // Standard quaternion conversion
+    q[0] = cy * cp * cr + sy * sp * sr; // w
+    q[1] = cy * cp * sr - sy * sp * cr; // x
+    q[2] = sy * cp * sr + cy * sp * cr; // y
+    q[3] = sy * cp * cr - cy * sp * sr; // z
+}
+
+// =============================================================
+// Publish odometry message with current timestamp
+// =============================================================
+rcl_ret_t Odometry::publish() {
+    // Timestamp in ROS2 format
+    odom_msg.header.stamp.sec = millis() / 1000;
+    odom_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+
+    return rcl_publish(&odom_publisher, &odom_msg, NULL);
 }

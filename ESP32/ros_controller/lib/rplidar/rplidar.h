@@ -1,3 +1,12 @@
+// Author: Gerard Harkema
+// Date: November 2025
+// Description: RPLIDAR interface implementation for ESP32 with micro-ROS
+// License: CC BY-NC-SA 4.0
+// Note: Comments added for clarity and explanation.
+
+// =============================================================
+// RPLIDAR.h — Fully Commented Version
+// =============================================================
 #ifndef RPLIDAR_H
 #define RPLIDAR_H
 
@@ -8,168 +17,188 @@
 #include <rcl/rcl.h>
 #include <rclc/rclc.h>
 #include <rclc/executor.h>
-#include "rosidl_runtime_c/string_functions.h"  // Header for string assignment functions
+#include "rosidl_runtime_c/string_functions.h"  // For string handling in ROS messages
 #include <micro_ros_utilities/string_utilities.h>
-
 #include <sensor_msgs/msg/laser_scan.h>
 #endif
 
+// Mathematical constant
 constexpr double pi = 3.14159265358979323846;
 
-#define RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN 50 //640  // aantal metingen per scan (bij 0.01 radian increment over 360°)
-#define RPLIDAR_MIN_RANGE_M  0.16    // minimale afstand in meters
-#define RPLIDAR_MAX_RANGE_M  12.0     // maximale afstand in meters
+// =============================================================
+// LIDAR scan parameters
+// =============================================================
+#define RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN 50 // Number of samples collected per scan
+#define RPLIDAR_MIN_RANGE_M  0.16    // Minimum valid reading in meters
+#define RPLIDAR_MAX_RANGE_M  12.0    // Maximum valid reading in meters
 
+// =============================================================
+// Command bytes used by the RPLIDAR protocol
+// =============================================================
+#define RPLIDAR_CMD_SYNC_BYTE       0xA5
+#define RPLIDAR_CMD_SYNC_BYTE2      0x5A
 
-// --- Algemene protocol bytes ---
-#define RPLIDAR_CMD_SYNC_BYTE                0xA5
-#define RPLIDAR_CMD_SYNC_BYTE2               0x5A    // gebruikt voor payload commands
+// Basic commands
+#define RPLIDAR_CMD_GET_INFO        0x50
+#define RPLIDAR_CMD_GET_HEALTH      0x52
+#define RPLIDAR_CMD_GET_SAMPLERATE  0x59
 
-// --- Basis informatie commando's ---
-#define RPLIDAR_CMD_GET_INFO                 0x50
-#define RPLIDAR_CMD_GET_HEALTH               0x52
-#define RPLIDAR_CMD_GET_SAMPLERATE           0x59
+// Scan control commands
+#define RPLIDAR_CMD_SCAN            0x20
+#define RPLIDAR_CMD_FORCE_SCAN      0x21
+#define RPLIDAR_CMD_STOP            0x25
 
-// --- Scan control ---
-#define RPLIDAR_CMD_SCAN                     0x20
-#define RPLIDAR_CMD_FORCE_SCAN               0x21
-#define RPLIDAR_CMD_STOP                     0x25
+// Express/HQ scan (used by A2/A3 models)
+#define RPLIDAR_CMD_EXPRESS_SCAN    0x82
+#define RPLIDAR_CMD_HQ_SCAN         0x83
 
-// --- Express scan modes ---
-#define RPLIDAR_CMD_EXPRESS_SCAN             0x82    // A2/A3
-#define RPLIDAR_CMD_HQ_SCAN                  0x83    // HQ-mode
+// Motor PWM control
+#define RPLIDAR_CMD_SET_MOTOR_PWM   0xF0
+#define RPLIDAR_CMD_GET_ACC_BOARD_FLAG 0xFF
 
-// --- Motor control (via driver IC) ---
-#define RPLIDAR_CMD_SET_MOTOR_PWM            0xF0
-#define RPLIDAR_CMD_GET_ACC_BOARD_FLAG       0xFF
+// Configuration commands
+#define RPLIDAR_CMD_GET_LIDAR_CONF  0x84
+#define RPLIDAR_CMD_SET_LIDAR_CONF  0x85
 
-// --- Configuration interface (spec >= 1.29) ---
-#define RPLIDAR_CMD_GET_LIDAR_CONF           0x84
-#define RPLIDAR_CMD_SET_LIDAR_CONF           0x85   // (niet voor alle modellen)
+// Typical debug/internal
+#define RPLIDAR_CMD_SCAN_EXPRESS    0x82
+#define RPLIDAR_CMD_GET_COUNTER     0xC0
+#define RPLIDAR_CMD_RESET           0x40
 
-// --- Dual / Ultra sampling modes ---
-#define RPLIDAR_CMD_SCAN_EXPRESS              0x82  // zelfde als EXPRESS_SCAN
-#define RPLIDAR_CMD_GET_COUNTER               0xC0  // interne debug
-#define RPLIDAR_CMD_RESET                     0x40
+#define RPLIDAR_PAYLOAD_FLAG_HAS_PAYLOAD 0x80
 
-// --- Payload specificaties ---
-#define RPLIDAR_PAYLOAD_FLAG_HAS_PAYLOAD     0x80
-
-
-// ========================================================
-//  RPLIDAR RESPONSE DESCRIPTORS (7 bytes each)
-// ========================================================
-
-// --- GET_INFO (20 bytes payload, single response) ---
+// =============================================================
+// Expected response descriptors
+// =============================================================
 static const uint8_t RPLIDAR_INFO_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x14, 0x00, 0x00, 0x00, 0x04
 };
 
-// --- GET_HEALTH (3 bytes payload, single response) ---
 static const uint8_t RPLIDAR_HEALTH_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x03, 0x00, 0x00, 0x00, 0x06
 };
 
-// --- SCAN (5 bytes per packet, continuous) ---
 static const uint8_t RPLIDAR_SCAN_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x05, 0x00, 0x00, 0x00, 0x00
 };
 
-// --- FORCE_SCAN (same as SCAN) ---
 static const uint8_t RPLIDAR_FORCE_SCAN_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x05, 0x00, 0x00, 0x00, 0x00
 };
 
-// --- EXPRESS_SCAN (84 bytes per packet, continuous) ---
 static const uint8_t RPLIDAR_EXPRESS_SCAN_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x54, 0x00, 0x00, 0x00, 0x00
 };
 
-// --- HQ_SCAN (96 bytes per packet, continuous) ---
 static const uint8_t RPLIDAR_HQ_SCAN_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x60, 0x00, 0x00, 0x00, 0x00
 };
 
-// --- GET_SAMPLERATE (4 bytes payload, single response) ---
 static const uint8_t RPLIDAR_SAMPLERATE_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x04, 0x00, 0x00, 0x00, 0x04
 };
 
-// --- GET_LIDAR_CONF (variable length, single with payload) ---
 static const uint8_t RPLIDAR_GET_LIDAR_CONF_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x00, 0x00, 0x00, 0x00, 0x20
 };
 
-
-
-
-// Health struct
+// =============================================================
+// Data structures for responses
+// =============================================================
 typedef struct {
-    uint8_t status;      // 0 = Good, 1 = Warning, 2 = Error
-    uint16_t error_code; // LSB first
+    uint8_t status;      // 0=Good, 1=Warning, 2=Error
+    uint16_t error_code; // Detailed error information
 } RplidarHealth;
 
-// Struct die alle device info bevat
+// General information about the LIDAR
 typedef struct {
-    uint8_t model;
-    uint8_t firmware_major;
-    uint8_t firmware_minor;
-    uint8_t hardware;
-    uint8_t serial[16];   // 128-bit serial
+    uint8_t model;            // Model ID
+    uint8_t firmware_major;   // Firmware major version
+    uint8_t firmware_minor;   // Firmware minor version
+    uint8_t hardware;         // Hardware revision
+    uint8_t serial[16];       // 128-bit unique serial number
 } RplidarInfo;
 
+// Measured sample rates
 struct RplidarSampleRate {
-    uint16_t standardScan_us;  // tijd per meting in microseconden
-    uint16_t expressScan_us;   // tijd per meting in express scan mode
+    uint16_t standardScan_us;
+    uint16_t expressScan_us;
 };
 
-typedef struct{
+// Individual scan point
+typedef struct {
     float distance; // in cm
     float angle;    // in degrees
-    uint8_t quality;
+    uint8_t quality; // quality flag
 } RplidarValue;
 
-#define MAX_LIDAR_CONF_PAYLOAD 32  // maximaal payload aantal bytes
+#define MAX_LIDAR_CONF_PAYLOAD 32
 
+// Configuration response structure
 typedef struct {
     uint8_t type;
     uint8_t payload[MAX_LIDAR_CONF_PAYLOAD];
     uint8_t length;
-}RplidarConf;
+} RplidarConf;
 
-
+// =============================================================
+// RPLIDAR class definition
+// =============================================================
 class rplidar
 {
 private:
-    /* data */
-    HardwareSerial *LIDARSerial; // UART
-    uint8_t motor_pin;
+    HardwareSerial *LIDARSerial; // Pointer to UART interface
+    uint8_t motor_pin;            // Motor PWM pin
+
 #ifndef TESTING
-    rcl_publisher_t laser_pub;
-    sensor_msgs__msg__LaserScan scan_msg;
+    rcl_publisher_t laser_pub;    // micro-ROS publisher
+    sensor_msgs__msg__LaserScan scan_msg; // ROS LaserScan message buffer
 #endif
 
 public:
 #ifndef TESTING
-    rplidar(const rcl_node_t *node, uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pin, uint8_t motor_pin);
+    rplidar(const rcl_node_t *node, uint8_t uart_channel, uint8_t lidar_tx_pin,
+            uint8_t lidar_rx_pin, uint8_t motor_pin);
 #else
-    rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pin, uint8_t motor_pin);
+    rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin,
+            uint8_t lidar_rx_pin, uint8_t motor_pin);
 #endif
-    void setupMotorPWM(int percent);
-    bool reset();
-    bool getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms = 100);
-    bool getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms = 100);
-    void startScan(bool express);
-    bool getSampleRate(RplidarSampleRate* rate,uint32_t timeout_ms = 100);
-    bool getScanValue(RplidarValue* value, uint32_t timeout_ms = 100);
-    bool getLidarConf(uint8_t type, const uint8_t* requestPayload, uint8_t requestLength, RplidarConf* conf, uint32_t timeout_ms = 100);
 
+    // Control motor speed (PWM percent)
+    void setupMotorPWM(int percent);
+
+    // Sends RESET command
+    bool reset();
+
+    // Queries device info
+    bool getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms = 100);
+
+    // Queries device health
+    bool getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms = 100);
+
+    // Starts scanning (normal or express)
+    void startScan(bool express);
+
+    // Reads the scan rate
+    bool getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms = 100);
+
+    // Reads 1 scan point
+    bool getScanValue(RplidarValue* value, uint32_t timeout_ms = 100);
+
+    // Retrieves configuration block
+    bool getLidarConf(uint8_t type, const uint8_t* requestPayload,
+                      uint8_t requestLength, RplidarConf* conf,
+                      uint32_t timeout_ms = 100);
+
+    // Stops scan
     void stopScan();
+
 #ifndef TESTING
+    // Publishes LaserScan message
     rcl_ret_t publish();
 #endif
+
     ~rplidar();
 };
 
-
-#endif
+#endif // RPLIDAR_H

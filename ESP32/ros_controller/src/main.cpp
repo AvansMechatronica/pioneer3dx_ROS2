@@ -11,10 +11,9 @@
 #include <std_msgs/msg/bool.h>
 #include <std_msgs/msg/float32.h>
 #include <odometry.h>
-#include <nav_msgs/msg/odometry.h>
-#include <geometry_msgs/msg/twist.h>
-#include <geometry_msgs/msg/vector3.h>
-#include <sensor_msgs/msg/joint_state.h>
+#include <jointstate.h>
+//#include <geometry_msgs/msg/twist.h>
+//#include <geometry_msgs/msg/vector3.h>
 
 #if defined(HANDLE_BUMPERS)
 #include <p3dx_interfaces/msg/bumpers.h>
@@ -74,19 +73,17 @@ rcl_allocator_t allocator;
 rclc_support_t support;
 rcl_node_t node;
 
-rcl_publisher_t odom_publisher;
-rcl_publisher_t joint_state_publisher;
+
 rcl_publisher_t error_publisher;
 rcl_publisher_t battery_voltage_publisher;
 #if defined(HANDLE_BUMPERS)
 rcl_publisher_t bumpers_publisher;
 #endif
 
-nav_msgs__msg__Odometry odom_msg;
+
 std_msgs__msg__Bool error_msg;
 std_msgs__msg__Bool reset_msg;
 std_msgs__msg__Float32 battery_voltage_msg;
-sensor_msgs__msg__JointState joint_state_msg;
 
 #if defined(HANDLE_BUMPERS)
 p3dx_interfaces__msg__Bumpers  bumper_msg;
@@ -107,7 +104,10 @@ rcl_timer_t highSpeedPublisherTimer;
 unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
 unsigned long prev_odom_update = 0;
-Odometry odometry;
+
+Odometry *odometry;
+Jointstate *jointstate;
+
 
 
 //creating objects for right wheel and left wheel
@@ -205,6 +205,7 @@ void batteryPublisher(){
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
 }
 
+#if 0
 void jointstatePublisher(){
   double current_rpm_l = leftWheel->getVelocity();
   double current_rpm_r = rightWheel->getVelocity();
@@ -227,17 +228,9 @@ void jointstatePublisher(){
   RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
 
 }
-
+#endif
 //function which publishes wheel odometry.
-void odomPublisher() {
 
-  // odometry publish
-  odom_msg = odometry.getData();
-  struct timespec time_stamp = getTime();
-  odom_msg.header.stamp.sec = time_stamp.tv_sec;
-  odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
-}
 
 #if defined(HANDLE_BUMPERS)
 void bumpersPunblisher()
@@ -265,56 +258,16 @@ void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 }
 
 void highSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-  odomPublisher();
-  jointstatePublisher();
+  RCSOFTCHECK(odometry->publish());
+  jointstate->update(leftWheel->getVelocity(), 
+                     rightWheel->getVelocity(), 
+                     encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
+                     encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
+  RCSOFTCHECK(jointstate->publish());
 }
 
 
 
-void setup_joint_state_msg()
-{
-    // 1. Init JointState message
-    sensor_msgs__msg__JointState__init(&joint_state_msg);
-
-    // 2. Init and set header.frame_id safely
-    rosidl_runtime_c__String__init(&joint_state_msg.header.frame_id);
-    joint_state_msg.header.frame_id = micro_ros_string_utilities_set(joint_state_msg.header.frame_id, "p3dx_base");
-
-    // 3. Initialize name sequence with 3 joints
-    rosidl_runtime_c__String__Sequence__init(&joint_state_msg.name, 3);
-
-    rosidl_runtime_c__String__assign(&joint_state_msg.name.data[0], "left_wheel_joint");
-    rosidl_runtime_c__String__assign(&joint_state_msg.name.data[1], "right_wheel_joint");
-    rosidl_runtime_c__String__assign(&joint_state_msg.name.data[2], "caster_swivel_hubcap_joint");
-
-    // 4. Initialize position, velocity, effort arrays safely
-    joint_state_msg.position.size = 3;
-    joint_state_msg.position.capacity = 3;
-    joint_state_msg.position.data = (double*)malloc(3 * sizeof(double));
-
-    joint_state_msg.velocity.size = 3;
-    joint_state_msg.velocity.capacity = 3;
-    joint_state_msg.velocity.data = (double*)malloc(3 * sizeof(double));
-
-    joint_state_msg.effort.size = 3;
-    joint_state_msg.effort.capacity = 3;
-    joint_state_msg.effort.data = (double*)malloc(3 * sizeof(double));
-
-    // Check malloc success
-    if (!joint_state_msg.position.data || !joint_state_msg.velocity.data || !joint_state_msg.effort.data) {
-        // handle allocation failure
-        // (for example, print error and return)
-        //Serial.printf("Error allocating memory for joint_state_msg arrays\n");
-        return;
-    }
-
-    // 5. Initialize all values to 0
-    for (int i = 0; i < 3; i++) {
-        joint_state_msg.position.data[i] = 0.0;
-        joint_state_msg.velocity.data[i] = 0.0;
-        joint_state_msg.effort.data[i] = 0.0;
-    }
-}
 
 //counter for controlling the display update rate
 int display_interval_counter=0;
@@ -366,12 +319,11 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   unsigned long now = millis();
   float vel_dt = (now - prev_odom_update) / 1000.0;
   prev_odom_update = now;
-  odometry.update(
+  odometry->update(
     vel_dt,
     linear_x,
     linear_y,
     angular_z);
-//  publishData();
 }
 
 //interrupt function for left wheel encoder.
@@ -591,6 +543,8 @@ void setup() {
 
   lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   lidar->setupMotorPWM(50);
+  odometry = new Odometry(&node);
+  jointstate = new Jointstate(&node);
 
 
   // create cmd_vel_subscriber for cmd_vel topic
@@ -608,12 +562,7 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     "reset"));
   
-  //create a odometry publisher
-  RCCHECK(rclc_publisher_init_default(
-    &odom_publisher,
-    &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(nav_msgs, msg, Odometry),
-    "odom/unfiltered"));
+
 
   //create a bumper publisher
 #if defined(HANDLE_BUMPERS)
@@ -638,14 +587,6 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "battery_voltage"));
 
-  // Prepare message memory
-  setup_joint_state_msg();
-    // Create publisher
-  RCCHECK(rclc_publisher_init_default(
-        &joint_state_publisher,
-        &node,
-        ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, JointState),
-        "/joint_states"));
 
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
