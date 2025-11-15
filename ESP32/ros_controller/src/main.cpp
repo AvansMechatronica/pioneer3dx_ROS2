@@ -111,10 +111,8 @@ Odometry odometry;
 
 
 //creating objects for right wheel and left wheel
-#if 1
-MotorController *leftWheel;//(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
-MotorController *rightWheel;//(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB, &encodervalue_r, WHEELS_RADIUS);
-#endif
+MotorController *leftWheel;
+MotorController *rightWheel;
 Adafruit_ST7735 *tft;
 
 rplidar *lidar;
@@ -226,11 +224,8 @@ void jointstatePublisher(){
   joint_state_msg.velocity.data[0] = current_rpm_l;//vel_left;
   joint_state_msg.velocity.data[1] = -current_rpm_r;//vel_right;
   // Publish jointstates
+  RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
 
-// Waarom gaat deze fout !!!
-
-  //RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
-//
 }
 
 //function which publishes wheel odometry.
@@ -241,7 +236,7 @@ void odomPublisher() {
   struct timespec time_stamp = getTime();
   odom_msg.header.stamp.sec = time_stamp.tv_sec;
   odom_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-//  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
+  RCSOFTCHECK(rcl_publish(&odom_publisher, &odom_msg, NULL));
 }
 
 #if defined(HANDLE_BUMPERS)
@@ -262,7 +257,7 @@ void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 
   batteryPublisher();
   errorPublisher();
-//  lidar->publish();
+  RCSOFTCHECK(lidar->publish());
 
 #if defined(HANDLE_BUMPERS)
   bumpersPunblisher();
@@ -283,7 +278,7 @@ void setup_joint_state_msg()
 
     // 2. Init and set header.frame_id safely
     rosidl_runtime_c__String__init(&joint_state_msg.header.frame_id);
-    micro_ros_string_utilities_set(joint_state_msg.header.frame_id, "p3dx_base");
+    joint_state_msg.header.frame_id = micro_ros_string_utilities_set(joint_state_msg.header.frame_id, "p3dx_base");
 
     // 3. Initialize name sequence with 3 joints
     rosidl_runtime_c__String__Sequence__init(&joint_state_msg.name, 3);
@@ -490,16 +485,12 @@ void setup() {
   delay(500);
   Serial.println("RPLIDAR A1M8 - Setup gestart");
 
-
-  #if 0
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
-  #endif
 
   init_display();
 
   tft_printf(ST77XX_MAGENTA, "Pioneer 3DX\nController\nStarted\n");
-  #if 1
 
   leftWheel = new MotorController(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
   rightWheel = new MotorController(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB, &encodervalue_r, WHEELS_RADIUS);
@@ -599,6 +590,7 @@ void setup() {
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+  lidar->setupMotorPWM(50);
 
 
   // create cmd_vel_subscriber for cmd_vel topic
@@ -674,7 +666,7 @@ void setup() {
   RCCHECK(rclc_timer_init_default(
     &highSpeedPublisherTimer,
     &support,
-    RCL_MS_TO_NS(100),
+    RCL_MS_TO_NS(500),
     highSpeedPublisher_timerCallBack));
 
 
@@ -684,19 +676,16 @@ void setup() {
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
 //  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
-//  RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
-#endif
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
   delay(100);
-#if 1
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
-#endif
 }
 

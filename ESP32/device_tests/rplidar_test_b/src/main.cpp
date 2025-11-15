@@ -18,6 +18,7 @@ void setup() {
 
 
   lidar = new rplidar( RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN );
+  lidar->reset();
 
   lidar->setupMotorPWM(motorSpeedPercent);
   delay(1000);
@@ -64,7 +65,7 @@ void setup() {
 RplidarValue scanValue;
 // ------------------- Loop -------------------
 void loop() {
-#if 1
+#if 0
   if(lidar->getScanValue(&scanValue, 100)) {
     Serial.printf("Hoek: %6.2f°  |  Afstand: %6.1f mm\n", scanValue.angle, scanValue.distance);
   }

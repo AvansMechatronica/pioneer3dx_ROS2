@@ -14,6 +14,12 @@
 #include <sensor_msgs/msg/laser_scan.h>
 #endif
 
+constexpr double pi = 3.14159265358979323846;
+
+#define RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN 50 //640  // aantal metingen per scan (bij 0.01 radian increment over 360°)
+#define RPLIDAR_MIN_RANGE_M  0.16    // minimale afstand in meters
+#define RPLIDAR_MAX_RANGE_M  12.0     // maximale afstand in meters
+
 
 // --- Algemene protocol bytes ---
 #define RPLIDAR_CMD_SYNC_BYTE                0xA5
@@ -123,6 +129,15 @@ typedef struct{
     uint8_t quality;
 } RplidarValue;
 
+#define MAX_LIDAR_CONF_PAYLOAD 32  // maximaal payload aantal bytes
+
+typedef struct {
+    uint8_t type;
+    uint8_t payload[MAX_LIDAR_CONF_PAYLOAD];
+    uint8_t length;
+}RplidarConf;
+
+
 class rplidar
 {
 private:
@@ -141,13 +156,18 @@ public:
     rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pin, uint8_t motor_pin);
 #endif
     void setupMotorPWM(int percent);
-    bool getDeviceInfo(RplidarInfo *info);
-    bool getDeviceHealth(RplidarHealth *health);
+    bool reset();
+    bool getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms = 100);
+    bool getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms = 100);
     void startScan(bool express);
-    bool getSampleRate(RplidarSampleRate* rate);
-    bool getScanValue(RplidarValue* value, uint32_t timeout_ms);
+    bool getSampleRate(RplidarSampleRate* rate,uint32_t timeout_ms = 100);
+    bool getScanValue(RplidarValue* value, uint32_t timeout_ms = 100);
+    bool getLidarConf(uint8_t type, const uint8_t* requestPayload, uint8_t requestLength, RplidarConf* conf, uint32_t timeout_ms = 100);
+
     void stopScan();
-    void publish();
+#ifndef TESTING
+    rcl_ret_t publish();
+#endif
     ~rplidar();
 };
 
