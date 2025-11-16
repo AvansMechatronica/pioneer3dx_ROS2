@@ -28,7 +28,7 @@ constexpr double pi = 3.14159265358979323846;
 // =============================================================
 // LIDAR scan parameters
 // =============================================================
-#define RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN 50 // Number of samples collected per scan
+#define RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN 720 // Number of samples collected per scan
 #define RPLIDAR_MIN_RANGE_M  0.16    // Minimum valid reading in meters
 #define RPLIDAR_MAX_RANGE_M  12.0    // Maximum valid reading in meters
 
@@ -95,13 +95,14 @@ static const uint8_t RPLIDAR_HQ_SCAN_DESCRIPTOR[7] = {
 };
 
 static const uint8_t RPLIDAR_SAMPLERATE_DESCRIPTOR[7] = {
-    RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x04, 0x00, 0x00, 0x00, 0x04
+    RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x04, 0x00, 0x00, 0x00, 0x15
 };
 
+#if 0
 static const uint8_t RPLIDAR_GET_LIDAR_CONF_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x00, 0x00, 0x00, 0x00, 0x20
 };
-
+#endif
 static const uint8_t RPLIDAR_START_SCAN_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x05, 0x00, 0x00, 0x40, 0x81
 };
@@ -201,9 +202,9 @@ public:
 
     // Stops scan
     void stopScan();
+#ifndef TESTING
     static void scanTaskFunction(void* parameter);
 
-#ifndef TESTING
     // Publishes LaserScan message
     rcl_ret_t publish();
 #endif

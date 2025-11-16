@@ -12,8 +12,7 @@
 #include <std_msgs/msg/float32.h>
 #include <odometry.h>
 #include <jointstate.h>
-//#include <geometry_msgs/msg/twist.h>
-//#include <geometry_msgs/msg/vector3.h>
+#include <rplidar.h>
 
 #if defined(HANDLE_BUMPERS)
 #include <p3dx_interfaces/msg/bumpers.h>
@@ -30,7 +29,6 @@
 #include <Adafruit_ST7735.h> // Hardware-specific library
 //#include <SPI.h>
 #include "tft_printf.h"
-#include "rplidar.h"
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
 
@@ -107,6 +105,7 @@ unsigned long prev_odom_update = 0;
 
 Odometry *odometry;
 Jointstate *jointstate;
+rplidar *lidar;
 
 
 
@@ -115,7 +114,6 @@ MotorController *leftWheel;
 MotorController *rightWheel;
 Adafruit_ST7735 *tft;
 
-rplidar *lidar;
 
 #define RCCHECK(fn) \
   { \
@@ -205,31 +203,6 @@ void batteryPublisher(){
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
 }
 
-#if 0
-void jointstatePublisher(){
-  double current_rpm_l = leftWheel->getVelocity();
-  double current_rpm_r = rightWheel->getVelocity();
-
-  double pos_left = encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI));
-  double pos_right = encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI));
-  // Update data
-
-  struct timespec time_stamp = getTime();
-  joint_state_msg.header.stamp.sec = time_stamp.tv_sec;
-  joint_state_msg.header.stamp.nanosec = time_stamp.tv_nsec;
-
-  //Serial.printf("Pos L: %.2f, Pos R: %.2f, Vel L: %.2f, Vel R: %.2f\n", pos_left, pos_right, vel_left, vel_right);
-  joint_state_msg.position.data[0] = pos_left;
-  joint_state_msg.position.data[1] = -pos_right;
-
-  joint_state_msg.velocity.data[0] = current_rpm_l;//vel_left;
-  joint_state_msg.velocity.data[1] = -current_rpm_r;//vel_right;
-  // Publish jointstates
-  RCSOFTCHECK(rcl_publish(&joint_state_publisher, &joint_state_msg, NULL));
-
-}
-#endif
-//function which publishes wheel odometry.
 
 
 #if defined(HANDLE_BUMPERS)
@@ -250,7 +223,6 @@ void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 
   batteryPublisher();
   errorPublisher();
-  RCSOFTCHECK(lidar->publish());
 
 #if defined(HANDLE_BUMPERS)
   bumpersPunblisher();
@@ -258,12 +230,14 @@ void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 }
 
 void highSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-  RCSOFTCHECK(odometry->publish());
+//  RCSOFTCHECK(odometry->publish());
   jointstate->update(leftWheel->getVelocity(), 
                      rightWheel->getVelocity(), 
                      encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
                      encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
   RCSOFTCHECK(jointstate->publish());
+  RCSOFTCHECK(lidar->publish());
+
 }
 
 
@@ -306,8 +280,6 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   rightWheel->moveBase(actuating_signal_RW);
   leftWheel->moveBase(actuating_signal_LW);
 
-
-  //odometry
   //current wheel rpm is calculated
   float currentRpmL = leftWheel->getVelocity();
   float currentRpmR = rightWheel->getVelocity();
@@ -319,11 +291,11 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   unsigned long now = millis();
   float vel_dt = (now - prev_odom_update) / 1000.0;
   prev_odom_update = now;
-  odometry->update(
-    vel_dt,
-    linear_x,
-    linear_y,
-    angular_z);
+//  odometry->update(
+//    vel_dt,
+//    linear_x,
+//    linear_y,
+//    angular_z);
 }
 
 //interrupt function for left wheel encoder.
@@ -435,7 +407,7 @@ void setup() {
   // Configure serial transport
   Serial.begin(115200);
   delay(500);
-  Serial.println("RPLIDAR A1M8 - Setup gestart");
+  Serial.println("RPlidar A1M8 - Setup gestart");
 
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
@@ -453,8 +425,8 @@ void setup() {
   rightWheel->setPIDvalues(KP_R, KI_R, KD_R);
 
   //initializing interrupt functions for counting the encoder tick values
-//  attachInterrupt(digitalPinToInterrupt(leftWheel->EncoderPinB), updateEncoderL, RISING);
-//  attachInterrupt(digitalPinToInterrupt(rightWheel->EncoderPinB), updateEncoderR, RISING);
+  attachInterrupt(digitalPinToInterrupt(leftWheel->EncoderPinB), updateEncoderL, RISING);
+  attachInterrupt(digitalPinToInterrupt(rightWheel->EncoderPinB), updateEncoderR, RISING);
 
 
   prev_rpm_l = leftWheel->getVelocity();
@@ -542,7 +514,7 @@ void setup() {
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
-  lidar->setupMotorPWM(50);
+  lidar->setupMotorPWM(60); //set motor pwm to 100%
   odometry = new Odometry(&node);
   jointstate = new Jointstate(&node);
 
@@ -607,7 +579,7 @@ void setup() {
   RCCHECK(rclc_timer_init_default(
     &highSpeedPublisherTimer,
     &support,
-    RCL_MS_TO_NS(500),
+    RCL_MS_TO_NS(100),
     highSpeedPublisher_timerCallBack));
 
 
@@ -615,7 +587,7 @@ void setup() {
   RCCHECK(rclc_executor_init(&executor, &support.context, 9, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
-//  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+  //RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
 

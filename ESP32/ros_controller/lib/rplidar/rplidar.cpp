@@ -33,6 +33,7 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
 
     // Create UART interface for LIDAR
     LIDARSerial =  new HardwareSerial(uart_channel);
+    DEBUG_PRINT("Initialiseer LIDAR op UART kanaal %d, TX pin %d, RX pin %d\n", uart_channel, lidar_tx_pin, lidar_rx_pin);
     LIDARSerial->begin(115200, SERIAL_8N1, lidar_tx_pin, lidar_rx_pin);
     delay(100);
     reset(); // Reset LIDAR
@@ -98,30 +99,40 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
     scan_msg.angle_increment = (2 * pi) / RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
     scan_msg.range_min = RPLIDAR_MIN_RANGE_M;
     scan_msg.range_max = RPLIDAR_MAX_RANGE_M;
+    scan_msg.scan_time = 1.0 / 10.0; // Assuming 10 Hz scan rate
 
     // Allocate range and intensity arrays
     scan_msg.ranges.data = (float*) malloc(RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
     if (scan_msg.ranges.data == NULL) {
         DEBUG_PRINT("Fout bij toewijzen geheugen voor ranges array\n");
         // Handle memory allocation error appropriately
-    }   
-    scan_msg.ranges.size = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
-    scan_msg.ranges.capacity = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
+        scan_msg.ranges.size = 0;
+        scan_msg.ranges.capacity = 0;
+    }
+    else { 
+        scan_msg.ranges.size = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
+        scan_msg.ranges.capacity = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
+        // Initialize scan arrays
+        for(int i = 0; i < RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
+            scan_msg.ranges.data[i] = 1.0; // Default to 1 meter(dummy value)
+        }
+    }
 
     scan_msg.intensities.data = (float*) malloc(RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
     if (scan_msg.intensities.data == NULL) {
         DEBUG_PRINT("Fout bij toewijzen geheugen voor intensities array\n");
         // Handle memory allocation error appropriately
-    }   
-    scan_msg.intensities.size = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
-    scan_msg.intensities.capacity = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
-
-    // Initialize scan arrays
-    for(int i = 0; i < RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
-        scan_msg.ranges.data[i] = 1.0; // Default to 1 meter(dummy value)
-        scan_msg.intensities.data[i] = 0.0;
+        scan_msg.intensities.size = 0;
+        scan_msg.intensities.capacity = 0;
+    } else { 
+        scan_msg.intensities.size = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
+        scan_msg.intensities.capacity = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
+        // Initialize scan arrays
+        for(int i = 0; i < RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
+            scan_msg.intensities.data[i] = 0.0;
+        }
     }
-#endif
+
 
     // Create FreeRTOS task for scanning
     const uint16_t stackSize = 4096; // Stack size in bytes
@@ -138,12 +149,15 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
         DEBUG_PRINT("Fout bij aanmaken scan taak\n");
         // Handle task creation error appropriately
     }   
+#endif
 
 }
 
+#ifndef TESTING
 void rplidar::scanTaskFunction(void* parameter) {
     rplidar* lidar = static_cast<rplidar*>(parameter);
-
+    sensor_msgs__msg__LaserScan& scan_msg = lidar->scan_msg;   
+     
     RplidarMeasurement measurement;
     while (true) {
         if (lidar->scan_enable == false) {
@@ -151,6 +165,11 @@ void rplidar::scanTaskFunction(void* parameter) {
             continue;
         }
         if (lidar->getScanValue(&measurement, 100)) {
+            if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL) {
+                DEBUG_PRINT("Geheugen voor scan arrays niet toegewezen, verwerking overslaan\n");
+                // Memory not allocated, skip processing
+                continue;
+            }
             // Process measurement (e.g., store in buffer, publish, etc.)
             #if 0
             DEBUG_PRINT("Angle: %.2f, Distance: %.2f mm, Quality: %u\n",
@@ -180,9 +199,11 @@ void rplidar::scanTaskFunction(void* parameter) {
         } else {
             DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
         }
+        //taskYIELD();
         vTaskDelay(1/ portTICK_PERIOD_MS);
     }
 }
+#endif
 
 // Set motor speed via PWM [%]
 void rplidar::setupMotorPWM(int percent) {
@@ -213,27 +234,42 @@ bool rplidar::getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms) {
     uint8_t cmd[2] = { RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_GET_INFO };
 
     LIDARSerial->flush(); // Clear any old data
-    if (LIDARSerial->write(cmd, 2) != 2)
-        return false;
-
-    uint32_t startTime = millis();
-
-    // Descriptor is always 7 bytes
-    while (LIDARSerial->available() < 7) {
-        if (millis() - startTime > timeout_ms)
-            return false;
+    if (LIDARSerial->write(cmd, 2) != 2){
+        DEBUG_PRINT("Fout bij verzenden device info commando\n");
+        return false;   
     }
 
+    delay(100); // Short delay to allow device to respond
+    uint32_t startTime = millis();
+#if 0
+    // Descriptor is always 7 bytes
+    while (LIDARSerial->available() < 7) {
+        if (millis() - startTime > timeout_ms){
+            DEBUG_PRINT("Timeout: geen device info descriptor ontvangen\n");
+            return false;
+        }
+    }
+#endif
     uint8_t descriptor[7];
     LIDARSerial->readBytes(descriptor, 7);
 
-    if (memcmp(descriptor, RPLIDAR_INFO_DESCRIPTOR, 7) != 0)
-        return false;
+    if (memcmp(descriptor, RPLIDAR_INFO_DESCRIPTOR, 7) != 0){
+        DEBUG_PRINT("Descriptor mismatch bij device info\n");
+        DEBUG_PRINT("Verwacht: ");
+        for(int i = 0; i < 7; i++) {
+            DEBUG_PRINT("%i: %02X %02X \n", i, descriptor[i], RPLIDAR_INFO_DESCRIPTOR[i]);
+        }
+        
+        return false;   
+    }
+
 
     // Payload = 20 bytes
     while (LIDARSerial->available() < 20) {
-        if (millis() - startTime > timeout_ms)
+        if (millis() - startTime > timeout_ms){
+            DEBUG_PRINT("Timeout: geen device info data ontvangen\n");
             return false;
+        }
     }
 
     uint8_t data[20];
@@ -252,8 +288,10 @@ bool rplidar::getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms) {
 
 // Generic LIDAR config request
 bool rplidar::getLidarConf(uint8_t type, const uint8_t* requestPayload, uint8_t requestLength, RplidarConf* conf, uint32_t timeout_ms) {
-    if (requestLength > MAX_LIDAR_CONF_PAYLOAD)
+    if (requestLength > MAX_LIDAR_CONF_PAYLOAD){
+        DEBUG_PRINT("Fout: request payload lengte te groot\n");
         return false;
+    }
 
     // Build request packet
     uint8_t cmd[1 + MAX_LIDAR_CONF_PAYLOAD];
@@ -263,24 +301,38 @@ bool rplidar::getLidarConf(uint8_t type, const uint8_t* requestPayload, uint8_t 
 
     LIDARSerial->flush(); // Clear any old data
     // Send command
-    if (LIDARSerial->write(RPLIDAR_CMD_SYNC_BYTE) != 1) return false;
-    if (LIDARSerial->write(RPLIDAR_CMD_GET_LIDAR_CONF) != 1) return false;
+    if (LIDARSerial->write(RPLIDAR_CMD_SYNC_BYTE) != 1){
+        DEBUG_PRINT("Fout: kon LIDAR CONF commando niet verzenden\n");
+        return false;
+    }
+    if (LIDARSerial->write(RPLIDAR_CMD_GET_LIDAR_CONF) != 1){
+        DEBUG_PRINT("Fout: kon LIDAR CONF commando niet verzenden\n");
+        return false;
+    }
     if (requestLength > 0)
-        if (LIDARSerial->write(cmd, requestLength + 1) != requestLength + 1) return false;
+        if (LIDARSerial->write(cmd, requestLength + 1) != requestLength + 1){
+        DEBUG_PRINT("Fout: kon LIDAR CONF commando niet verzenden\n");
+        return false;
+        }
 
     uint32_t startTime = millis();
 
     // Descriptor
     while (LIDARSerial->available() < 7) {
-        if (millis() - startTime > timeout_ms) return false;
+        if (millis() - startTime > timeout_ms){
+            DEBUG_PRINT("Timeout: geen device info descriptor ontvangen\n");
+            return false;
+        }
     }
 
     uint8_t descriptor[7];
     LIDARSerial->readBytes(descriptor, 7);
 
     // Must be single-response
-    if ((descriptor[6] & 0x20) != 0x20)
+    if ((descriptor[6] & 0x20) != 0x20){
+        DEBUG_PRINT("Fout: geen single-response bericht ontvangen\n");
         return false;
+    }
 
     uint8_t payloadLength = descriptor[2];
     if (payloadLength > MAX_LIDAR_CONF_PAYLOAD)
@@ -308,7 +360,7 @@ bool rplidar::getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms) {
 
     LIDARSerial->flush(); // Clear any old data
     if (LIDARSerial->write(cmd, 2) != 2){
-        Serial.println("Fout bij verzenden device health commando.");
+        DEBUG_PRINT("Fout bij verzenden device health commando.");
         return false;
     }
 
@@ -316,7 +368,7 @@ bool rplidar::getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms) {
 
     while (LIDARSerial->available() < 7) {
         if (millis() - startTime > timeout_ms){
-            Serial.println("Timeout: geen device health descriptor ontvangen.");
+            DEBUG_PRINT("Timeout: geen device health descriptor ontvangen.");
             return false;
         }
     }
@@ -325,13 +377,13 @@ bool rplidar::getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms) {
     LIDARSerial->readBytes(descriptor, 7);
 
     if (memcmp(descriptor, RPLIDAR_HEALTH_DESCRIPTOR, 7) != 0){
-        Serial.println("Descriptor mismatch bij device health.");
+        DEBUG_PRINT("Descriptor mismatch bij device health.");
         return false;
     }
 
     while (LIDARSerial->available() < 3) {
         if (millis() - startTime > timeout_ms){
-            Serial.println("Timeout: geen device health data ontvangen.");
+            DEBUG_PRINT("Timeout: geen device health data ontvangen.");
             return false;
         }
     }
@@ -460,47 +512,11 @@ rcl_ret_t rplidar::publish() {
     scan_msg.header.stamp.sec = millis() / 1000;
     scan_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
 
-
     return rcl_publish(&laser_pub, &scan_msg, NULL);
 }
 #endif
 
 // Read one 5-byte scan measurement packet
-#if 0
-bool rplidar::getScanValue(RplidarValue* value, uint32_t timeout_ms) {
-    uint32_t startTime = millis();
-
-    while (LIDARSerial->available() < 5) {
-        if (millis() - startTime > timeout_ms)
-            return false;
-    }
-
-    uint8_t data[5];
-    LIDARSerial->readBytes(data, 5);
-
-    bool startFlag = data[0] & 0x01;
-    bool invertedFlag = (data[0] >> 1) & 0x01;
-
-    uint16_t angleQ6 = ((data[1] >> 1) | (data[2] << 7));
-    float angle = angleQ6 / 64.0f;
-
-    uint16_t distanceQ2 = (data[3] | (data[4] << 8));
-    float distance = distanceQ2 / 4.0f;
-
-    if(angle > 360.0f || angle < 0.0f)
-        return false;
-
-    if (distance <= 0.0f || distance > 6000.0f)
-        return false;
-
-    value->angle = angle;
-    value->distance = distance;
-    value->quality = 0;
-
-    return true;
-}
-#endif
-
 bool rplidar::getScanValue(RplidarMeasurement* value, uint32_t timeout_ms) {
     uint32_t startTime = millis();
 
@@ -510,6 +526,7 @@ bool rplidar::getScanValue(RplidarMeasurement* value, uint32_t timeout_ms) {
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
             return false;
         }
+        //taskYIELD();
     }
 
     uint8_t data[5];
