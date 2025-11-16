@@ -156,6 +156,8 @@ class rplidar
 private:
     HardwareSerial *LIDARSerial; // Pointer to UART interface
     uint8_t motor_pin;            // Motor PWM pin
+    TaskHandle_t scanTaskHandle;  // FreeRTOS task handle for scanning
+    bool scan_enable = false;          // Flag to control scanning task
 
 #ifndef TESTING
     rcl_publisher_t laser_pub;    // micro-ROS publisher
@@ -178,19 +180,19 @@ public:
     bool reset();
 
     // Queries device info
-    bool getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms = 100);
+    bool getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms = 1000);
 
     // Queries device health
-    bool getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms = 100);
+    bool getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms = 1000);
 
     // Starts scanning (normal or express)
-    void startScan(bool express, uint32_t timeout_ms = 100);
+    void startScan(bool express, uint32_t timeout_ms = 1000);
 
     // Reads the scan rate
-    bool getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms = 100);
+    bool getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms = 1000);
 
     // Reads 1 scan point
-    bool getScanValue(RplidarMeasurement* value, uint32_t timeout_ms = 100);
+    bool getScanValue(RplidarMeasurement* value, uint32_t timeout_ms = 1000);
 
     // Retrieves configuration block
     bool getLidarConf(uint8_t type, const uint8_t* requestPayload,
@@ -199,6 +201,7 @@ public:
 
     // Stops scan
     void stopScan();
+    static void scanTaskFunction(void* parameter);
 
 #ifndef TESTING
     // Publishes LaserScan message

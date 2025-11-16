@@ -618,6 +618,9 @@ void setup() {
 //  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
+
+  lidar->startScan(false);
+
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
