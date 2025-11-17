@@ -101,6 +101,8 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
     scan_msg.range_min = RPLIDAR_MIN_RANGE_M;
     scan_msg.range_max = RPLIDAR_MAX_RANGE_M;
     scan_msg.scan_time = 1.0 / 10.0; // Assuming 10 Hz scan rate
+    scan_msg.time_increment = scan_msg.scan_time / RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
+
 
     // Allocate range and intensity arrays
     scan_msg.ranges.data = (float*) malloc(RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
@@ -115,7 +117,7 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
         scan_msg.ranges.capacity = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
         // Initialize scan arrays
         for(int i = 0; i < RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
-            scan_msg.ranges.data[i] = 1.0; // Default to 1 meter(dummy value)
+            scan_msg.ranges.data[i] = 0.0; // Default to 1 meter(dummy value)
         }
     }
 
@@ -196,7 +198,7 @@ void rplidar::scanTaskFunction(void* parameter) {
             
             // Update scan data
             lidar->scan_msg.ranges.data[index] = measurement.distance / 1000.0f; // mm to meters
-            lidar->scan_msg.intensities.data[index] = (float)measurement.quality;
+            //lidar->scan_msg.intensities.data[index] = (float)measurement.quality;
         } else {
             DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
         }
@@ -510,10 +512,18 @@ void rplidar::stopScan() {
 #ifndef TESTING
 // Publish LaserScan message (placeholder implementation)
 rcl_ret_t rplidar::publish() {
+
+    rcl_ret_t return_code;
     scan_msg.header.stamp.sec = millis() / 1000;
     scan_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
 
-    return rcl_publish(&laser_pub, &scan_msg, NULL);
+
+    return_code = rcl_publish(&laser_pub, &scan_msg, NULL);
+
+    if (return_code != RCL_RET_OK) {
+        DEBUG_PRINT("Fout bij publiceren LaserScan bericht: %d\n", return_code);
+    }   
+    return return_code;
 }
 #endif
 

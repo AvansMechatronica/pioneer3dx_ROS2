@@ -24,10 +24,12 @@ Odometry::Odometry(const rcl_node_t *node):
         "odom/unfiltered");
 
     // Set frame identifiers
+    rosidl_runtime_c__String__init(&odom_msg.header.frame_id);
     odom_msg.header.frame_id = micro_ros_string_utilities_set(odom_msg.header.frame_id, "odom");
+    rosidl_runtime_c__String__init(&odom_msg.child_frame_id);
     odom_msg.child_frame_id = micro_ros_string_utilities_set(odom_msg.child_frame_id, "p3dx_base");
     for(int i = 0; i < COVARIANCE_SIZE; i++) {
-        odom_msg.pose.covariance.data[i] = 0.0; // Default to 1 meter(dummy value)
+        odom_msg.pose.covariance[i] = 0.0; // Default to 1 meter(dummy value)
     }
 
     // Initialize pose to zero
@@ -51,24 +53,11 @@ Odometry::Odometry(const rcl_node_t *node):
     odom_msg.twist.twist.angular.z = 0.0;
 
     // Twist covariance
-    odom_msg.twist.covariance[0] = 0.0001;
+    odom_msg.twist.covariance[0] = 0.0001; // of 0.001 m/s
     odom_msg.twist.covariance[7] = 0.0001;
     odom_msg.twist.covariance[35] = 0.0001;
 
 
-#if 0
-    odom_msg.pose.covariance.data = (float*) malloc(COVARIANCE_SIZE * sizeof(float));
-    if (odom_msg.pose.covariance.data == NULL) {
-        // Handle memory allocation error appropriately
-        odom_msg.pose.covariance.size = 0;
-        odom_msg.pose.covariance.capacity = 0;
-    }
-    else {          
-         odom_msg.pose.covariance.size = COVARIANCE_SIZE;
-        odom_msg.pose.covariance.capacity = COVARIANCE_SIZE;
-        // Initialize scan arrays
-    }
-#endif
 
 }
 
@@ -110,11 +99,7 @@ void Odometry::update(float vel_dt, float linear_vel_x, float linear_vel_y, floa
     odom_msg.pose.pose.orientation.w = (double) q[0];
 
     // Pose covariance (small uncertainty)
-//    if(odom_msg.pose.covariance.data != NULL) {
-        odom_msg.pose.covariance[0] = 0.001;
-        odom_msg.pose.covariance[7] = 0.001;
-        odom_msg.pose.covariance[35] = 0.001;
-//    }
+   
 
     // Twist (velocities)
     odom_msg.twist.twist.linear.x = linear_vel_x;
@@ -125,10 +110,7 @@ void Odometry::update(float vel_dt, float linear_vel_x, float linear_vel_y, floa
     odom_msg.twist.twist.angular.y = 0.0;
     odom_msg.twist.twist.angular.z = angular_vel_z;
 
-    // Twist covariance
-    odom_msg.twist.covariance[0] = 0.0001;
-    odom_msg.twist.covariance[7] = 0.0001;
-    odom_msg.twist.covariance[35] = 0.0001;
+
 }
 
 // =============================================================

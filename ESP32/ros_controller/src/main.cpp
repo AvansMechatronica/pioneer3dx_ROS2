@@ -230,7 +230,7 @@ void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time)
 }
 
 void highSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-//  RCSOFTCHECK(odometry->publish());
+  RCSOFTCHECK(odometry->publish());
   jointstate->update(leftWheel->getVelocity(), 
                      rightWheel->getVelocity(), 
                      encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
@@ -291,11 +291,11 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   unsigned long now = millis();
   float vel_dt = (now - prev_odom_update) / 1000.0;
   prev_odom_update = now;
-//  odometry->update(
-//    vel_dt,
-//    linear_x,
-//    linear_y,
-//    angular_z);
+  odometry->update(
+    vel_dt,
+    linear_x,
+    linear_y,
+    angular_z);
 }
 
 //interrupt function for left wheel encoder.
@@ -515,7 +515,7 @@ void setup() {
 
   lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   lidar->setupMotorPWM(60); //set motor pwm to 100%
-//  odometry = new Odometry(&node);
+  odometry = new Odometry(&node);
   jointstate = new Jointstate(&node);
 
 
