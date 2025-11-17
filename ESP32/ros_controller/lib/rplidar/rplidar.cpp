@@ -36,7 +36,8 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
     DEBUG_PRINT("Initialiseer LIDAR op UART kanaal %d, TX pin %d, RX pin %d\n", uart_channel, lidar_tx_pin, lidar_rx_pin);
     LIDARSerial->begin(115200, SERIAL_8N1, lidar_tx_pin, lidar_rx_pin);
     delay(100);
-    reset(); // Reset LIDAR
+    //reset(); // Reset LIDAR
+    stopScan(); // Ensure scanning is stopped
     delay(100); // Wait for device to stabilize
     // Motor PWM pin
     pinMode(motor_pin, OUTPUT);

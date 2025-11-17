@@ -515,7 +515,7 @@ void setup() {
 
   lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   lidar->setupMotorPWM(60); //set motor pwm to 100%
-  odometry = new Odometry(&node);
+//  odometry = new Odometry(&node);
   jointstate = new Jointstate(&node);
 
 

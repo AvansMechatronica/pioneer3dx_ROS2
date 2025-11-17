@@ -26,6 +26,36 @@ Odometry::Odometry(const rcl_node_t *node):
     // Set frame identifiers
     odom_msg.header.frame_id = micro_ros_string_utilities_set(odom_msg.header.frame_id, "odom");
     odom_msg.child_frame_id = micro_ros_string_utilities_set(odom_msg.child_frame_id, "p3dx_base");
+    for(int i = 0; i < COVARIANCE_SIZE; i++) {
+        odom_msg.pose.covariance.data[i] = 0.0; // Default to 1 meter(dummy value)
+    }
+
+    // Initialize pose to zero
+    odom_msg.pose.pose.position.x = 0.0;
+    odom_msg.pose.pose.position.y = 0.0;
+    odom_msg.pose.pose.position.z = 0.0; // Robot stays on ground
+
+    // Orientation (quaternion)
+    odom_msg.pose.pose.orientation.x = 0.0;
+    odom_msg.pose.pose.orientation.y = 0.0;
+    odom_msg.pose.pose.orientation.z = 0.0;
+    odom_msg.pose.pose.orientation.w = 1.0;
+
+    // Twist (velocities)
+    odom_msg.twist.twist.linear.x = 0.0; 
+    odom_msg.twist.twist.linear.y = 0.0;
+    odom_msg.twist.twist.linear.z = 0.0;
+
+    odom_msg.twist.twist.angular.x = 0.0;
+    odom_msg.twist.twist.angular.y = 0.0;
+    odom_msg.twist.twist.angular.z = 0.0;
+
+    // Twist covariance
+    odom_msg.twist.covariance[0] = 0.0001;
+    odom_msg.twist.covariance[7] = 0.0001;
+    odom_msg.twist.covariance[35] = 0.0001;
+
+
 #if 0
     odom_msg.pose.covariance.data = (float*) malloc(COVARIANCE_SIZE * sizeof(float));
     if (odom_msg.pose.covariance.data == NULL) {
@@ -37,10 +67,8 @@ Odometry::Odometry(const rcl_node_t *node):
          odom_msg.pose.covariance.size = COVARIANCE_SIZE;
         odom_msg.pose.covariance.capacity = COVARIANCE_SIZE;
         // Initialize scan arrays
-        for(int i = 0; i < COVARIANCE_SIZE; i++) {
-            odom_msg.pose.covariance.data[i] = 0.0; // Default to 1 meter(dummy value)
-        }
     }
+#endif
 
 }
 
