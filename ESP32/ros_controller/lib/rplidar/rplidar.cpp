@@ -162,47 +162,84 @@ void rplidar::scanTaskFunction(void* parameter) {
     sensor_msgs__msg__LaserScan& scan_msg = lidar->scan_msg;   
      
     RplidarMeasurement measurement;
+    RplidarMeasurement expressPacket[32]; // 32 measurements per Express packet
     while (true) {
         if (lidar->scan_enable == false) {
             vTaskDelay(100 / portTICK_PERIOD_MS);
             continue;
         }
-        if (lidar->getScanValue(&measurement, 100)) {
-            if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL) {
-                DEBUG_PRINT("Geheugen voor scan arrays niet toegewezen, verwerking overslaan\n");
-                // Memory not allocated, skip processing
-                continue;
+        if(lidar->express_mode){
+            if (lidar->getScanValuesExpress(expressPacket, 100  )) {
+                if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL) {
+                    DEBUG_PRINT("Geheugen voor scan arrays niet toegewezen, verwerking overslaan\n");
+                    // Memory not allocated, skip processing
+                    continue;
+                }
+                for(int i = 0; i < 32; i++) {
+                    // Process each measurement
+                    float angle_rad = expressPacket[i].angle * (pi / 180.0f);
+                    
+                    // Normalize angle to range [-π, π]
+                    while (angle_rad > pi) angle_rad -= 2.0f * pi;
+                    while (angle_rad < -pi) angle_rad += 2.0f * pi;
+                    
+                    // Convert angle from [-π, π] to array index [0, RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN-1]
+                    int index = (int)(((angle_rad + pi) / (2.0f * pi)) * RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN);
+                    
+                    // Clamp index to valid range
+                    if (index < 0) index = 0;
+                    if (index >= RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN) 
+                        index = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN - 1;
+                    
+                    // Update scan data
+                    lidar->scan_msg.ranges.data[index] = expressPacket[i].distance / 1000.0f; // mm to meters
+                    //lidar->scan_msg.intensities.data[index] = (float)expressPacket[i].quality;
+                }
+            } else {
+                DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
             }
-            // Process measurement (e.g., store in buffer, publish, etc.)
-            #if 0
-            DEBUG_PRINT("Angle: %.2f, Distance: %.2f mm, Quality: %u\n",
-                        measurement.angle,
-                        measurement.distance,
-                        measurement.quality);
-            #endif
-            // Convert angle from degrees to radians
-            float angle_rad = measurement.angle * (pi / 180.0f);
-            
-            // Normalize angle to range [-π, π]
-            while (angle_rad > pi) angle_rad -= 2.0f * pi;
-            while (angle_rad < -pi) angle_rad += 2.0f * pi;
-            
-            // Convert angle from [-π, π] to array index [0, RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN-1]
-            // Formula: map [-π, π] to [0, N-1]
-            int index = (int)(((angle_rad + pi) / (2.0f * pi)) * RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN);
-            
-            // Clamp index to valid range
-            if (index < 0) index = 0;
-            if (index >= RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN) 
-                index = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN - 1;
-            
-            // Update scan data
-            lidar->scan_msg.ranges.data[index] = measurement.distance / 1000.0f; // mm to meters
-            //lidar->scan_msg.intensities.data[index] = (float)measurement.quality;
-        } else {
-            DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
+            //taskYIELD();
+            vTaskDelay(1/ portTICK_PERIOD_MS);
+            continue;
         }
-        //taskYIELD();
+        else{
+            if (lidar->getScanValue(&measurement, 100)) {
+                if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL) {
+                    DEBUG_PRINT("Geheugen voor scan arrays niet toegewezen, verwerking overslaan\n");
+                    // Memory not allocated, skip processing
+                    continue;
+                }
+                // Process measurement (e.g., store in buffer, publish, etc.)
+                #if 0
+                DEBUG_PRINT("Angle: %.2f, Distance: %.2f mm, Quality: %u\n",
+                            measurement.angle,
+                            measurement.distance,
+                            measurement.quality);
+                #endif
+                // Convert angle from degrees to radians
+                float angle_rad = measurement.angle * (pi / 180.0f);
+                
+                // Normalize angle to range [-π, π]
+                while (angle_rad > pi) angle_rad -= 2.0f * pi;
+                while (angle_rad < -pi) angle_rad += 2.0f * pi;
+                
+                // Convert angle from [-π, π] to array index [0, RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN-1]
+                // Formula: map [-π, π] to [0, N-1]
+                int index = (int)(((angle_rad + pi) / (2.0f * pi)) * RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN);
+                
+                // Clamp index to valid range
+                if (index < 0) index = 0;
+                if (index >= RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN) 
+                    index = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN - 1;
+                
+                // Update scan data
+                lidar->scan_msg.ranges.data[index] = measurement.distance / 1000.0f; // mm to meters
+                //lidar->scan_msg.intensities.data[index] = (float)measurement.quality;
+            } else {
+                DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
+            }
+        }
+            //taskYIELD();
         vTaskDelay(1/ portTICK_PERIOD_MS);
     }
 }
@@ -445,31 +482,29 @@ bool rplidar::getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms) {
 }
 
 // Start scanning in standard or express mode
-
-
 void rplidar::startScan(bool express, uint32_t timeout_ms) {
-    uint8_t cmd[2] = {
-        RPLIDAR_CMD_SYNC_BYTE,
-        express ? RPLIDAR_CMD_EXPRESS_SCAN : RPLIDAR_CMD_SCAN
-    };
-
-    // Clear any old data
-    LIDARSerial->flush();
-
-    // Verstuur scan commando
-    if (LIDARSerial->write(cmd, 2) != 2) {
-        DEBUG_PRINT("Fout: kon scan commando niet verzenden\n");
-        return;
-    }
+    LIDARSerial->flush(); // Clear any old data
 
     if (!express) {
-        // Voor standaard SCAN, wacht op descriptor
+        // ===== STANDARD SCAN =====
+        uint8_t cmd[2] = {
+            RPLIDAR_CMD_SYNC_BYTE,
+            RPLIDAR_CMD_SCAN
+        };
+
+        if (LIDARSerial->write(cmd, 2) != 2) {
+            DEBUG_PRINT("Fout: kon standard scan commando niet verzenden\n");
+            return;
+        }
+
+        // Wacht op descriptor
         uint32_t startTime = millis();
         while (LIDARSerial->available() < 7) {
             if (millis() - startTime > timeout_ms) {
                 DEBUG_PRINT("Timeout: geen SCAN descriptor ontvangen\n");
                 return;
             }
+            delay(1);
         }
 
         uint8_t descriptor[7];
@@ -478,19 +513,73 @@ void rplidar::startScan(bool express, uint32_t timeout_ms) {
             return;
         }
 
-        // Optioneel: descriptor check (kan je aanpassen)
-        if(memcmp(descriptor, RPLIDAR_START_SCAN_DESCRIPTOR, 7) != 0){
-            DEBUG_PRINT("Descriptor mismatch\n");
-            //return;
+        // Verify descriptor
+        if(memcmp(descriptor, RPLIDAR_START_SCAN_DESCRIPTOR, 7) != 0) {
+            DEBUG_PRINT("Descriptor mismatch voor standard scan\n");
+            DEBUG_PRINT("Ontvangen: ");
+            for(int i = 0; i < 7; i++) {
+                DEBUG_PRINT("%02X ", descriptor[i]);
+            }
+            DEBUG_PRINT("\n");
         }
-    }
 
-    scan_enable = true; // Enable scanning in task
-    if (express) {
-        DEBUG_PRINT("Express scan gestart\n");
-    } else {
+        express_mode = false;
         DEBUG_PRINT("Standaard scan gestart\n");
     }
+    else {
+        // ===== EXPRESS SCAN =====
+        // Express scan heeft een payload van 5 bytes
+        uint8_t cmd[9] = {
+            RPLIDAR_CMD_SYNC_BYTE,      // 0xA5
+            RPLIDAR_CMD_EXPRESS_SCAN,   // 0x82
+            0x05,                       // Payload length (5 bytes)
+            0x00, 0x00, 0x00, 0x00,    // Reserved (4 bytes)
+            0x00,                       // Working mode (0 = standard, 1 = boost, 2 = sensitivity, 3 = stability)
+            0x22                        // Reserved
+        };
+        // Calculate checksum (XOR of payload bytes)
+        uint8_t checksum = 0;
+        for (int i = 0; i < 8; ++i) {
+            checksum ^= cmd[i];
+        }
+        // Voeg checksum toe (vervang laatste reserved byte)
+        cmd[8] = checksum;
+        DEBUG_PRINT("Express scan commando checksum: 0x%02X\n", checksum);
+        if (LIDARSerial->write(cmd, 9) != 9) {
+            DEBUG_PRINT("Fout: kon express scan commando niet verzenden\n");
+            return;
+        }
+
+        // Wacht op descriptor
+        uint32_t startTime = millis();
+        while (LIDARSerial->available() < 7) {
+            if (millis() - startTime > timeout_ms) {
+                DEBUG_PRINT("Timeout: geen EXPRESS SCAN descriptor ontvangen\n");
+                return;
+            }
+            delay(1);
+        }
+
+        uint8_t descriptor[7];
+        if (LIDARSerial->readBytes(descriptor, 7) != 7) {
+            DEBUG_PRINT("Fout bij lezen express descriptor\n");
+            return;
+        }
+
+        // Verify descriptor
+        if(memcmp(descriptor, RPLIDAR_EXPRESS_SCAN_LEGACY_VERSION_DESCRIPTOR, 7) != 0) {
+            DEBUG_PRINT("Descriptor mismatch voor express (legacy) scan\n");
+            return;
+        }
+
+
+        express_mode = true;
+        //DEBUG_PRINT("Express scan gestart (payload size: %u bytes, data type: 0x%02X)\n", 
+        //           payloadSize, dataType);
+        DEBUG_PRINT("Express scan gestart\n");
+    }
+    delay(100); // Allow some time to start
+    scan_enable = true; // Enable scanning in task
 }
 
 // Stop scanning
@@ -507,6 +596,135 @@ void rplidar::stopScan() {
     }
 
     DEBUG_PRINT("Scan gestopt\n");
+}
+
+
+
+// Decode 1 cabin (legacy express): distances in Q2 (1/4 mm), dtheta in Q3 (1/8 deg)
+static inline void decode_express_cabin(const decltype(ExpressScanPacket::cabin[0])& c,
+                                        uint16_t& dist1_q2, uint16_t& dist2_q2,
+                                        uint8_t& dtheta1_q3, uint8_t& dtheta2_q3) {
+    // distance1: 14 bits = [b1(7:0) << 6] | [b0(7:2)]
+    dist1_q2 = (static_cast<uint16_t>(c.b1) << 6) | (c.b0 >> 2);
+    
+    // distance2: 14 bits = [b3(7:0) << 6] | [b4(5:0)]
+    dist2_q2 = (static_cast<uint16_t>(c.b3) << 6) | (c.b2 >> 2);
+    
+    // dtheta1: 6 bits = [b2(5:4) << 4] | [b0(1:0) << 2] | [b2(7:6)]
+    //        = [b2(5:4)] (bits 5:4) | [b0(1:0)] (bits 3:2) | [implied from sign extension]
+    // Actually from doc: dθ1[3:0] in b0, dθ1[5:4] in b2
+    //dtheta1_q3 = ((c.b2 >> 4) & 0x03) << 4 | (c.b0 & 0x0F);
+    dtheta1_q3 = (c.b0 & 0x03) << 4 | c.b4 & 0x0F;
+    
+    // dtheta2: 6 bits = [b4(7:6) << 4] | [b2(3:0)]
+    //dtheta2_q3 = ((c.b4 >> 6) & 0x03) << 4 | (c.b2 & 0x0F);
+    dtheta2_q3 = (c.b2 & 0x03) << 4 | (c.b4 & 0xf0) >> 4;
+
+}
+
+static inline uint8_t express_calc_checksum(const ExpressScanPacket& p) {
+    uint8_t cs = 0;
+    // XOR only the 80 cabin bytes (16 cabins × 5 bytes each)
+    // Do NOT include start_angle_q6_lo and start_angle_q6_hi
+    cs ^= p.start_angle_q6_lo;
+    cs ^= p.start_angle_q6_hi;
+    for (int i = 0; i < 16; ++i) {
+        cs ^= p.cabin[i].b0;
+        cs ^= p.cabin[i].b1;
+        cs ^= p.cabin[i].b2;
+        cs ^= p.cabin[i].b3;
+        cs ^= p.cabin[i].b4;
+    }
+    return cs;
+}
+
+static inline bool express_header_ok(const ExpressScanPacket& p, uint8_t& checksum8, bool& start_of_scan, uint16_t& start_angle_q6) {
+    // High nibbles must be 0xA and 0x5
+    if ( (p.b0 & 0xF0) != 0xA0 || (p.b1 & 0xF0) != 0x50 ){
+        DEBUG_PRINT("Express header invalid (sync nibbles)\n");
+        return false;
+    }
+
+    // 8-bit checksum is split across low nibbles
+    checksum8 = static_cast<uint8_t>(((p.b0& 0x0F)) | ((p.b1 & 0x0F) << 4));
+
+    // Start flag S in bit7 of start_angle high byte
+    start_of_scan = (p.start_angle_q6_hi & 0x80) != 0;
+
+    // Start angle Q6 (15 bits)
+    start_angle_q6 = static_cast<uint16_t>(p.start_angle_q6_lo) |
+                     (static_cast<uint16_t>(p.start_angle_q6_hi & 0x7F) << 8);
+    return true;
+}
+
+bool rplidar::getScanValuesExpress(RplidarMeasurement* values, uint32_t timeout_ms) {
+    if (!values) {
+        DEBUG_PRINT("Null pointer voor measurements array\n");
+        return false;
+    }
+
+    ExpressScanPacket packet;
+    uint32_t t0 = millis();
+    const size_t PACKET_SIZE = sizeof(ExpressScanPacket); // 84 bytes
+
+    while (LIDARSerial->available() < PACKET_SIZE) {
+        if (millis() - t0 > timeout_ms) {
+            DEBUG_PRINT("Timeout wachten op express packet\n");
+            return false;
+        }
+        delay(1);
+    }
+    if (LIDARSerial->readBytes(reinterpret_cast<uint8_t*>(&packet), PACKET_SIZE) != PACKET_SIZE) {
+        DEBUG_PRINT("Onvolledige express packet\n");
+        return false;
+    }
+
+    // Validate header, checksum and extract header fields
+    uint8_t hdr_chk = 0;
+    bool start_of_scan = false;
+    uint16_t start_angle_q6 = 0;
+
+    if (!express_header_ok(packet, hdr_chk, start_of_scan, start_angle_q6)) {
+        DEBUG_PRINT("Express header invalid (sync nibbles)\n");
+        LIDARSerial->flush(); // Discard rest of packet
+        return false;
+    }
+    uint8_t calc = express_calc_checksum(packet);
+    if (calc != hdr_chk) {
+        DEBUG_PRINT("Express checksum mismatch: calc=0x%02X hdr=0x%02X\n", calc, hdr_chk);
+        return false;
+    }
+
+    // Base angle in degrees
+    float base_angle_deg = static_cast<float>(start_angle_q6) / 64.0f;
+
+    // Decode 32 points (16 cabins × 2)
+    int out = 0;
+    for (int i = 0; i < 16; ++i) {
+        uint16_t d1_q2, d2_q2;
+        uint8_t a1_q3, a2_q3;
+        decode_express_cabin(packet.cabin[i], d1_q2, d2_q2, a1_q3, a2_q3);
+
+        // Distances: Q2 (0.25 mm) → mm
+        float dist1_mm = static_cast<float>(d1_q2);// / 4.0f;
+        float dist2_mm = static_cast<float>(d2_q2);// / 4.0f;
+
+        // Delta angles: Q3 (1/8 deg)
+        float a1_deg = base_angle_deg + static_cast<float>(a1_q3);// / 8.0f;
+        float a2_deg = base_angle_deg + static_cast<float>(a2_q3);// / 8.0f;
+
+        // Normalize to [0, 360)
+        while (a1_deg >= 360.0f) a1_deg -= 360.0f;
+        while (a1_deg < 0.0f)     a1_deg += 360.0f;
+        while (a2_deg >= 360.0f) a2_deg -= 360.0f;
+        while (a2_deg < 0.0f)     a2_deg += 360.0f;
+
+        // Fill outputs
+        values[out++] = { a1_deg, dist1_mm, 47u, start_of_scan && (i == 0) };
+        values[out++] = { a2_deg, dist2_mm, 47u, false };
+    }
+
+    return true;
 }
 
 #ifndef TESTING

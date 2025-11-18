@@ -591,7 +591,7 @@ void setup() {
   RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
 
-  lidar->startScan(false);
+  lidar->startScan(true);
 
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));

@@ -86,8 +86,8 @@ static const uint8_t RPLIDAR_FORCE_SCAN_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x05, 0x00, 0x00, 0x00, 0x00
 };
 
-static const uint8_t RPLIDAR_EXPRESS_SCAN_DESCRIPTOR[7] = {
-    RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x54, 0x00, 0x00, 0x00, 0x00
+static const uint8_t RPLIDAR_EXPRESS_SCAN_LEGACY_VERSION_DESCRIPTOR[7] = {
+    RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x54, 0x00, 0x00, 0x40, 0x82
 };
 
 static const uint8_t RPLIDAR_HQ_SCAN_DESCRIPTOR[7] = {
@@ -140,6 +140,21 @@ typedef struct {
     bool startFlag;    // S-bit: begin van nieuwe 360° scan
 } RplidarMeasurement;
 
+// Express scan packet structure (84 bytes for A2/A3)
+typedef struct {
+    uint8_t b0; // high nibble: 0xA, low nibble: checksum[3:0]
+    uint8_t b1; // high nibble: 0x5, low nibble: checksum[7:4]
+    uint8_t start_angle_q6_lo; // start angle low (Q6)
+    uint8_t start_angle_q6_hi; // bit7=S flag, bits[6:0]=start_angle_q6[14:8]
+    struct {
+        uint8_t b0;
+        uint8_t b1;
+        uint8_t b2;
+        uint8_t b3;
+        uint8_t b4;
+    } cabin[16];
+} __attribute__((packed)) ExpressScanPacket;
+
 #define MAX_LIDAR_CONF_PAYLOAD 32
 
 // Configuration response structure
@@ -159,6 +174,7 @@ private:
     uint8_t motor_pin;            // Motor PWM pin
     TaskHandle_t scanTaskHandle;  // FreeRTOS task handle for scanning
     bool scan_enable = false;          // Flag to control scanning task
+    bool express_mode = false;        // Flag for express scan mode
 
 #ifndef TESTING
     rcl_publisher_t laser_pub;    // micro-ROS publisher
@@ -194,6 +210,7 @@ public:
 
     // Reads 1 scan point
     bool getScanValue(RplidarMeasurement* value, uint32_t timeout_ms = 1000);
+    bool getScanValuesExpress(RplidarMeasurement* values, uint32_t timeout_ms = 1000);
 
     // Retrieves configuration block
     bool getLidarConf(uint8_t type, const uint8_t* requestPayload,
