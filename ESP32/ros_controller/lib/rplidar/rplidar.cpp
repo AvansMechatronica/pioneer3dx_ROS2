@@ -94,7 +94,7 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
 
     // Setup message fields
     rosidl_runtime_c__String__init(&scan_msg.header.frame_id);
-    scan_msg.header.frame_id = micro_ros_string_utilities_set(scan_msg.header.frame_id, "rplidar_link");
+    scan_msg.header.frame_id = micro_ros_string_utilities_set(scan_msg.header.frame_id, "rplidar");
     scan_msg.angle_min = -pi;
     scan_msg.angle_max =  pi;
     scan_msg.angle_increment = (2 * pi) / RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
@@ -103,7 +103,12 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
     scan_msg.scan_time = 1.0 / 10.0; // Assuming 10 Hz scan rate
     scan_msg.time_increment = scan_msg.scan_time / RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
 
-
+    //angele = (float*) malloc(RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
+    distance = (float*) malloc(RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
+    if (distance == NULL) {
+        DEBUG_PRINT("Fout bij toewijzen geheugen voor distance array\n");
+        // Handle memory allocation error appropriately
+    }   
     // Allocate range and intensity arrays
     scan_msg.ranges.data = (float*) malloc(RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
     if (scan_msg.ranges.data == NULL) {
@@ -163,6 +168,8 @@ void rplidar::scanTaskFunction(void* parameter) {
      
     RplidarMeasurement measurement;
     RplidarMeasurement expressPacket[32]; // 32 measurements per Express packet
+    lidar->scan_start_time = millis();
+
     while (true) {
         if (lidar->scan_enable == false) {
             vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -204,10 +211,31 @@ void rplidar::scanTaskFunction(void* parameter) {
         }
         else{
             if (lidar->getScanValue(&measurement, 100)) {
-                if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL) {
+                if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL || lidar->distance == NULL) {
                     DEBUG_PRINT("Geheugen voor scan arrays niet toegewezen, verwerking overslaan\n");
                     // Memory not allocated, skip processing
                     continue;
+                }
+                if(measurement.startFlag) {
+                    unsigned long current_time = millis();
+                    unsigned long scan_duration = current_time - lidar->scan_start_time;
+                    lidar->scan_time = scan_duration / 1000.0f; // Convert to seconds
+                    lidar->scan_start_time = current_time;
+                    scan_msg.scan_time = lidar->scan_time;
+                    scan_msg.time_increment = scan_msg.scan_time / RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN;
+                    for(int i = 0; i < RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
+                        scan_msg.ranges.data[i] = lidar->distance[i]; // Default to 0.0 meters
+                        //scan_msg.intensities.data[i] = 0.0;
+                    }
+                    DEBUG_PRINT("Nieuwe scan gestart, duur vorige scan: %.6f ms\n", lidar->scan_time * 1000.0f);   
+                    // New scan started, publish previous scan
+                    //lidar->publish();
+                    // Reset scan arrays
+                    for(int i = 0; i < RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
+                        //scan_msg.ranges.data[i] = 0.0; // Default to 0.0 meters
+                        lidar->distance[i] = 0.0f;
+                        //scan_msg.intensities.data[i] = 0.0;
+                    }
                 }
                 // Process measurement (e.g., store in buffer, publish, etc.)
                 #if 0
@@ -233,8 +261,10 @@ void rplidar::scanTaskFunction(void* parameter) {
                     index = RPLIDAD_NUMBER_OF_SAMPLES_PER_SCAN - 1;
                 
                 // Update scan data
-                lidar->scan_msg.ranges.data[index] = measurement.distance / 1000.0f; // mm to meters
+                //lidar->scan_msg.ranges.data[index] = measurement.distance / 1000.0f; // mm to meters
                 //lidar->scan_msg.intensities.data[index] = (float)measurement.quality;
+                //angle[index] = angle_rad;
+                lidar->distance[index] = measurement.distance / 1000.0f; // mm to meters
             } else {
                 DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
             }
@@ -706,12 +736,12 @@ bool rplidar::getScanValuesExpress(RplidarMeasurement* values, uint32_t timeout_
         decode_express_cabin(packet.cabin[i], d1_q2, d2_q2, a1_q3, a2_q3);
 
         // Distances: Q2 (0.25 mm) → mm
-        float dist1_mm = static_cast<float>(d1_q2);// / 4.0f;
-        float dist2_mm = static_cast<float>(d2_q2);// / 4.0f;
+        float dist1_mm = static_cast<float>(d1_q2)/ 4.0f;
+        float dist2_mm = static_cast<float>(d2_q2)/ 4.0f;
 
-        // Delta angles: Q3 (1/8 deg)
-        float a1_deg = base_angle_deg + static_cast<float>(a1_q3);// / 8.0f;
-        float a2_deg = base_angle_deg + static_cast<float>(a2_q3);// / 8.0f;
+        // Delta angles: Q3 (1/32 deg)  // ik weet nog niet of dit goed gaat!
+        float a1_deg = base_angle_deg + (static_cast<float>(a1_q3) / 8.0f);
+        float a2_deg = base_angle_deg + (static_cast<float>(a2_q3) / 8.0f);
 
         // Normalize to [0, 360)
         while (a1_deg >= 360.0f) a1_deg -= 360.0f;
@@ -737,6 +767,7 @@ rcl_ret_t rplidar::publish() {
 
 
     return_code = rcl_publish(&laser_pub, &scan_msg, NULL);
+    //return_code = RCL_RET_OK; // Placeholder for actual publish call
 
     if (return_code != RCL_RET_OK) {
         DEBUG_PRINT("Fout bij publiceren LaserScan bericht: %d\n", return_code);

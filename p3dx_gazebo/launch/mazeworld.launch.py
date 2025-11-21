@@ -51,6 +51,10 @@ def launch_setup(context, *args, **kwargs):
         launch_arguments={'gz_args': f'-r -v 4 {world_file}'}.items(),
     )
 
+    ekf_config_path = PathJoinSubstitution(
+        [FindPackageShare("p3dx_base"), "config", "ekf.yaml"]
+    )
+
 
     # === Robot State Publisher ===
     robot_state_publisher = Node(
@@ -89,7 +93,9 @@ def launch_setup(context, *args, **kwargs):
         # enable (ROS → Gazebo)
         #'/model/pioneer3dx/enable@std_msgs/msg/Bool]gz.msgs.Boolean',
         # odometry (Gazebo → ROS)
-        '/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+        #'/model/pioneer3dx/odometry@nav_msgs/msg/Odometry[gz.msgs.Odometry',
+        "/odom/unfiltered@nav_msgs/msg/Odometry[gz.msgs.Odometry",
+        #'/odom@nav_msgs/msg/Odometry[gz.msgs.Odometry',
         # joint states (Gazebo → ROS)
         '/world/maze/model/pioneer3dx/joint_state@sensor_msgs/msg/JointState[gz.msgs.Model',
         # lidar (Gazebo → ROS)
@@ -102,7 +108,7 @@ def launch_setup(context, *args, **kwargs):
     remappings=[
         # (Optional) Simplify names for ROS side
         ('/model/pioneer3dx/cmd_vel', '/cmd_vel'),
-        ('/model/pioneer3dx/odometry', '/odom'),
+        #('/model/pioneer3dx/odometry', '/odom'),
         ('/world/maze/model/pioneer3dx/joint_state', '/joint_states'),
         ('/lidar', '/scan'),
 #        ('/model/pioneer3dx/enable', '/enable'),
@@ -153,6 +159,19 @@ def launch_setup(context, *args, **kwargs):
         parameters=[{'use_sim_time': use_sim_time}],
     )
 
+    efk = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[
+            {'use_sim_time': use_sim_time}, 
+            ekf_config_path
+        ],
+        remappings=[("odometry/filtered", LaunchConfiguration("odom_topic"))]
+    ),
+
+
     return [
         gz_resource_path,
         gazebo_launch,
@@ -160,6 +179,7 @@ def launch_setup(context, *args, **kwargs):
         spawn_robot,
         ros_gz_bridge,
         rplidar_stf,
+#        efk,
         rviz_node,
 #        map_tf
     ]

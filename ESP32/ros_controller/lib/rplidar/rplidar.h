@@ -175,6 +175,9 @@ private:
     TaskHandle_t scanTaskHandle;  // FreeRTOS task handle for scanning
     bool scan_enable = false;          // Flag to control scanning task
     bool express_mode = false;        // Flag for express scan mode
+    unsigned long scan_start_time;
+    unsigned long scan_time = 0;
+    float *distance;
 
 #ifndef TESTING
     rcl_publisher_t laser_pub;    // micro-ROS publisher
