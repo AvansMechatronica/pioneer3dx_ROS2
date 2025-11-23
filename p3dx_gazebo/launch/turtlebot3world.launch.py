@@ -144,7 +144,7 @@ def launch_setup(context, *args, **kwargs):
         spawn_robot,
         ros_gz_bridge,
         ekf_node,
-        command_timeout,
+        #command_timeout,
     ]
 
 

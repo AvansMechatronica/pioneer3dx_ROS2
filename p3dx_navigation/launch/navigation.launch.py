@@ -23,7 +23,7 @@ from launch_ros.actions import Node
 from launch.conditions import IfCondition
 
 
-MAP_NAME='turtlebot3_world' #change to the name of your own map here
+MAP_NAME='warehouse' #change to the name of your own map here
 
 def generate_launch_description():
     nav2_launch_path = PathJoinSubstitution(
@@ -31,15 +31,15 @@ def generate_launch_description():
     )
 
     rviz_config_path = PathJoinSubstitution(
-        [FindPackageShare('linorobot2_navigation'), 'rviz', 'linorobot2_navigation.rviz']
+        [FindPackageShare('p3dx_navigation'), 'rviz', 'p3dx_navigation.rviz']
     )
 
     default_map_path = PathJoinSubstitution(
-        [FindPackageShare('linorobot2_navigation'), 'maps', f'{MAP_NAME}.yaml']
+        [FindPackageShare('p3dx_navigation'), 'maps', f'{MAP_NAME}.yaml']
     )
 
     nav2_config_path = PathJoinSubstitution(
-        [FindPackageShare('linorobot2_navigation'), 'config', 'navigation.yaml']
+        [FindPackageShare('p3dx_navigation'), 'config', 'navigation.yaml']
     )
 
     return LaunchDescription([
@@ -51,7 +51,7 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             name='rviz', 
-            default_value='false',
+            default_value='true',
             description='Run rviz'
         ),
 
