@@ -127,6 +127,7 @@ def launch_setup(context, *args, **kwargs):
             name='command_timeout'
         )
 
+
     description_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(description_launch_path),
         launch_arguments={
@@ -157,7 +158,7 @@ def generate_launch_description():
     )
     
     world_path = PathJoinSubstitution(
-        [FindPackageShare("p3dx_gazebo"), "worlds", "maze.sdf"]
+        [FindPackageShare("p3dx_gazebo"), "worlds", "turtlebot3.sdf"]
     )
 
     # Gazebo resource path
@@ -195,7 +196,7 @@ def generate_launch_description():
 
         DeclareLaunchArgument(
             name='spawn_x',
-            default_value='0.0',
+            default_value='0.5',
             description='Robot spawn position in X axis'
         ),
 

@@ -7,7 +7,7 @@
 rplidar* lidar;
 
 // Motor PWM snelheid (0-100%)
-int motorSpeedPercent = 50;
+int motorSpeedPercent = 40;
 
 
 // ------------------- Setup -------------------
@@ -18,10 +18,7 @@ void setup() {
 
 
   lidar = new rplidar( RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN );
-  lidar->reset();
 
-  lidar->setupMotorPWM(motorSpeedPercent);
-  delay(1000);
 
   // Device info en health uitlezen
   RplidarInfo info;
@@ -58,16 +55,24 @@ void setup() {
     Serial.println("Fout bij het uitlezen van sample rate.");
   }
 
+  lidar->setupMotorPWM(motorSpeedPercent);
+  delay(1000);
+
   // Start scan (false = standaard scan, true = express scan)
   lidar->startScan(false);
 }
+
+
 
 RplidarMeasurement scanValue;
 // ------------------- Loop -------------------
 void loop() {
 #if 1
   if(lidar->getScanValue(&scanValue, 100)) {
+    if(scanValue.startFlag) {
+        Serial.printf("---- Nieuwe scan gestart ----");
     Serial.printf("Hoek: %6.2f°  |  Afstand: %6.1f mm\n", scanValue.angle, scanValue.distance);
+    } 
   }
 #endif
   delay(10);

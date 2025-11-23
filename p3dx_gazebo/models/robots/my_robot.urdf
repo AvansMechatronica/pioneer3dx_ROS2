@@ -16,7 +16,7 @@
       <visual name='chassis_visual'>
         <geometry>
           <mesh>
-            <uri>package://p3dx_robots_description/meshes/p3dx_meshes/chassis.stl</uri>
+            <uri>package://p3dx_description/meshes/p3dx_meshes/chassis.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -53,7 +53,7 @@
       <visual name='top_plate_visual'>
         <geometry>
           <mesh>
-            <uri>package://p3dx_robots_description/meshes/p3dx_meshes/top.stl</uri>
+            <uri>package://p3dx_description/meshes/p3dx_meshes/top.stl</uri>
           </mesh>
         </geometry>
         <material>
@@ -83,7 +83,7 @@
       <visual name='front_sonar_visual'>
         <geometry>
           <mesh>
-            <uri>package://p3dx_robots_description/meshes/p3dx_meshes/front_sonar.stl</uri>
+            <uri>package://p3dx_description/meshes/p3dx_meshes/front_sonar.stl</uri>
           </mesh>
         </geometry>
       </visual>
@@ -109,7 +109,7 @@
       <visual name='back_sonar_visual'>
         <geometry>
           <mesh>
-            <uri>package://p3dx_robots_description/meshes/p3dx_meshes/back_sonar.stl</uri>
+            <uri>package://p3dx_description/meshes/p3dx_meshes/back_sonar.stl</uri>
           </mesh>
         </geometry>
       </visual>
@@ -135,7 +135,7 @@
       <visual name='caster_swivel_visual'>
         <geometry>
           <mesh>
-            <uri>package://p3dx_robots_description/meshes/p3dx_meshes/caster_swivel.stl</uri>
+            <uri>package://p3dx_description/meshes/p3dx_meshes/caster_swivel.stl</uri>
           </mesh>
         </geometry>
       </visual>
@@ -221,7 +221,7 @@
       <visual name='left_hub_visual'>
         <geometry>
           <mesh>
-            <uri>package://p3dx_robots_description/meshes/p3dx_meshes/left_hubcap.stl</uri>
+            <uri>package://p3dx_description/meshes/p3dx_meshes/left_hubcap.stl</uri>
           </mesh>
         </geometry>
       </visual>
@@ -307,7 +307,7 @@
       <visual name='right_hub_visual'>
         <geometry>
           <mesh>
-            <uri>package://p3dx_robots_description/meshes/p3dx_meshes/right_hubcap.stl</uri>
+            <uri>package://p3dx_description/meshes/p3dx_meshes/right_hubcap.stl</uri>
           </mesh>
         </geometry>
       </visual>

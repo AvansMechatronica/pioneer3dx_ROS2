@@ -3,12 +3,9 @@ Panels:
     Help Height: 78
     Name: Displays
     Property Tree Widget:
-      Expanded:
-        - /Global Options1
-        - /TF1
-        - /TF1/Frames1
+      Expanded: ~
       Splitter Ratio: 0.5
-    Tree Height: 512
+    Tree Height: 775
   - Class: rviz_common/Views
     Expanded:
       - /Current View1
@@ -35,7 +32,7 @@ Visualization Manager:
       Plane Cell Count: 10
       Reference Frame: <Fixed Frame>
       Value: true
-    - Alpha: 0.6000000238418579
+    - Alpha: 0.8999999761581421
       Class: rviz_default_plugins/RobotModel
       Collision Enabled: false
       Description File: ""
@@ -58,6 +55,10 @@ Visualization Manager:
           Show Axes: false
           Show Trail: false
           Value: true
+        base_footprint:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
         base_link:
           Alpha: 1
           Show Axes: false
@@ -95,21 +96,15 @@ Visualization Manager:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         left_wheel:
           Alpha: 1
           Show Axes: false
           Show Trail: false
           Value: true
-        p3dx_base:
-          Alpha: 1
-          Show Axes: false
-          Show Trail: false
         right_hub:
           Alpha: 1
           Show Axes: false
           Show Trail: false
-          Value: true
         right_wheel:
           Alpha: 1
           Show Axes: false
@@ -134,42 +129,42 @@ Visualization Manager:
       Filter (whitelist): ""
       Frame Timeout: 15
       Frames:
-        All Enabled: true
+        All Enabled: false
         back_sonar:
-          Value: true
+          Value: false
+        base_footprint:
+          Value: false
         base_link:
-          Value: true
+          Value: false
         caster_swivel:
-          Value: true
+          Value: false
         caster_wheel:
-          Value: true
+          Value: false
         chassis:
-          Value: true
+          Value: false
         front_sonar:
-          Value: true
+          Value: false
         imu_link:
-          Value: true
+          Value: false
         laser:
-          Value: true
+          Value: false
         left_hub:
-          Value: true
+          Value: false
         left_wheel:
           Value: true
-        p3dx_base:
-          Value: true
         right_hub:
-          Value: true
+          Value: false
         right_wheel:
           Value: true
         top_plate:
-          Value: true
-      Marker Scale: 0.5
+          Value: false
+      Marker Scale: 1
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: true
       Tree:
-        p3dx_base:
+        base_footprint:
           base_link:
             back_sonar:
               {}
@@ -235,33 +230,10 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
-    - Alpha: 0.699999988079071
-      Binary representation: false
-      Binary threshold: 100
-      Class: rviz_default_plugins/Map
-      Color Scheme: map
-      Draw Behind: false
-      Enabled: true
-      Name: Map
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        Filter size: 10
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /map
-      Update Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /map_updates
-      Use Timestamp: false
-      Value: true
   Enabled: true
   Global Options:
-    Background Color: 48; 48; 48
-    Fixed Frame: p3dx_base
+    Background Color: 238; 238; 236
+    Fixed Frame: base_link
     Frame Rate: 30
   Name: root
   Tools:
@@ -278,21 +250,26 @@ Visualization Manager:
   Value: true
   Views:
     Current:
-      Angle: 0
-      Class: rviz_default_plugins/TopDownOrtho
+      Class: rviz_default_plugins/Orbit
+      Distance: 0.6545249223709106
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
+      Focal Point:
+        X: 0.19264458119869232
+        Y: -0.3277195394039154
+        Z: 0.3564203083515167
+      Focal Shape Fixed Size: true
+      Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Scale: 128.70262145996094
+      Pitch: 0.5397975444793701
       Target Frame: <Fixed Frame>
-      Value: TopDownOrtho (rviz_default_plugins)
-      X: 0
-      Y: 0
+      Value: Orbit (rviz_default_plugins)
+      Yaw: 4.682379245758057
     Saved: ~
 Window Geometry:
   Displays:
@@ -300,7 +277,7 @@ Window Geometry:
   Height: 1011
   Hide Left Dock: false
   Hide Right Dock: false
-  QMainWindow State: 000000ff00000000fd00000001000000000000015600000395fc0200000002fb000000100044006900730070006c006100790073010000003f0000028e000000cc00fffffffb0000000a0056006900650077007301000002d300000101000000a900ffffff000005e20000039500000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
+  QMainWindow State: 000000ff00000000fd00000001000000000000015600000395fc0200000002fb000000100044006900730070006c006100790073010000003f00000395000000cc00fffffffb0000000a0056006900650077007303000006190000003500000156000000fc000005e20000039500000004000000040000000800000008fc0000000100000002000000010000000a0054006f006f006c00730100000000ffffffff0000000000000000
   Views:
     collapsed: false
   Width: 1854

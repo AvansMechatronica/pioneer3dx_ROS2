@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'p3dx_navigation'
+package_name = 'p3dx_description'
 
 data_files=[
         ('share/ament_index/resource_index/packages',
@@ -35,23 +35,18 @@ def package_files(data_files, directory_list):
 
     return data_files
 
-
 setup(
     name=package_name,
     version='0.0.0',
     packages=find_packages(exclude=['test']),
-    data_files=package_files(data_files, ['launch/', 'maps/', 'config/', 'rviz/']),
+    data_files=package_files(data_files, ['launch/', 'rviz/', 'urdf/', 'meshes/', 'models/']),
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='gerard',
-    maintainer_email='GerardAnneHarkema@gmail.com',
+    maintainer_email='ga.harkema@avans.nl',
     description='TODO: Package description',
     license='TODO: License declaration',
-    extras_require={
-        'test': [
-            'pytest',
-        ],
-    },
+    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
         ],

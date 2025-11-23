@@ -2,7 +2,7 @@ import os
 from glob import glob
 from setuptools import setup
 
-package_name = 'p3dx_gazebo'
+package_name = 'linorobot2_gazebo'
 
 setup(
     name=package_name,
@@ -24,11 +24,11 @@ setup(
     author_email='jimenojmm@gmail.com',
     maintainer='Juan Miguel Jimeno',
     maintainer_email='jimenojmm@gmail.com',
-    description='p3dx Gazebo Package',
+    description='Linorobot2 Gazebo Package',
     license='Apache 2.0',
     entry_points={
         'console_scripts': [
-            'command_timeout = p3dx_gazebo.command_timeout:main'
+            'command_timeout = linorobot2_gazebo.command_timeout:main'
         ],
     },
 )

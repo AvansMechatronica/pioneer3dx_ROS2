@@ -35,13 +35,13 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
     LIDARSerial =  new HardwareSerial(uart_channel);
     DEBUG_PRINT("Initialiseer LIDAR op UART kanaal %d, TX pin %d, RX pin %d\n", uart_channel, lidar_tx_pin, lidar_rx_pin);
     LIDARSerial->begin(115200, SERIAL_8N1, lidar_tx_pin, lidar_rx_pin);
+    // Motor PWM pin
+    pinMode(motor_pin, OUTPUT);
+    setupMotorPWM(0); // Start motor at 50% speed
     delay(100);
     //reset(); // Reset LIDAR
     stopScan(); // Ensure scanning is stopped
     delay(100); // Wait for device to stabilize
-    // Motor PWM pin
-    pinMode(motor_pin, OUTPUT);
-    setupMotorPWM(50); // Start motor at 50% speed
 
 #ifdef DEBUG
     // Read device information for debugging
@@ -205,8 +205,8 @@ void rplidar::scanTaskFunction(void* parameter) {
             } else {
                 DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
             }
-            //taskYIELD();
-            vTaskDelay(1/ portTICK_PERIOD_MS);
+            taskYIELD();
+            //vTaskDelay(1/ portTICK_PERIOD_MS);
             continue;
         }
         else{
@@ -227,7 +227,7 @@ void rplidar::scanTaskFunction(void* parameter) {
                         scan_msg.ranges.data[i] = lidar->distance[i]; // Default to 0.0 meters
                         //scan_msg.intensities.data[i] = 0.0;
                     }
-                    DEBUG_PRINT("Nieuwe scan gestart, duur vorige scan: %.6f ms\n", lidar->scan_time * 1000.0f);   
+                    //DEBUG_PRINT("Nieuwe scan gestart, duur vorige scan: %.6f ms\n", lidar->scan_time * 1000.0f);   
                     // New scan started, publish previous scan
                     //lidar->publish();
                     // Reset scan arrays
@@ -269,8 +269,8 @@ void rplidar::scanTaskFunction(void* parameter) {
                 DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
             }
         }
-            //taskYIELD();
-        vTaskDelay(1/ portTICK_PERIOD_MS);
+        taskYIELD();
+        //vTaskDelay(1/ portTICK_PERIOD_MS);
     }
 }
 #endif
@@ -325,10 +325,10 @@ bool rplidar::getDeviceInfo(RplidarInfo *info, uint32_t timeout_ms) {
 
     if (memcmp(descriptor, RPLIDAR_INFO_DESCRIPTOR, 7) != 0){
         DEBUG_PRINT("Descriptor mismatch bij device info\n");
-        DEBUG_PRINT("Verwacht: ");
-        for(int i = 0; i < 7; i++) {
-            DEBUG_PRINT("%i: %02X %02X \n", i, descriptor[i], RPLIDAR_INFO_DESCRIPTOR[i]);
-        }
+        //DEBUG_PRINT("Verwacht: ");
+        //for(int i = 0; i < 7; i++) {
+        //    DEBUG_PRINT("%i: %02X %02X \n", i, descriptor[i], RPLIDAR_INFO_DESCRIPTOR[i]);
+        //}
         
         return false;   
     }
@@ -546,11 +546,11 @@ void rplidar::startScan(bool express, uint32_t timeout_ms) {
         // Verify descriptor
         if(memcmp(descriptor, RPLIDAR_START_SCAN_DESCRIPTOR, 7) != 0) {
             DEBUG_PRINT("Descriptor mismatch voor standard scan\n");
-            DEBUG_PRINT("Ontvangen: ");
-            for(int i = 0; i < 7; i++) {
-                DEBUG_PRINT("%02X ", descriptor[i]);
-            }
-            DEBUG_PRINT("\n");
+            //DEBUG_PRINT("Ontvangen: ");
+            //for(int i = 0; i < 7; i++) {
+            //    DEBUG_PRINT("%02X ", descriptor[i]);
+            //}
+            //DEBUG_PRINT("\n");
         }
 
         express_mode = false;
@@ -608,7 +608,7 @@ void rplidar::startScan(bool express, uint32_t timeout_ms) {
         //           payloadSize, dataType);
         DEBUG_PRINT("Express scan gestart\n");
     }
-    delay(100); // Allow some time to start
+//    delay(100); // Allow some time to start
     scan_enable = true; // Enable scanning in task
 }
 
@@ -786,7 +786,7 @@ bool rplidar::getScanValue(RplidarMeasurement* value, uint32_t timeout_ms) {
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
             return false;
         }
-        //taskYIELD();
+        taskYIELD();
     }
 
     uint8_t data[5];
@@ -796,11 +796,11 @@ bool rplidar::getScanValue(RplidarMeasurement* value, uint32_t timeout_ms) {
     }
 
     // --- Decodeer packet ---
-    uint8_t byte0 = data[0];
-    value->startFlag = byte0 & 0x1;             // S-bit
-    bool invertedFlag = (byte0 >> 1) & 0x1;    // !S
-    uint8_t checkBit = (byte0 >> 2) & 0x1;     // C-bit
-    value->quality = byte0 >> 2;               // kwaliteit (bovenste bits)
+    bool startFlag = data[0] & 0x1; // S-bit
+    bool invertedStartFlag = (data[0] >> 1) & 0x1;    // !S
+    value->startFlag = startFlag && !invertedStartFlag;             
+    uint8_t checkBit = data[1] & 0x1;     // C-bit
+    value->quality = data[0] >> 2;               // kwaliteit (bovenste bits)
 
     // hoek in Q6 (1/64 graden)
     uint16_t angleQ6 = ((data[1] >> 1) | ((uint16_t)data[2] << 7));

@@ -533,7 +533,7 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     "reset"));
-  
+ 
 
 
   //create a bumper publisher
