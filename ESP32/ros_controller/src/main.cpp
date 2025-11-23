@@ -235,13 +235,10 @@ void highSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time
                      rightWheel->getVelocity(), 
                      encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
                      encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
-  RCSOFTCHECK(jointstate->publish());
   RCSOFTCHECK(lidar->publish());
+  RCSOFTCHECK(jointstate->publish());
 
 }
-
-
-
 
 //counter for controlling the display update rate
 int display_interval_counter=0;
@@ -513,11 +510,6 @@ void setup() {
   // create node
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
-  lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
-  lidar->setupMotorPWM(60); //set motor pwm to 100%
-  odometry = new Odometry(&node);
-  jointstate = new Jointstate(&node);
-
 
   // create cmd_vel_subscriber for cmd_vel topic
   RCCHECK(rclc_subscription_init_default(
@@ -533,8 +525,6 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool),
     "reset"));
- 
-
 
   //create a bumper publisher
 #if defined(HANDLE_BUMPERS)
@@ -559,6 +549,9 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "battery_voltage"));
 
+  lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+  odometry = new Odometry(&node);
+  jointstate = new Jointstate(&node);
 
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
@@ -584,24 +577,27 @@ void setup() {
 
 
     // create executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 9, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
-  //RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
-
-  lidar->startScan(false); //start normal scan
-
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
+  lidar->startScan(false, DEFAULT_LIDAR_MOTOR_PWM); //start normal scan
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
 }
 
 void loop() {
   // put your main code here, to run repeatedly:
+  #if 1
   delay(100);
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+  //taskYIELD();
+  #else
+  RCCHECK(rclc_executor_spin(&executor));
+  #endif
 }
 

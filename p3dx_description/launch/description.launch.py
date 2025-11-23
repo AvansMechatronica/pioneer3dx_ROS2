@@ -25,7 +25,7 @@ def generate_launch_description():
     robot_base = os.getenv('p3dx_BASE')
 
     urdf_path = PathJoinSubstitution(
-        [FindPackageShare("p3dx_description"), "urdf/robots", f"{robot_base}.urdf.xacro"]
+        [FindPackageShare("p3dx_description"), "urdf", "p3dx.urdf.xacro"]
     )
 
     rviz_config_path = PathJoinSubstitution(

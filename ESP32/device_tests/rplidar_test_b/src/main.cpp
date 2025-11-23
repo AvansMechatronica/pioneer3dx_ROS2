@@ -16,10 +16,9 @@ void setup() {
   delay(500);
   Serial.println("RPLIDAR A1M8 - Setup gestart");
 
-
   lidar = new rplidar( RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN );
 
-
+  Serial.printf("LIDAR initialized\n");
   // Device info en health uitlezen
   RplidarInfo info;
   if(lidar->getDeviceInfo(&info)){
@@ -34,7 +33,7 @@ void setup() {
     Serial.println();
   } else {
     Serial.println("Fout bij het uitlezen van device info.");
-    }
+  }
 
   RplidarHealth health;
 
@@ -55,11 +54,10 @@ void setup() {
     Serial.println("Fout bij het uitlezen van sample rate.");
   }
 
-  lidar->setupMotorPWM(motorSpeedPercent);
   delay(1000);
 
   // Start scan (false = standaard scan, true = express scan)
-  lidar->startScan(false);
+  lidar->startScan(false, DEFAULT_LIDAR_MOTOR_PWM);
 }
 
 

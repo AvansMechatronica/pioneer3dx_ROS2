@@ -11,7 +11,7 @@ def generate_launch_description():
 
     pkg_share = launch_ros.substitutions.FindPackageShare(package=package_name).find(package_name)
     
-    xacro_file = os.path.join(pkg_share, 'urdf/robots', 'p3dx.urdf.xacro')
+    xacro_file = os.path.join(pkg_share, 'urdf', 'p3dx.urdf.xacro')
     rviz_config_file = os.path.join(pkg_share, 'rviz', 'description.rviz')
 
     robot_description = Command(['xacro ', xacro_file])

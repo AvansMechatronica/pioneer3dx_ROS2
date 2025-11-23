@@ -30,15 +30,15 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
 #endif
 {
     this->motor_pin = motor_pin;
+    pinMode(motor_pin, OUTPUT);
+    setupMotorPWM(0); // Start motor at 50% speed
+    delay(5000);
 
     // Create UART interface for LIDAR
     LIDARSerial =  new HardwareSerial(uart_channel);
     DEBUG_PRINT("Initialiseer LIDAR op UART kanaal %d, TX pin %d, RX pin %d\n", uart_channel, lidar_tx_pin, lidar_rx_pin);
     LIDARSerial->begin(115200, SERIAL_8N1, lidar_tx_pin, lidar_rx_pin);
-    // Motor PWM pin
-    pinMode(motor_pin, OUTPUT);
-    setupMotorPWM(0); // Start motor at 50% speed
-    delay(100);
+
     //reset(); // Reset LIDAR
     stopScan(); // Ensure scanning is stopped
     delay(100); // Wait for device to stabilize
@@ -47,39 +47,39 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
     // Read device information for debugging
     RplidarInfo info;
     if(getDeviceInfo(&info)){
-        Serial.println("Device info succesvol uitgelezen.");
+        Serial.printf("Debug: Device info succesvol uitgelezen.");
         Serial.printf("Model: %u\n", info.model);
         Serial.printf("Firmware: %u.%u\n", info.firmware_major, info.firmware_minor);
         Serial.printf("Hardware: %u\n", info.hardware);
 
-        Serial.print("Serial: ");
+        Serial.printf("Serial: ");
         for (int i = 15; i >= 0; i--)
             Serial.printf("%02X", info.serial[i]);
-        Serial.println();
+        Serial.printf("\n");
     }
     else {
-        Serial.println("Fout bij uitlezen device info.");
+        Serial.printf("Debug: Fout bij uitlezen device info.");
     }   
 
     RplidarHealth health;
     if(getDeviceHealth(&health)) {
-        Serial.println("Device health succesvol uitgelezen.");
+        Serial.printf("Debug: Device health succesvol uitgelezen.");
         Serial.printf("Status: %u\n", health.status);
         Serial.printf("Error code: %u\n", health.error_code);
     }
     else {
-        Serial.println("Fout bij uitlezen device health.");
+        Serial.printf("Debug: Fout bij uitlezen device health.");
     }   
 
     // Read sample rate
     RplidarSampleRate sampleRate;
     if(getSampleRate(&sampleRate)) {
-        Serial.println("Sample rate succesvol uitgelezen.");
+        Serial.printf("Debug: Sample rate succesvol uitgelezen.");
         Serial.printf("Standard scan: %u us\n", sampleRate.standardScan_us);
         Serial.printf("Express scan: %u us\n", sampleRate.expressScan_us);
     }
     else {
-        Serial.println("Fout bij uitlezen sample rate.");
+        Serial.printf("Debug: Fout bij uitlezen sample rate.");
     }
 #endif
 
@@ -144,7 +144,7 @@ rplidar::rplidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lidar_rx_pi
 
     // Create FreeRTOS task for scanning
     const uint16_t stackSize = 4096; // Stack size in bytes
-    const UBaseType_t priority = 5;   // Task priority
+    const UBaseType_t priority = 1;   // Task priority
     BaseType_t result = xTaskCreate(
         scanTaskFunction,       // Task function
         "LIDAR_Scan",          // Task name
@@ -171,11 +171,13 @@ void rplidar::scanTaskFunction(void* parameter) {
     lidar->scan_start_time = millis();
 
     while (true) {
+        taskYIELD();
+        //vTaskDelay(1/ portTICK_PERIOD_MS);
         if (lidar->scan_enable == false) {
-            vTaskDelay(100 / portTICK_PERIOD_MS);
             continue;
         }
         if(lidar->express_mode){
+            
             if (lidar->getScanValuesExpress(expressPacket, 100  )) {
                 if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL) {
                     DEBUG_PRINT("Geheugen voor scan arrays niet toegewezen, verwerking overslaan\n");
@@ -205,8 +207,6 @@ void rplidar::scanTaskFunction(void* parameter) {
             } else {
                 DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
             }
-            taskYIELD();
-            //vTaskDelay(1/ portTICK_PERIOD_MS);
             continue;
         }
         else{
@@ -269,8 +269,6 @@ void rplidar::scanTaskFunction(void* parameter) {
                 DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
             }
         }
-        taskYIELD();
-        //vTaskDelay(1/ portTICK_PERIOD_MS);
     }
 }
 #endif
@@ -512,7 +510,11 @@ bool rplidar::getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms) {
 }
 
 // Start scanning in standard or express mode
-void rplidar::startScan(bool express, uint32_t timeout_ms) {
+void rplidar::startScan(bool express, uint32_t lidar_speed, uint32_t timeout_ms) {
+
+
+    delay(1000);
+
     LIDARSerial->flush(); // Clear any old data
 
     if (!express) {
@@ -610,6 +612,9 @@ void rplidar::startScan(bool express, uint32_t timeout_ms) {
     }
 //    delay(100); // Allow some time to start
     scan_enable = true; // Enable scanning in task
+    delay(100); // Allow some time to start
+    setupMotorPWM(lidar_speed);
+
 }
 
 // Stop scanning
@@ -624,6 +629,9 @@ void rplidar::stopScan() {
         DEBUG_PRINT("Fout: kon STOP commando niet verzenden\n");
         return;
     }
+    setupMotorPWM(0); // Stop motor
+    delay(1000); // Allow time to stop
+
 
     DEBUG_PRINT("Scan gestopt\n");
 }
@@ -765,9 +773,7 @@ rcl_ret_t rplidar::publish() {
     scan_msg.header.stamp.sec = millis() / 1000;
     scan_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
 
-
     return_code = rcl_publish(&laser_pub, &scan_msg, NULL);
-    //return_code = RCL_RET_OK; // Placeholder for actual publish call
 
     if (return_code != RCL_RET_OK) {
         DEBUG_PRINT("Fout bij publiceren LaserScan bericht: %d\n", return_code);
@@ -786,7 +792,7 @@ bool rplidar::getScanValue(RplidarMeasurement* value, uint32_t timeout_ms) {
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
             return false;
         }
-        taskYIELD();
+        vTaskDelay(1/ portTICK_PERIOD_MS);
     }
 
     uint8_t data[5];

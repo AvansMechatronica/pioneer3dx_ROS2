@@ -107,7 +107,7 @@ static const uint8_t RPLIDAR_START_SCAN_DESCRIPTOR[7] = {
     RPLIDAR_CMD_SYNC_BYTE, RPLIDAR_CMD_SYNC_BYTE2, 0x05, 0x00, 0x00, 0x40, 0x81
 };
 
-
+#define DEFAULT_LIDAR_MOTOR_PWM 60 // Default motor PWM value
 
 // =============================================================
 // Data structures for responses
@@ -178,6 +178,8 @@ private:
     unsigned long scan_start_time;
     unsigned long scan_time = 0;
     float *distance;
+    // Control motor speed (PWM percent)
+    void setupMotorPWM(int percent);
 
 #ifndef TESTING
     rcl_publisher_t laser_pub;    // micro-ROS publisher
@@ -193,8 +195,6 @@ public:
             uint8_t lidar_rx_pin, uint8_t motor_pin);
 #endif
 
-    // Control motor speed (PWM percent)
-    void setupMotorPWM(int percent);
 
     // Sends RESET command
     bool reset();
@@ -206,7 +206,7 @@ public:
     bool getDeviceHealth(RplidarHealth *health, uint32_t timeout_ms = 1000);
 
     // Starts scanning (normal or express)
-    void startScan(bool express, uint32_t timeout_ms = 1000);
+    void startScan(bool express, uint32_t lidar_speed, uint32_t timeout_ms = 1000);
 
     // Reads the scan rate
     bool getSampleRate(RplidarSampleRate* rate, uint32_t timeout_ms = 1000);
