@@ -12,7 +12,8 @@
 #include <std_msgs/msg/float32.h>
 #include <odometry.h>
 #include <jointstate.h>
-#include <rplidar.h>
+#include <lds08_lidar.h>
+//#include <rplidar.h>
 
 #if defined(HANDLE_BUMPERS)
 #include <p3dx_interfaces/msg/bumpers.h>
@@ -29,6 +30,11 @@
 #include <Adafruit_ST7735.h> // Hardware-specific library
 //#include <SPI.h>
 #include "tft_printf.h"
+
+#ifdef RPLIDAR_H
+#define EXPRESS_LIDAR_MODE  false
+#endif
+
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
 
@@ -105,7 +111,12 @@ unsigned long prev_odom_update = 0;
 
 Odometry *odometry;
 Jointstate *jointstate;
+
+#ifdef RPLIDAR_H
 rplidar *lidar;
+#else
+lds08_lidar *lidar;
+#endif
 
 
 
@@ -404,7 +415,11 @@ void setup() {
   // Configure serial transport
   Serial.begin(115200);
   delay(500);
+#ifdef RPLIDAR_H
   Serial.println("RPlidar A1M8 - Setup gestart");
+#else
+  Serial.println("LDS08 Lidar - Setup gestart");
+#endif
 
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
@@ -548,8 +563,13 @@ void setup() {
     &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32),
     "battery_voltage"));
+    
+#ifdef RPLIDAR_H
+  lidar = new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+#else
+  lidar = new lds08_lidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+#endif
 
-  lidar =  new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   odometry = new Odometry(&node);
   jointstate = new Jointstate(&node);
 
@@ -586,7 +606,11 @@ void setup() {
 #if defined(HANDLE_BUMPERS)
   RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
-  lidar->startScan(false, DEFAULT_LIDAR_MOTOR_PWM); //start normal scan
+#ifdef RPLIDAR_H
+  lidar->startScan(EXPRESS_LIDAR_MODE, DEFAULT_LIDAR_MOTOR_PWM); //start normal scan
+#else
+  lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM); //start normal scan at 10Hz
+#endif
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
 }
 

@@ -13,10 +13,13 @@
 			"path": "device_tests/regelaar_test"
 		},
 		{
-			"path": "device_tests/rplidar_test_a"
+			"path": "device_tests/rplidar_tests/rplidar_test_a"
 		},
 		{
-			"path": "device_tests/rplidar_test_b"
+			"path": "device_tests/rplidar_tests/rplidar_test_b"
+		},
+		{
+			"path": "device_tests/lds08_lidar_tests/lds08_lidar_test"
 		}
 	],
 	"settings": {

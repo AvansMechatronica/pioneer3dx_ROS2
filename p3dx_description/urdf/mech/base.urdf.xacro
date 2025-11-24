@@ -177,13 +177,11 @@
           <mass value="0.1"/>
           <inertia ixx="0.01" iyy="0.01" izz="0.01" ixy="0" ixz="0" iyz="0"/>
         </inertial>
-        <!--
         <visual>
           <geometry>
             <mesh filename="package://p3dx_description/meshes/p3dx_meshes/${prefix}_hubcap.stl"/>
           </geometry>
         </visual>
-        -->
         <xacro:cylinder_inertia m="0.1" r="${wheel_radius-0.05}" h="${wheel_width}"/>
       </link>
 
