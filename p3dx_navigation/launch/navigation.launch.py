@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Juan Miguel Jimeno
+# Copyright (c) 2021 Juan Miguel Jimeno/Adapted (2025) by Gerard Harkema for Avans usage
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ from launch_ros.actions import Node
 from launch.conditions import IfCondition
 
 
-MAP_NAME='warehouse' #change to the name of your own map here
+MAP_NAME='maze' #change to the name of your own map here
 
 def generate_launch_description():
     nav2_launch_path = PathJoinSubstitution(

@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Juan Miguel Jimeno
+# Copyright (c) 2021 Juan Miguel Jimeno/Adapted (2025) by Gerard Harkema for Avans usage
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
