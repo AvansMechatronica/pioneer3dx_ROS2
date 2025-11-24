@@ -54,6 +54,9 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'drive_circle = p3dx_navigation.drive_circle:main',
+            'demo1 = p3dx_navigation.demo1:main',
+            'demo2 = p3dx_navigation.demo2:main',
         ],
     },
 )
