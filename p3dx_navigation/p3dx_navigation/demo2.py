@@ -77,13 +77,17 @@ def main(args=None):
 
     # Define multiple goals
     goals = [
-        (0.5, 1.0),  # First goal (x, y) (0.5, 1.0)
-        (-7.8, -1.5),  # Second goal (x, y)
+        (7.0, 8.0),  # First goal (x, y) 
+        (9.0, 2.0),  # Second goal (x, y) 
+        (-9.5, -2.0),  # Third goal (x, y)
     ]
 
     # Send goals sequentially
     for x, y in goals:
         node.send_goal(x, y)
+        delay = 2.0  # seconds
+        node.get_logger().info(f"Waiting for {delay} seconds before sending the next goal...")
+        time.sleep(delay)
     
     # Shutdown after achieving all goals
     rclpy.shutdown()

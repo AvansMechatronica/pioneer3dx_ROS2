@@ -28,8 +28,8 @@ class MoveRobotNode(Node):
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose.header.frame_id = "map"
         goal_msg.pose.header.stamp = self.get_clock().now().to_msg()
-        goal_msg.pose.pose.position.x = 0.13
-        goal_msg.pose.pose.position.y = 1.44
+        goal_msg.pose.pose.position.x = 9.0
+        goal_msg.pose.pose.position.y = -1.0
         goal_msg.pose.pose.position.z = 0.0
         goal_msg.pose.pose.orientation.x = 0.0
         goal_msg.pose.pose.orientation.y = 0.0

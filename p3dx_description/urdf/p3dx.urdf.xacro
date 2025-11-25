@@ -69,8 +69,10 @@
     mesh_file="${base_mesh_file}"
   />
 
+  <!-- IMU is niet perse nodig-->
+<!--
   <xacro:imu/>
-
+-->
   <xacro:rplidar frame_id="laser" parent_link="base_link">
     <origin xyz="${rplidar_x_offset} ${rplidar_y_offset} ${rplidar_z_offset}"
             rpy="0 0 ${pi/2}"/>
