@@ -12,56 +12,100 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
+from launch.actions import (
+    DeclareLaunchArgument,
+    IncludeLaunchDescription,
+    SetEnvironmentVariable,
+    OpaqueFunction,
+)
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-from launch.conditions import IfCondition, UnlessCondition
+from launch.conditions import IfCondition
 
 
-def generate_launch_description():
-    sensors_launch_path = PathJoinSubstitution(
-        [FindPackageShare('p3dx_bringup'), 'launch', 'sensors.launch.py']
-    )
+def launch_setup(context, *args, **kwargs):
+    """Executed at runtime when the launch context exists."""
+    
+    # Evaluate launch arguments
+    use_sim_time = False
+    odom_topic = LaunchConfiguration('odom_topic')
+    base_serial_port = LaunchConfiguration('base_serial_port')
+    micro_ros_baudrate = LaunchConfiguration('micro_ros_baudrate')
+    micro_ros_transport = LaunchConfiguration('micro_ros_transport')
+    micro_ros_port = LaunchConfiguration('micro_ros_port')
 
-    joy_launch_path = PathJoinSubstitution(
-        [FindPackageShare('p3dx_bringup'), 'launch', 'joy_teleop.launch.py']
-    )
 
-    description_launch_path = PathJoinSubstitution(
-        [FindPackageShare('p3dx_description'), 'launch', 'description.launch.py']
-    )
-
+    # Package paths
     ekf_config_path = PathJoinSubstitution(
         [FindPackageShare("p3dx_base"), "config", "ekf.yaml"]
     )
 
-    default_robot_launch_path = PathJoinSubstitution(
-        [FindPackageShare('p3dx_bringup'), 'launch', 'default_robot.launch.py']
+    description_launch_path = os.path.join(
+        get_package_share_directory('p3dx_description'), 'launch', 'description.launch.py'
     )
 
-    custom_robot_launch_path = PathJoinSubstitution(
-        [FindPackageShare('p3dx_bringup'), 'launch', 'custom_robot.launch.py']
+    if micro_ros_transport == 'serial':
+        micro_ros_agent_node = Node(
+            package='micro_ros_agent',
+            executable='micro_ros_agent',
+            name='micro_ros_agent',
+            output='screen',
+            arguments=['serial', '--dev', base_serial_port, '-b', micro_ros_baudrate]
+        )
+    else:
+        micro_ros_agent_node = Node(
+            package='micro_ros_agent',
+            executable='micro_ros_agent',
+            name='micro_ros_agent',
+            output='screen',
+            arguments=[micro_ros_transport, '--port', micro_ros_port]
+        )
+
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[
+            {'use_sim_time': use_sim_time},
+            ekf_config_path
+        ],
+        remappings=[("odometry/filtered", odom_topic)]
     )
 
-    extra_launch_path = PathJoinSubstitution(
-        [FindPackageShare('p3dx_bringup'), 'launch', 'extra.launch.py']
+
+    description_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(description_launch_path),
+        launch_arguments={
+            'use_sim_time': str(use_sim_time),
+            'publish_joints': 'false',
+            'urdf': LaunchConfiguration('urdf')
+        }.items()
     )
+
+    return [
+        micro_ros_agent_node,
+        description_launch,
+        ekf_node,
+    ]
+
+
+def generate_launch_description():
+    # Package paths for defaults
+    desc_pkg = get_package_share_directory('p3dx_description')
+    desc_pkg_gazebo = os.path.dirname(desc_pkg)
+    
+    urdf_path = PathJoinSubstitution(
+        [FindPackageShare("p3dx_description"), "urdf", "p3dx.urdf.xacro"]
+    )
+
 
     return LaunchDescription([
-        DeclareLaunchArgument(
-            name='custom_robot', 
-            default_value='false',
-            description='Use custom robot'
-        ),
-
-        DeclareLaunchArgument(
-            name='extra', 
-            default_value='false',
-            description='Launch extra launch file'
-        ),
 
         DeclareLaunchArgument(
             name='base_serial_port', 
@@ -70,8 +114,14 @@ def generate_launch_description():
         ),
 
         DeclareLaunchArgument(
+            name='micro_ros_baudrate', 
+            default_value='115200',
+            description='micro-ROS baudrate'
+        ),
+
+        DeclareLaunchArgument(
             name='micro_ros_transport',
-            default_value='serial',
+            default_value='udp4',
             description='micro-ROS transport'
         ),
 
@@ -82,66 +132,22 @@ def generate_launch_description():
         ),
 
         DeclareLaunchArgument(
-            name='odom_topic', 
+            name='urdf',
+            default_value=urdf_path,
+            description='Absolute path to robot urdf file'
+        ),
+
+        DeclareLaunchArgument(
+            name='odom_topic',
             default_value='/odom',
             description='EKF out odometry topic'
         ),
-
-        DeclareLaunchArgument(
-            name='madgwick',
-            default_value='false',
-            description='Use madgwick to fuse imu and magnetometer'
-        ),
-
-        DeclareLaunchArgument(
-            name='orientation_stddev',
-            default_value='0.003162278',
-            description='Madgwick orientation stddev'
-        ),
-
-        DeclareLaunchArgument(
-            name='joy', 
-            default_value='false',
-            description='Use Joystick'
-        ),
-
-        Node(
-            condition=IfCondition(LaunchConfiguration("madgwick")),
-            package='imu_filter_madgwick',
-            executable='imu_filter_madgwick_node',
-            name='madgwick_filter_node',
-            output='screen',
-            parameters=[
-                {'orientation_stddev' : LaunchConfiguration('orientation_stddev')}
-            ]
-        ),
-
-        Node(
-            package='robot_localization',
-            executable='ekf_node',
-            name='ekf_filter_node',
-            output='screen',
-            parameters=[
-                ekf_config_path
-            ],
-            remappings=[("odometry/filtered", LaunchConfiguration("odom_topic"))]
-        ),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(default_robot_launch_path),
-            condition=UnlessCondition(LaunchConfiguration("custom_robot")),
-            launch_arguments={
-                'base_serial_port': LaunchConfiguration("base_serial_port")
-            }.items()
-        ),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(extra_launch_path),
-            condition=IfCondition(LaunchConfiguration("extra")),
-        ),
-
-        IncludeLaunchDescription(
-            PythonLaunchDescriptionSource(custom_robot_launch_path),
-            condition=IfCondition(LaunchConfiguration("custom_robot")),
-        )
+                
+        OpaqueFunction(function=launch_setup)
     ])
+
+
+#sources: 
+#https://navigation.ros.org/setup_guides/index.html#
+#https://answers.ros.org/question/374976/ros2-launch-gazebolaunchpy-from-my-own-launch-file/
+#https://github.com/ros2/rclcpp/issues/940
