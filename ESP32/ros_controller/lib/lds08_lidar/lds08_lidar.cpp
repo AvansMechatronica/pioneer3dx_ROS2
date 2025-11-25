@@ -55,7 +55,7 @@ lds08_lidar::lds08_lidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lid
 
     // Setup message fields
     rosidl_runtime_c__String__init(&scan_msg.header.frame_id);
-    scan_msg.header.frame_id = micro_ros_string_utilities_set(scan_msg.header.frame_id, "lds08_lidar");
+    scan_msg.header.frame_id = micro_ros_string_utilities_set(scan_msg.header.frame_id, "laser");
     scan_msg.angle_min = -pi;
     scan_msg.angle_max =  pi;
     scan_msg.angle_increment = (2 * pi) / LDS08_NUMBER_OF_SAMPLES_PER_SCAN;
@@ -160,6 +160,7 @@ void lds08_lidar::scanTaskFunction(void* parameter) {
                 if (index < 0) index = 0;
                 if (index >= LDS08_NUMBER_OF_SAMPLES_PER_SCAN) 
                     index = LDS08_NUMBER_OF_SAMPLES_PER_SCAN - 1;
+                if(lidar->inverted) index = LDS08_NUMBER_OF_SAMPLES_PER_SCAN - 1 - index;
                 
                 // Update scan data
                 lidar->scan_msg.ranges.data[index] = measurement.point[i].distance / 1000.0f; // mm to meters
@@ -241,13 +242,15 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     uint32_t startTime = millis();
     LiDARFrameTypeDef frame;
 
-    // Wacht tot minstens 5 bytes beschikbaar zijn
+
+#if 0
+    // Wacht tot minstens 1 bytes beschikbaar zijn
     while (LIDARSerial->available() < 1) {
         if (millis() - startTime > timeout_ms){
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
             return false;
         }
-        vTaskDelay(1/ portTICK_PERIOD_MS);
+        //vTaskDelay(1/ portTICK_PERIOD_MS);
     }
 
     // Read header bytes
@@ -256,19 +259,21 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
         return false;
     }
 
-    while (LIDARSerial->available() < 1) {
-        if (millis() - startTime > timeout_ms){
-            DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
-            return false;
-        }
-        vTaskDelay(1/ portTICK_PERIOD_MS);
-    }
-
     if(frame.header != PKG_HEADER) {
         // Invalid start byte, discard and continue
         DEBUG_PRINT("Ongeldige start byte: 0x%02X\n", frame.header);
         return false;
     }
+
+
+    while (LIDARSerial->available() < 1) {
+        if (millis() - startTime > timeout_ms){
+            DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
+            return false;
+        }
+        //vTaskDelay(1/ portTICK_PERIOD_MS);
+    }
+
 
     // Read length byte
     if (LIDARSerial->readBytes((uint8_t*)&frame + 1, 1) != 1) {
@@ -288,7 +293,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
             return false;
         }
-        vTaskDelay(1/ portTICK_PERIOD_MS);
+        //vTaskDelay(1/ portTICK_PERIOD_MS);
     }
 
     if(LIDARSerial->readBytes(((uint8_t*)&frame) + 2, size_of_frame) != size_of_frame) {
@@ -296,6 +301,35 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
         return false;
     }
 
+#else
+
+    int size_of_frame = sizeof(LiDARFrameTypeDef); // Exclude header bytes already read
+    while (LIDARSerial->available() < size_of_frame){
+        if (millis() - startTime > timeout_ms){
+            DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
+            return false;
+        }
+        //vTaskDelay(1/ portTICK_PERIOD_MS);
+    }
+
+    if(LIDARSerial->readBytes(((uint8_t*)&frame), size_of_frame) != size_of_frame) {
+        DEBUG_PRINT("Fout bij lezen volledige scan frame\n");
+        return false;
+    }
+
+    if(frame.header != PKG_HEADER) {
+        // Invalid start byte, discard and continue
+        DEBUG_PRINT("Ongeldige start byte: 0x%02X\n", frame.header);
+        return false;
+    }
+
+    if(frame.ver_len != PKG_VER_LEN) {
+        // Invalid version/length byte, discard and continue
+        DEBUG_PRINT("Ongeldige lengte byte: 0x%02X, expected 0x2C\n", frame.ver_len);
+        return false;
+    }   
+
+#endif
     uint8_t crc = 0;
     for (uint32_t i = 0; i < sizeof(LiDARFrameTypeDef) - 1; i++) {
       crc = CrcTable[(crc ^ ((uint8_t*)&frame)[i]) & 0xff];

@@ -23,27 +23,33 @@ void setup() {
 
   // Start scan (false = standaard scan, true = express scan)
   lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM);
+  lidar->startScan(40);
 }
 
 
-
+int loop_counter = 0;
 lds08_lidarMeasurement scanValue;
 // ------------------- Loop -------------------
 void loop() {
 #if 1
   if(lidar->getScanValue(&scanValue, 100)) {
-    Serial.printf("Speed: %d\n", scanValue.speed);
-    Serial.printf("Start angle: %.2f deg, End angle: %.2f deg\n",
-      scanValue.start_angle,
-      scanValue.end_angle);
-    for(int i = 0; i < POINT_PER_PACK; i++) {
-      Serial.printf("Angle: %.2f deg, Distance: %.2f mm, Quality: %d\n",
-        scanValue.point[i].angle,
-        scanValue.point[i].distance,
-        scanValue.point[i].quality);
+#if 0
+    if(loop_counter++ % 1000 == 0) {
+      Serial.printf("Speed: %d\n", scanValue.speed);
+      Serial.printf("Start angle: %.2f deg, End angle: %.2f deg\n",
+        scanValue.start_angle,
+        scanValue.end_angle);
+      for(int i = 0; i < POINT_PER_PACK; i++) {
+        Serial.printf("Angle: %.2f deg, Distance: %.2f mm, Quality: %d\n",
+          scanValue.point[i].angle,
+          scanValue.point[i].distance,
+          scanValue.point[i].quality);
+      }
+      loop_counter++;
     }
+#endif
   }
 #endif
-  delay(10);
+//  delay(10);
 }
 
