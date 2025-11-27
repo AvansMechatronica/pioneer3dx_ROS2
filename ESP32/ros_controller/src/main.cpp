@@ -138,6 +138,7 @@ Adafruit_ST7735 *tft;
   }
 
 void microros_error_handler(int line) {
+    lidar->stopScan();
     Serial.printf("Restarting...\n");
     tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\n,Line: %d", line);
     delay(5000);

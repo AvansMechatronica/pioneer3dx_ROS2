@@ -217,9 +217,6 @@ void lds08_lidar::stopScan() {
     DEBUG_PRINT("Scan gestopt\n");
 }
 
-
-
-
 #ifndef TESTING
 // Publish LaserScan message (placeholder implementation)
 rcl_ret_t lds08_lidar::publish() {
