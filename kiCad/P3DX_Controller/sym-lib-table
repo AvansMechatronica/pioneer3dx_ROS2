@@ -1,0 +1,4 @@
+(sym_lib_table
+  (version 7)
+  (lib (name "p3dx")(type "KiCad")(uri "${KIPRJMOD}/p3dx.kicad_sym")(options "")(descr ""))
+)
