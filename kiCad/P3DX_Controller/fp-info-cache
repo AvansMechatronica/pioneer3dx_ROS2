@@ -1,4 +1,4 @@
-26855858371910796
+26857622787075071
 Audio_Module
 Reverb_BTDR-1H
 Digital Reverberation Unit, http://www.belton.co.kr/inc/downfile.php?seq=17&file=pdf (footprint from http://www.uk-electronic.de/PDF/BTDR-1.pdf)
@@ -106700,3 +106700,10 @@ GY_271
 0
 5
 5
+p3dx
+MPU6050
+
+
+0
+8
+8
