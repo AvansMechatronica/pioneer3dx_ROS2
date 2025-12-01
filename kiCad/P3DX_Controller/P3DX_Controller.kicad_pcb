@@ -11319,7 +11319,7 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Pioneer 3DX Mobile Robot Controller\nDepartment: ATIx/Mechatronics\nDesign by: Gerard Harkema © 2025\n"
+	(gr_text "Pioneer 3DX Mobile Robot Controller\nDepartment: ATIx/Mechatronics\nDesign by: Gerard Harkema © 2025\nhttps://avansmechatronica.github.io/pioneer3dx_ROS2/"
 		(locked yes)
 		(at 111.95 125.6 0)
 		(layer "F.SilkS")
