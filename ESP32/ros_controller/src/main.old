@@ -123,7 +123,6 @@ lds08_lidar *lidar;
 //creating objects for right wheel and left wheel
 MotorController *leftWheel;
 MotorController *rightWheel;
-SPIClass *spiClass;
 Adafruit_ST7735 *tft;
 
 
@@ -169,7 +168,9 @@ void cmd_vel_subscription_callback(const void* msgin) {
 void reset_by_button(){
 #if defined(HANDLE_BUMPERS)
     if(digitalRead(BUMPER_FRONT_PIN)==HIGH &&
-       digitalRead(BUMPER_REAR_PIN)==HIGH){
+      digitalRead(BUMPER_FRONT_LEFT_PIN)==HIGH  &&
+      digitalRead(BUMPER_REAR_PIN)==HIGH  &&
+      digitalRead(BUMPER_REAR_LEFT_PIN)==HIGH){
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
       error_msg.data = false;
     }
@@ -217,10 +218,11 @@ void batteryPublisher(){
 
 
 #if defined(HANDLE_BUMPERS)
-void bumpersPunblisher(){
-  // Read bumper states (assuming active low)
-  bumper_msg.front = !digitalRead(BUMPER_FRONT_PIN);
-  bumper_msg.rear = !digitalRead(BUMPER_REAR_PIN);
+void bumpersPunblisher()
+  bumper_msg.front_right = !digitalRead(BUMPER_FRONT_PIN);
+  bumper_msg.front_left = !digitalRead(BUMPER_FRONT_LEFT_PIN);
+  bumper_msg.rear_right = !digitalRead(BUMPER_REAR_PIN);
+  bumper_msg.rear_left = !digitalRead(BUMPER_REAR_LEFT_PIN);
 
   // Publish bumpers
   RCSOFTCHECK(rcl_publish(&bumpers_publisher, &bumper_msg, NULL));
@@ -354,11 +356,7 @@ void init_display(){
   Serial.printf("SS: %i\n", SS); 
   #endif
 
-  SPIClass *spiClass = new SPIClass(HSPI);
-  spiClass->begin(DISPLAY_CLK_PIN, -1, DISPLAY_SDA_PIN, DISPLAY_CS_PIN);
-
-  //tft = new Adafruit_ST7735(DISPLAY_CS_PIN, DISPLAY_RS_DC_PIN, DISPLAY_RST_PIN);
-  tft = new Adafruit_ST7735(spiClass, DISPLAY_CS_PIN, DISPLAY_RS_DC_PIN, DISPLAY_RST_PIN);
+  tft = new Adafruit_ST7735(DISPLAY_CS_PIN, DISPLAY_RS_DC_PIN, DISPLAY_RST_PIN);
   tft_prinft_begin(tft);
 
   tft->initR(INITR_GREENTAB);
@@ -449,11 +447,11 @@ void setup() {
 #if defined(WIFI)
   WiFi.setHostname("p3dx_controller");
 
-//  bool force_network_configure;
-//  force_network_configure = !digitalRead(SELECT_WIFI_CONFIG_MODE_PIN);
+  bool force_network_configure;
+  force_network_configure = !digitalRead(SELECT_WIFI_CONFIG_MODE_PIN);
 
   NETWORK_CONFIG networkConfig;
-  bool wifiUp = configureNetwork(false, &networkConfig); //???
+  bool wifiUp = configureNetwork(force_network_configure, &networkConfig);
   if(!wifiUp){
     tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\n");
 
@@ -489,10 +487,16 @@ void setup() {
 #if defined(HANDLE_BUMPERS)
   pinMode(BUMPER_FRONT_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_PIN), bumber_hit, FALLING);
+  pinMode(BUMPER_FRONT_LEFT_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_LEFT_PIN), bumber_hit, FALLING); 
   pinMode(BUMPER_REAR_PIN, INPUT);
   attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_PIN), bumber_hit, FALLING);
+  pinMode(BUMPER_REAR_LEFT_PIN, INPUT);
+  attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_LEFT_PIN), bumber_hit, FALLING);
   if(digitalRead(BUMPER_FRONT_PIN)==HIGH &&
-     digitalRead(BUMPER_REAR_PIN)==HIGH){
+     digitalRead(BUMPER_FRONT_LEFT_PIN)==HIGH  &&
+     digitalRead(BUMPER_REAR_PIN)==HIGH  &&
+     digitalRead(BUMPER_REAR_LEFT_PIN)==HIGH){
     error_msg.data = false;
   }
   else{
@@ -601,7 +605,7 @@ void setup() {
   RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
   RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
 #if defined(HANDLE_BUMPERS)
-  RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &publishBumpersTimer));
 #endif
 #ifdef RPLIDAR_H
   lidar->startScan(EXPRESS_LIDAR_MODE, DEFAULT_LIDAR_MOTOR_PWM); //start normal scan
