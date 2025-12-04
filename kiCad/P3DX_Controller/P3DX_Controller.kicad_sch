@@ -5516,12 +5516,6 @@
 		(uuid "89bc0da5-f327-4ded-9388-2110c67858f1")
 	)
 	(junction
-		(at 203.2 144.78)
-		(diameter 0)
-		(color 0 0 0 0)
-		(uuid "a9d52eb3-e397-4776-aca4-af8a47a93987")
-	)
-	(junction
 		(at 251.46 55.88)
 		(diameter 0)
 		(color 0 0 0 0)
@@ -5694,16 +5688,6 @@
 			(type default)
 		)
 		(uuid "7dc116a0-e39a-4270-86ad-b0a79d252b3f")
-	)
-	(wire
-		(pts
-			(xy 203.2 142.24) (xy 203.2 144.78)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "81cbf3fa-069a-4544-88ca-2914e8034826")
 	)
 	(wire
 		(pts
@@ -6395,14 +6379,14 @@
 		(uuid "2a287b2b-a5ae-4645-bd97-02a1e43b8e4f")
 	)
 	(label "V_BATTERY"
-		(at 203.2 142.24 0)
+		(at 203.2 139.7 0)
 		(effects
 			(font
 				(size 1.27 1.27)
 			)
 			(justify left bottom)
 		)
-		(uuid "33dc6d13-d803-4a5e-a50a-807ff4ed753a")
+		(uuid "2fcb17e2-2881-49d2-8191-7badab38e1ee")
 	)
 	(label "ucp_reset_lv"
 		(at 50.8 48.26 180)
@@ -6505,7 +6489,7 @@
 		(uuid "4916ce87-ebd0-4108-81c4-3d314c981d61")
 	)
 	(label "R_ENCODER_B"
-		(at 149.86 71.12 0)
+		(at 149.86 76.2 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6885,7 +6869,7 @@
 		(uuid "d417bd48-25de-494f-a112-a55064365181")
 	)
 	(label "L_ENCODER_B"
-		(at 149.86 73.66 0)
+		(at 149.86 81.28 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6995,7 +6979,7 @@
 		(uuid "f6cbb4c1-b92e-4026-857d-00138fcd9981")
 	)
 	(label "R_ENCODER_A"
-		(at 149.86 68.58 0)
+		(at 149.86 71.12 0)
 		(effects
 			(font
 				(size 1.27 1.27)
