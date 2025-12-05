@@ -6649,7 +6649,7 @@
 		(uuid "7f66a8fb-57c3-4da2-990c-2f1205d4f639")
 	)
 	(label "ucp_power_led"
-		(at 34.29 184.15 0)
+		(at 254 151.13 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -6679,7 +6679,7 @@
 		(uuid "88e4db2c-1794-4a50-a520-1eb4d7a68cd4")
 	)
 	(label "ucp_motors"
-		(at 229.87 146.05 0)
+		(at 232.41 151.13 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -8214,7 +8214,7 @@
 	)
 	(symbol
 		(lib_id "power:VCC")
-		(at 34.29 176.53 0)
+		(at 254 143.51 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8223,7 +8223,7 @@
 		(fields_autoplaced yes)
 		(uuid "6fb1f72d-e5d2-49d6-96e7-a7e3539ab68c")
 		(property "Reference" "#PWR029"
-			(at 34.29 180.34 0)
+			(at 254 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8232,7 +8232,7 @@
 			)
 		)
 		(property "Value" "VCC"
-			(at 34.29 171.45 0)
+			(at 254 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8240,7 +8240,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 34.29 176.53 0)
+			(at 254 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8249,7 +8249,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 34.29 176.53 0)
+			(at 254 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8258,7 +8258,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"VCC\""
-			(at 34.29 176.53 0)
+			(at 254 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8478,7 +8478,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 34.29 180.34 0)
+		(at 254 147.32 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8487,7 +8487,7 @@
 		(fields_autoplaced yes)
 		(uuid "74cf25ed-8327-4c12-b1fd-835c8250495c")
 		(property "Reference" "R5"
-			(at 36.83 179.0699 0)
+			(at 256.54 146.0499 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8496,7 +8496,7 @@
 			)
 		)
 		(property "Value" "DO NOT PLACE"
-			(at 36.83 181.6099 0)
+			(at 256.54 148.5899 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8505,7 +8505,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P7.62mm_Horizontal"
-			(at 32.512 180.34 90)
+			(at 252.222 147.32 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8514,7 +8514,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 34.29 180.34 0)
+			(at 254 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8523,7 +8523,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 34.29 180.34 0)
+			(at 254 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8820,7 +8820,7 @@
 	)
 	(symbol
 		(lib_id "power:VCC")
-		(at 229.87 138.43 0)
+		(at 232.41 143.51 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -8829,7 +8829,7 @@
 		(fields_autoplaced yes)
 		(uuid "789e2b59-781d-40f7-bbb5-6d550813b113")
 		(property "Reference" "#PWR018"
-			(at 229.87 142.24 0)
+			(at 232.41 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8838,7 +8838,7 @@
 			)
 		)
 		(property "Value" "VCC"
-			(at 229.87 133.35 0)
+			(at 232.41 138.43 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8846,7 +8846,7 @@
 			)
 		)
 		(property "Footprint" ""
-			(at 229.87 138.43 0)
+			(at 232.41 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8855,7 +8855,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 229.87 138.43 0)
+			(at 232.41 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -8864,7 +8864,7 @@
 			)
 		)
 		(property "Description" "Power symbol creates a global label with name \"VCC\""
-			(at 229.87 138.43 0)
+			(at 232.41 143.51 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10031,7 +10031,7 @@
 	)
 	(symbol
 		(lib_id "Device:R")
-		(at 229.87 142.24 0)
+		(at 232.41 147.32 0)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
@@ -10040,7 +10040,7 @@
 		(fields_autoplaced yes)
 		(uuid "cf83e3df-d31c-440f-bf05-99c329dff0e0")
 		(property "Reference" "R6"
-			(at 232.41 140.9699 0)
+			(at 234.95 146.0499 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10049,7 +10049,7 @@
 			)
 		)
 		(property "Value" "DO NOT PLACE"
-			(at 232.41 143.5099 0)
+			(at 234.95 148.5899 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10058,7 +10058,7 @@
 			)
 		)
 		(property "Footprint" "Resistor_THT:R_Axial_DIN0204_L3.6mm_D1.6mm_P7.62mm_Horizontal"
-			(at 228.092 142.24 90)
+			(at 230.632 147.32 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10067,7 +10067,7 @@
 			)
 		)
 		(property "Datasheet" ""
-			(at 229.87 142.24 0)
+			(at 232.41 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10076,7 +10076,7 @@
 			)
 		)
 		(property "Description" ""
-			(at 229.87 142.24 0)
+			(at 232.41 147.32 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -10577,7 +10577,6 @@
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "f38704e2-7f1c-4181-bb0b-b1cf16a1eb6e")
 		(property "Reference" "#PWR011"
 			(at 251.46 130.81 0)
