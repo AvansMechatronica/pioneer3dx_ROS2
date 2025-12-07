@@ -20,6 +20,9 @@
 		},
 		{
 			"path": "device_tests/lds08_lidar_tests/lds08_lidar_test"
+		},
+		{
+			"path": "device_tests/imu_mpu6050_test"
 		}
 	],
 	"settings": {
