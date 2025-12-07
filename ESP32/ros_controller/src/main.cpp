@@ -14,6 +14,7 @@
 #include <jointstate.h>
 #include <lds08_lidar.h>
 //#include <rplidar.h>
+#include <imu_mpu6050.h>
 
 #if defined(HANDLE_BUMPERS)
 #include <p3dx_interfaces/msg/bumpers.h>
@@ -118,7 +119,7 @@ rplidar *lidar;
 lds08_lidar *lidar;
 #endif
 
-
+IMU_MPU6050 *imu;
 
 //creating objects for right wheel and left wheel
 MotorController *leftWheel;
@@ -569,6 +570,8 @@ void setup() {
 
   odometry = new Odometry(&node);
   jointstate = new Jointstate(&node);
+
+  imu = new IMU_MPU6050(&node);
 
   //timer function for controlling the motor base. At every samplingT time
   //MotorControll_timerCallback function is called
