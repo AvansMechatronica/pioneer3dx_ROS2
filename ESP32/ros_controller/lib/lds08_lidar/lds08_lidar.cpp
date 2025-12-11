@@ -145,6 +145,10 @@ void lds08_lidar::scanTaskFunction(void* parameter) {
             // Convert angle from degrees to radians
 
             for(int i = 0; i < POINT_PER_PACK; i++) {
+                
+#if defined(LIDAR_ANGLE_OFFSET)
+                measurement.point[i].angle += LIDAR_ANGLE_OFFSET;
+#endif
 
                 float angle_rad = measurement.point[i].angle * (pi / 180.0f);
                 
@@ -160,8 +164,9 @@ void lds08_lidar::scanTaskFunction(void* parameter) {
                 if (index < 0) index = 0;
                 if (index >= LDS08_NUMBER_OF_SAMPLES_PER_SCAN) 
                     index = LDS08_NUMBER_OF_SAMPLES_PER_SCAN - 1;
-                if(lidar->inverted) index = LDS08_NUMBER_OF_SAMPLES_PER_SCAN - 1 - index;
-                
+#if defined(LIDAR_INVERT_SCAN)
+                index = LDS08_NUMBER_OF_SAMPLES_PER_SCAN - 1 - index;
+#endif
                 // Update scan data
                 lidar->scan_msg.ranges.data[index] = measurement.point[i].distance / 1000.0f; // mm to meters
                 lidar->scan_msg.intensities.data[index] = (float)measurement.point[i].quality;

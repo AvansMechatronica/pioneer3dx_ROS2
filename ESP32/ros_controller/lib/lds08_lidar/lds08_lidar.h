@@ -120,7 +120,7 @@ private:
     float *distance;
     // Control motor speed (PWM percent)
     void setupMotorPWM(int percent);
-    bool inverted = true;
+
 
 #ifndef TESTING
     rcl_publisher_t laser_pub;    // micro-ROS publisher

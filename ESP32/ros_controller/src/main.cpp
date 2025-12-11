@@ -444,10 +444,7 @@ char* convertToCamelCase(const char *input) {
     return output;
 }
 
-#if defined(WIFI)
-  String wifiWIFI_SSID = WIFI_SSID;
-  String wifiPass = WIFI_PASSWORD;
-#endif
+
 
 /**
  * Setup function - initializes hardware and ROS2 components
