@@ -23,6 +23,10 @@
 		},
 		{
 			"path": "device_tests/imu_mpu6050_test"
+		},
+		{
+			"name": "s3-basic-test",
+			"path": "device_tests/eps32-s3/s3-basic-test"
 		}
 	],
 	"settings": {

@@ -12,8 +12,10 @@
 #include <std_msgs/msg/float32.h>
 #include <odometry.h>
 #include <jointstate.h>
+#if defined(INCLUDE_LIDAR)
 #include <lds08_lidar.h>
 //#include <rplidar.h>
+#endif
 #if defined(INCLUDE_IMU)
 #include <imu_mpu6050.h>
 #endif
@@ -121,12 +123,13 @@ unsigned long prev_odom_update = 0;  // Last odometry update timestamp
 Odometry *odometry;
 Jointstate *jointstate;
 
+#if defined(INCLUDE_LIDAR)
 #ifdef RPLIDAR_H
 rplidar *lidar;
 #else
 lds08_lidar *lidar;
 #endif
-
+#endif
 #if defined(INCLUDE_IMU)
 imu_mpu6050 *imu;
 #endif
@@ -157,7 +160,9 @@ Adafruit_ST7735 *tft;
  * Error handler that stops the lidar, displays error, and restarts ESP32
  */
 void microros_error_handler(int line) {
+#if defined(INCLUDE_LIDAR)
     lidar->stopScan();
+#endif
     Serial.printf("Restarting...\n");
     tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\n,Line: %d", line);
     delay(5000);
@@ -280,7 +285,10 @@ void highSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time
                      rightWheel->getVelocity(), 
                      encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
                      encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
+
+#if defined(INCLUDE_LIDAR)
   RCSOFTCHECK(lidar->publish());
+#endif
   RCSOFTCHECK(jointstate->publish());
 #if defined(INCLUDE_IMU)
   RCSOFTCHECK(imu->publish());
@@ -452,17 +460,54 @@ char* convertToCamelCase(const char *input) {
 void setup() {
   Serial.begin(115200);
   delay(500);
-#ifdef RPLIDAR_H
-  Serial.println("RPlidar A1M8 - Setup gestart");
+
+  Serial.println("Pioneer 3DX Controller Starting...");
+
+  init_display();
+
+#if defined(WIFI)
+  const char *host_name = convertToCamelCase(NODE_NAME);
+  Serial.printf("hostname :%s\n", host_name);
+  WiFi.setHostname(host_name);
+#if 0
+  
+  NETWORK_CONFIG networkConfig;
+  bool wifiUp = configureNetwork(false, &networkConfig);
+  if(!wifiUp){
+    tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\nRestarting...\n");
+    delay(5000);
+    ESP.restart();
+  };
 #else
-  Serial.println("LDS08 Lidar - Setup gestart");
+
+  const char* ssid     = "BirdsBoven";
+  const char* password = "Highway12!";
+  NETWORK_CONFIG networkConfig;
+  networkConfig.ssid = ssid;
+  networkConfig.password = password;
+  networkConfig.microros_agent_ip_address.fromString("192.168.2.150");
+  networkConfig.microros_agent_port = 8888;
+
+
 #endif
 
+  set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
+                               const_cast<char*>(networkConfig.password.c_str()), 
+                               networkConfig.microros_agent_ip_address,
+                               networkConfig.microros_agent_port);
+  tft_printf(ST77XX_MAGENTA, "WiFi Connected\n");
+  delay(2000);
+#else
+  Serial.begin(115200);
+  set_microros_serial_transports(Serial);
+  delay(2000);
+#endif
+  Serial.printf("micro-ROS Transports Set");
   // Initialize ADC for battery voltage reading
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
 
-  init_display();
+
   tft_printf(ST77XX_MAGENTA, "Pioneer 3DX\nController\nStarted\n");
 
   // Initialize motor controllers
@@ -480,31 +525,6 @@ void setup() {
   prev_rpm_l = leftWheel->getVelocity();
   prev_rpm_r = rightWheel->getVelocity();
 
-#if defined(WIFI)
-  WiFi.setHostname("p3dx_controller");
-  
-  NETWORK_CONFIG networkConfig;
-  bool wifiUp = configureNetwork(false, &networkConfig);
-  if(!wifiUp){
-    tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\n");
-  };
-
-  const char *host_name = convertToCamelCase(NODE_NAME);
-  Serial.printf("hostname :%s\n", host_name);
-  WiFi.setHostname(NODE_NAME);
-  WiFi.setHostname("P3dxController");
-  
-  set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
-                               const_cast<char*>(networkConfig.password.c_str()), 
-                               networkConfig.microros_agent_ip_address,
-                               networkConfig.microros_agent_port);
-  tft_printf(ST77XX_MAGENTA, "WiFi Connected\n");
-  delay(2000);
-#else
-  Serial.begin(115200);
-  set_microros_serial_transports(Serial);
-  delay(2000);
-#endif
 
   // Initialize pins
   pinMode(LED_PIN, OUTPUT);
@@ -548,6 +568,8 @@ void setup() {
     ESP.restart();
   }
 
+
+
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   // Initialize subscribers
@@ -570,10 +592,14 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), "battery_voltage"));
     
   // Initialize sensors
+#if defined(INCLUDE_LIDAR)
 #ifdef RPLIDAR_H
   lidar = new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+  Serial.println("RPlidar A1M8 - Setup gestart");
 #else
   lidar = new lds08_lidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+  Serial.println("LDS08 Lidar - Setup gestart");
+#endif
 #endif
 
   odometry = new Odometry(&node);
@@ -605,19 +631,25 @@ void setup() {
 #endif
 
   // Start lidar
+#if defined(INCLUDE_LIDAR)
 #ifdef RPLIDAR_H
   lidar->startScan(EXPRESS_LIDAR_MODE, DEFAULT_LIDAR_MOTOR_PWM);
 #else
   lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM);
 #endif
+#endif
   
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
+
 }
 
 /**
  * Main loop - spins ROS2 executor
  */
 void loop() {
+
   delay(100);
+
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+
 }

@@ -1,4 +1,4 @@
-
+#ifndef USE_SPIFFS
 #ifdef WIFI
 #include <Arduino.h>
 #include <WiFi.h>
@@ -53,7 +53,7 @@ const long interval = 10000;  // interval to wait for Wi-Fi connection (millisec
 
 
 // Initialize LittleFS
-void initLittleFS() {
+void initFS() {
   if (!LittleFS.begin(false)) {
     DEBUG_PRINT("An error has occurred while mounting LittleFS\n");
 #ifndef IGNOR_TFT_PRINT
@@ -136,7 +136,7 @@ NETWORK_CONFIG network_config;
 bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
 
 
-  initLittleFS();
+  initFS();
 
   // detect webserver files
 
@@ -235,4 +235,5 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
   }
   return false;
 }
+#endif
 #endif
