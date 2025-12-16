@@ -21,8 +21,8 @@
 
 
 #define MOTOR_ENABLE_PIN    2
-#define MOTOR_ENABLE        HIGH
-#define MOTOR_DISABLE       LOW 
+#define MOTOR_ENABLE        LOW
+#define MOTOR_DISABLE       HIGH 
 
 //#define SELECT_WIFI_CONFIG_MODE_PIN 13
 
@@ -34,7 +34,8 @@
 //#define DISPLAY_MISO_PIN  19 // Not used
 
 #define RPLIDAR_COM_PORT    2      
-#define RPLIDAR_TX_PIN      18 // Lidar sidee
+#define RPLIDAR_TX_PIN      18 // Lidar side
+
 #define RPLIDAR_RX_PIN      21 // Lidar side
 #define RPLIDAR_MOTOR_PIN   35 // optioneel: PWM of GPIO voor motor aan/uit
 

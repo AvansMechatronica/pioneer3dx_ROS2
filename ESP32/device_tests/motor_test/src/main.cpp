@@ -6,7 +6,7 @@
 #define CLOCK_WISE            HIGH
 #define COUNTER_CLOCK_WISE    LOW
 
-#define R_CHANNEL         1
+//#define R_CHANNEL         1
 
 #if defined(R_CHANNEL)
 #undef L_PWM_PIN        
@@ -39,6 +39,8 @@ void setup() {
   ledcSetup(pwmChannel, freq, resolution);
   ledcAttachPin(L_PWM_PIN, pwmChannel);
   pinMode(L_DIR_PIN, OUTPUT);
+  pinMode(MOTOR_ENABLE_PIN, OUTPUT);
+  digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE); // Motor driver inschakelen
   
   Serial.println("PWM controller gestart.");
   Serial.println("Voer een waarde in tussen -100 en 100:");
