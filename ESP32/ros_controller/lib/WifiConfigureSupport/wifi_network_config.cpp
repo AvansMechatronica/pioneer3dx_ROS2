@@ -1,10 +1,20 @@
-#ifndef USE_SPIFFS
 #ifdef WIFI
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <AsyncTCP.h>
-#include "LittleFS.h"
+
+// Include appropriate filesystem
+#ifdef USE_SPIFFS
+  #include "SPIFFS.h"
+  #define FS_SYSTEM SPIFFS
+  #define FS_NAME "SPIFFS"
+#else
+  #include "LittleFS.h"
+  #define FS_SYSTEM LittleFS
+  #define FS_NAME "LittleFS"
+#endif
+
 #include "wifi_network_config.h"
 #ifndef IGNOR_TFT_PRINT
 #include "tft_printf.h"
@@ -25,7 +35,7 @@
     do {} while (0)
 #endif
 
-// Create AsyncWebServer object on port 80#include "tft_printf.h"
+// Create AsyncWebServer object on port 80
 AsyncWebServer server(80);
 
 // Search for parameter in HTTP POST request
@@ -34,7 +44,7 @@ const char* PARAM_INPUT_2 = "pass";
 const char* PARAM_INPUT_3 = "ros_agent_ipPath";
 const char* PARAM_INPUT_4 = "ros_agent_port";
 
-//Variables to save values from HTML form
+// Variables to save values from HTML form
 String ssid;
 String pass;
 String ros_agent_ipPath;
@@ -46,26 +56,31 @@ const char* passPath = "/pass.txt";
 const char* ros_server_ipPath = "/ros_agent_ipPath.txt";
 const char* ros_server_portPath = "/ros_agent_port.txt";
 
-
 // Timer variables
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
 
-
-// Initialize LittleFS
+// Initialize filesystem (LittleFS or SPIFFS)
 void initFS() {
-  if (!LittleFS.begin(false)) {
-    DEBUG_PRINT("An error has occurred while mounting LittleFS\n");
+  bool result;
+  
+#ifdef USE_SPIFFS
+  result = SPIFFS.begin(true);
+#else
+  result = LittleFS.begin(false);
+#endif
+
+  if (!result) {
+    DEBUG_PRINT("An error has occurred while mounting %s\n", FS_NAME);
 #ifndef IGNOR_TFT_PRINT
-    tft_printf(ST77XX_BLUE, "No filesystem\ndetected\nInstall by\nPlatfomIO\n");
+    tft_printf(ST77XX_BLUE, "No filesystem\ndetected\nInstall by\nPlatformIO\n");
 #endif
     while(true){};
   }
-  DEBUG_PRINT("LittleFS mounted successfully\n");
+  DEBUG_PRINT("%s mounted successfully\n", FS_NAME);
 }
 
-
-// Read File from LittleFS
+// Read File from filesystem
 String readFile(fs::FS &fs, const char * path){
   DEBUG_PRINT("Reading file: %s\r\n", path);
 
@@ -80,10 +95,11 @@ String readFile(fs::FS &fs, const char * path){
     fileContent = file.readStringUntil('\n');
     break;     
   }
+  file.close();
   return fileContent;
 }
 
-// Write file to LittleFS
+// Write file to filesystem
 void writeFile(fs::FS &fs, const char * path, const char * message){
   DEBUG_PRINT("Writing file: %s\r\n", path);
 
@@ -97,12 +113,13 @@ void writeFile(fs::FS &fs, const char * path, const char * message){
   } else {
     DEBUG_PRINT("- write failed\n");
   }
+  file.close();
 }
 
 // Initialize WiFi
 bool testWifi() {
   if(ssid=="" || pass=="" || ros_agent_ipPath=="" || ros_agent_port==""){
-    DEBUG_PRINT("Undefined WIFI_SSID, Password, microROS server IP address or Port\n");
+    DEBUG_PRINT("Undefined SSID, Password, microROS server IP address or Port\n");
     return false;
   }
 
@@ -127,40 +144,40 @@ bool testWifi() {
     }
   }
 
+  DEBUG_PRINT("Connected to WiFi\n");
+  DEBUG_PRINT("IP Address: %s\n", WiFi.localIP().toString().c_str());
   return true;
 }
-
 
 NETWORK_CONFIG network_config;
 
 bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
 
-
   initFS();
 
-  // detect webserver files
-
-  File file = LittleFS.open("/wifimanager.html");
+  // Detect webserver files
+  File file = FS_SYSTEM.open("/wifimanager.html");
   if(!file){
     DEBUG_PRINT("No webpages file found\n");
 #ifndef IGNOR_TFT_PRINT
-    tft_printf(ST77XX_BLUE, "No webpages\nfound\nInstall by\nPlatfomIO\n");
+    tft_printf(ST77XX_BLUE, "No webpages\nfound\nInstall by\nPlatformIO\n");
 #endif
     while(true){};
   }
+  file.close();
  
-  // Load values saved in LittleFS
-  ssid = readFile(LittleFS, ssidPath);
-  pass = readFile(LittleFS, passPath);
-  ros_agent_ipPath = readFile(LittleFS, ros_server_ipPath);
-  ros_agent_port = readFile(LittleFS, ros_server_portPath);
+  // Load values saved in filesystem
+  ssid = readFile(FS_SYSTEM, ssidPath);
+  pass = readFile(FS_SYSTEM, passPath);
+  ros_agent_ipPath = readFile(FS_SYSTEM, ros_server_ipPath);
+  ros_agent_port = readFile(FS_SYSTEM, ros_server_portPath);
 
   DEBUG_PRINT("ssid : %s\n", ssid.c_str());
   DEBUG_PRINT("pass : %s\n", pass.c_str());
   DEBUG_PRINT("ros_agent_ipPath : %s\n", ros_agent_ipPath.c_str());
   DEBUG_PRINT("ros_agent_port : %s\n", ros_agent_port.c_str());
 
-  if(testWifi() & !forceConfigure) {
+  if(testWifi() && !forceConfigure) {
     networkConfig->password = pass;
     networkConfig->ssid = ssid;
     networkConfig->microros_agent_ip_address.fromString(ros_agent_ipPath);
@@ -168,7 +185,7 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     return true;
   }
   else {
-    // Connect to Wi-Fi network with WIFI_SSID and password
+    // Connect to Wi-Fi network with SSID and password
     WiFi.mode(WIFI_AP);
     const char *ap_name = "Pioneer3DX";
     DEBUG_PRINT("Setting AP (Access Point)\n");
@@ -184,10 +201,10 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     
     // Web Server Root URL
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-      request->send(LittleFS, "/wifimanager.html", "text/html");
+      request->send(FS_SYSTEM, "/wifimanager.html", "text/html");
     });
     
-    server.serveStatic("/", LittleFS, "/");
+    server.serveStatic("/", FS_SYSTEM, "/");
     
     server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
       int params = request->params();
@@ -197,30 +214,30 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
           // HTTP POST ssid value
           if (p->name() == PARAM_INPUT_1) {
             ssid = p->value().c_str();
-            DEBUG_PRINT("WIFI_SSID set to: %s\n", ssid );
+            DEBUG_PRINT("SSID set to: %s\n", ssid.c_str());
             // Write file to save value
-            writeFile(LittleFS, ssidPath, ssid.c_str());
+            writeFile(FS_SYSTEM, ssidPath, ssid.c_str());
           }
           // HTTP POST pass value
           if (p->name() == PARAM_INPUT_2) {
             pass = p->value().c_str();
-            DEBUG_PRINT("Password set to: %s\n", pass);
+            DEBUG_PRINT("Password set to: %s\n", pass.c_str());
             // Write file to save value
-            writeFile(LittleFS, passPath, pass.c_str());
+            writeFile(FS_SYSTEM, passPath, pass.c_str());
           }
           // HTTP POST microROS server ip value
           if (p->name() == PARAM_INPUT_3) {
             ros_agent_ipPath = p->value().c_str();
-            DEBUG_PRINT("micoROS server IP Address set to: %s\n", ros_agent_ipPath);
+            DEBUG_PRINT("microROS server IP Address set to: %s\n", ros_agent_ipPath.c_str());
             // Write file to save value
-            writeFile(LittleFS, ros_server_ipPath, ros_agent_ipPath.c_str());
+            writeFile(FS_SYSTEM, ros_server_ipPath, ros_agent_ipPath.c_str());
           }
           // HTTP POST microROS port value
           if (p->name() == PARAM_INPUT_4) {
             ros_agent_port = p->value().c_str();
-            DEBUG_PRINT("microROS Port-number set to: %s\n", ros_agent_port);
+            DEBUG_PRINT("microROS Port-number set to: %s\n", ros_agent_port.c_str());
             // Write file to save value
-            writeFile(LittleFS, ros_server_portPath, ros_agent_port.c_str());
+            writeFile(FS_SYSTEM, ros_server_portPath, ros_agent_port.c_str());
           }
         }
       }
@@ -235,5 +252,4 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
   }
   return false;
 }
-#endif
 #endif
