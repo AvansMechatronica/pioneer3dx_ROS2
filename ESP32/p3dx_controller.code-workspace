@@ -27,6 +27,10 @@
 		{
 			"name": "s3-basic-test",
 			"path": "device_tests/eps32-s3/s3-basic-test"
+		},
+		{
+			"name": "s3-spiffs-test",
+			"path": "device_tests/eps32-s3/s3-spiffs-test"
 		}
 	],
 	"settings": {
