@@ -405,6 +405,7 @@ bool errorLedState = false;
 /**
  * Initialize SPI display
  */
+#if 0
 void init_display(){
   SPIClass *spiClass = new SPIClass(HSPI);
   spiClass->begin(DISPLAY_CLK_PIN, -1, DISPLAY_SDA_PIN, DISPLAY_CS_PIN);
@@ -423,6 +424,41 @@ void init_display(){
   tft->println("P3DX Control");
 
   Serial.printf("Ready"); 
+}
+#endif
+
+void init_display(){
+  // ESP32-S3 specific SPI initialization with explicit pins
+  SPIClass *spiClass = new SPIClass(HSPI);
+  
+  // Initialize SPI with explicit pins for ESP32-S3
+  spiClass->begin(
+    DISPLAY_CLK_PIN,   // SCK
+    -1,                // MISO (not used for display)
+    DISPLAY_SDA_PIN,   // MOSI
+    DISPLAY_CS_PIN     // SS
+  );
+
+  tft = new Adafruit_ST7735(
+    spiClass, 
+    DISPLAY_CS_PIN, 
+    DISPLAY_RS_DC_PIN, 
+    DISPLAY_RST_PIN
+  );
+  
+  tft_prinft_begin(tft);
+
+  tft->initR(INITR_GREENTAB);
+  tft->fillScreen(ST77XX_BLACK);
+  tft->setRotation(1);
+  tft->setFont(&FreeSansBold9pt7b);
+  tft->fillScreen(ST77XX_BLACK);
+  tft->setTextColor(ST77XX_CYAN);
+  tft->setTextSize(1);
+  tft->setCursor(1, 22);
+  tft->println("P3DX Control");
+
+  Serial.printf("Display Ready\n"); 
 }
 
 /**
@@ -469,7 +505,7 @@ void setup() {
   const char *host_name = convertToCamelCase(NODE_NAME);
   Serial.printf("hostname :%s\n", host_name);
   WiFi.setHostname(host_name);
-#if 0
+#if 1
   
   NETWORK_CONFIG networkConfig;
   bool wifiUp = configureNetwork(false, &networkConfig);
@@ -535,9 +571,9 @@ void setup() {
 
 #if defined(HANDLE_BUMPERS)
   // Setup bumper interrupts
-  pinMode(BUMPER_FRONT_PIN, INPUT);
+  pinMode(BUMPER_FRONT_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_PIN), bumber_hit, FALLING);
-  pinMode(BUMPER_REAR_PIN, INPUT);
+  pinMode(BUMPER_REAR_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_PIN), bumber_hit, FALLING);
   
   // Check initial bumper state

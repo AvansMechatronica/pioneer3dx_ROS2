@@ -21,7 +21,6 @@
 #endif
 
 #include <string>
-#include <iostream>
 
 #define DEBUG
 #ifdef DEBUG
@@ -151,6 +150,8 @@ bool testWifi() {
 
 NETWORK_CONFIG network_config;
 
+// Returns true if the network was configured and WiFi connection succeeded (station mode).
+// Returns false if the device entered AP mode for configuration or if configuration is incomplete.
 bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
 
   initFS();
@@ -181,7 +182,25 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     networkConfig->password = pass;
     networkConfig->ssid = ssid;
     networkConfig->microros_agent_ip_address.fromString(ros_agent_ipPath);
-    networkConfig->microros_agent_port = std::stoi(ros_agent_port.c_str());
+
+    int port = 0;
+    if (!ros_agent_port.isEmpty()) {
+      bool valid = true;
+      for (size_t i = 0; i < ros_agent_port.length(); ++i) {
+        if (!isdigit(ros_agent_port[i])) {
+          valid = false;
+          break;
+        }
+      }
+      if (valid) {
+        port = ros_agent_port.toInt();
+      } else {
+        DEBUG_PRINT("Invalid port string: %s\n", ros_agent_port.c_str());
+      }
+    } else {
+      DEBUG_PRINT("Port string is empty\n");
+    }
+    networkConfig->microros_agent_port = port;
     return true;
   }
   else {
@@ -194,11 +213,8 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     WiFi.softAP(ap_name, NULL);
 
     IPAddress IP = WiFi.softAPIP();
-#ifndef IGNOR_TFT_PRINT
-    tft_printf(ST77XX_MAGENTA, "Connect to AP:\n%s\nIP: %s\n", ap_name, IP.toString().c_str());
-#endif
-    DEBUG_PRINT("Connect to AP: %s, IP: %s\n", ap_name, IP.toString().c_str());
-    
+    DEBUG_PRINT("AP IP address: %s\n", IP.toString().c_str());
+
     // Web Server Root URL
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(FS_SYSTEM, "/wifimanager.html", "text/html");
@@ -208,47 +224,45 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     
     server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
       int params = request->params();
-      for(int i=0;i<params;i++){
-        const AsyncWebParameter* p = request->getParam(i);
+      for(int i=0; i<params; i++){
+        const AsyncWebParameter* p = request->getParam(i);  // Changed: Add 'const'
         if(p->isPost()){
           // HTTP POST ssid value
           if (p->name() == PARAM_INPUT_1) {
             ssid = p->value().c_str();
             DEBUG_PRINT("SSID set to: %s\n", ssid.c_str());
-            // Write file to save value
             writeFile(FS_SYSTEM, ssidPath, ssid.c_str());
           }
           // HTTP POST pass value
           if (p->name() == PARAM_INPUT_2) {
             pass = p->value().c_str();
             DEBUG_PRINT("Password set to: %s\n", pass.c_str());
-            // Write file to save value
             writeFile(FS_SYSTEM, passPath, pass.c_str());
           }
           // HTTP POST microROS server ip value
           if (p->name() == PARAM_INPUT_3) {
             ros_agent_ipPath = p->value().c_str();
             DEBUG_PRINT("microROS server IP Address set to: %s\n", ros_agent_ipPath.c_str());
-            // Write file to save value
             writeFile(FS_SYSTEM, ros_server_ipPath, ros_agent_ipPath.c_str());
           }
           // HTTP POST microROS port value
           if (p->name() == PARAM_INPUT_4) {
             ros_agent_port = p->value().c_str();
             DEBUG_PRINT("microROS Port-number set to: %s\n", ros_agent_port.c_str());
-            // Write file to save value
             writeFile(FS_SYSTEM, ros_server_portPath, ros_agent_port.c_str());
           }
         }
       }
       request->send(200, "text/plain", "Done. Controller will restart");
-#ifndef IGNOR_TFT_PRINT
+    #ifndef IGNOR_TFT_PRINT
       tft_printf(ST77XX_MAGENTA, "WiFi\nconfiguration\nstored\nRestarting...\n");
-#endif
+    #endif
       delay(3000);
       ESP.restart();
     });
+    DEBUG_PRINT("Starting web server on port 80\n");
     server.begin();
+    DEBUG_PRINT("Web server started\n");
   }
   return false;
 }
