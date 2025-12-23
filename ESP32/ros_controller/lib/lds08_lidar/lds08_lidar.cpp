@@ -31,7 +31,7 @@ lds08_lidar::lds08_lidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lid
 {
     this->motor_pin = motor_pin;
     pinMode(motor_pin, OUTPUT);
-    setupMotorPWM(0); // Start motor at 50% speed
+    setupMotorPWM(0); // Initialize motor at 0% speed
     delay(5000);
 
     // Create UART interface for LIDAR
@@ -76,7 +76,7 @@ lds08_lidar::lds08_lidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lid
         scan_msg.ranges.capacity = LDS08_NUMBER_OF_SAMPLES_PER_SCAN;
         // Initialize scan arrays
         for(int i = 0; i < LDS08_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
-            scan_msg.ranges.data[i] = 0.0; // Default to 1 meter(dummy value)
+            scan_msg.ranges.data[i] = 0.0; // Default to 0.0 meters (dummy value)
         }
     }
 
@@ -97,7 +97,7 @@ lds08_lidar::lds08_lidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lid
 
 
     // Create FreeRTOS task for scanning
-    const uint16_t stackSize = 4096; // Stack size in bytes
+    const uint16_t stackSize = 8192; // Stack size in bytes
     const UBaseType_t priority = 1;   // Task priority
     BaseType_t result = xTaskCreate(
         scanTaskFunction,       // Task function
@@ -130,7 +130,7 @@ void lds08_lidar::scanTaskFunction(void* parameter) {
             continue;
         }
         if (lidar->getScanValue(&measurement, 100)) {
-            if(scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL || lidar->distance == NULL) {
+            if (scan_msg.ranges.data == NULL || scan_msg.intensities.data == NULL) {
                 DEBUG_PRINT("Geheugen voor scan arrays niet toegewezen, verwerking overslaan\n");
                 // Memory not allocated, skip processing
                 continue;
@@ -177,8 +177,6 @@ void lds08_lidar::scanTaskFunction(void* parameter) {
             // mSpeed = rotation_degree / sec
             lidar->scan_msg.time_increment = (360 / measurement.speed) / ((lidar->scan_msg.angle_max - lidar->scan_msg.angle_min)/ angle_increment);
             lidar->scan_msg.scan_time = 360 / measurement.speed;
-        } else {
-            DEBUG_PRINT("Geen scanwaarde ontvangen binnen timeout\n");
         }
     }
 }
@@ -197,6 +195,7 @@ void lds08_lidar::setupMotorPWM(int percent) {
 // Start scanning in standard or express mode
 void lds08_lidar::startScan(uint32_t lidar_speed, uint32_t timeout_ms) {
 
+    (void)timeout_ms;  // currently unused; reserved for future timeout handling
 
     delay(1000);
 
@@ -304,8 +303,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     }
 
 #else
-
-    int size_of_frame = sizeof(LiDARFrameTypeDef); // Exclude header bytes already read
+    int size_of_frame = sizeof(LiDARFrameTypeDef); // Size of full frame, including header bytes
     while (LIDARSerial->available() < size_of_frame){
         if (millis() - startTime > timeout_ms){
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
@@ -341,13 +339,14 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
         DEBUG_PRINT("CRC fout: berekend 0x%02X, ontvangen 0x%02X\n", crc, frame.crc8);
         return false;
     }
+    
     // Parse measurement from frame
-    // Assuming POINT_PER_PACK is 1 for simplicity
-    uint32_t diff =
-        ((uint32_t)frame.end_angle + 36000 - (uint32_t)frame.start_angle) % 36000;
-    float step = diff / (POINT_PER_PACK - 1) / 100.0;
-    float start = static_cast<double>(frame.start_angle) / 100.0;
-    float end = static_cast<double>(frame.end_angle % 36000) / 100.0;
+    float start = static_cast<float>(frame.start_angle) / 100.0;
+    float end = static_cast<float>(frame.end_angle % 36000) / 100.0;
+    uint32_t diff = (frame.end_angle > frame.start_angle) ? 
+                    (frame.end_angle - frame.start_angle) : 
+                    (36000 + frame.end_angle - frame.start_angle);
+    float step = (static_cast<float>(diff) / 100.0f) / static_cast<float>(POINT_PER_PACK - 1);
     value->speed = frame.speed;
     value->start_angle = start;
     value->end_angle = end;

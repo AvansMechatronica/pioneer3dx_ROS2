@@ -45,7 +45,7 @@ void loop() {
           scanValue.point[i].distance,
           scanValue.point[i].quality);
       }
-      loop_counter++;
+
     }
 #endif
   }
