@@ -25,7 +25,7 @@ MotorController::MotorController(int8_t ledcChannel,
   this->PreviousTime = millis();
   this->CurrentTime = millis();
   this->PreviousTimeForError = millis();
-  this->CurrentTimeforError = millis();
+  this->CurrentTimeForError = millis();
   this->encoderCount = encoderCount;
 
   pinMode(Pwm, OUTPUT);
@@ -34,7 +34,7 @@ MotorController::MotorController(int8_t ledcChannel,
   pinMode(EncoderPinB, INPUT);
 
   // initializing PWM signal parameters
-  ledcSetup(this->ledcChannel, PWM_FRQUENCY, PWM_RESOLUTION);
+  ledcSetup(this->ledcChannel, PWM_FREQUENCY, PWM_RESOLUTION);
   ledcAttachPin(this->Pwm, this->ledcChannel);
   ledcWrite(this->ledcChannel, 0);
   digitalWrite(Dir, LOW);
@@ -49,15 +49,20 @@ void MotorController::setPIDvalues(float proportionalGain, float integralGain, f
 float MotorController::getVelocityInt(){// returns linear velocity in m/s
   CurrentPosition = *encoderCount;
   CurrentTime = millis();
-  float delta1 = ((float)CurrentTime - PreviousTime) / 1.0e3; //convert to seconds
+  float deltaMs = (float)CurrentTime - PreviousTime;
+  if (deltaMs <= 0.0f) {
+    // Avoid division by zero or negative time intervals; return current filtered velocity
+    return (rpmFilt * wheel_radius * 2 * 3.14f) / 60.0f;  // linear velocity in m/s
+  }
+  float delta1 = deltaMs / 1.0e3f; // convert to seconds
   float velocity = ((float)CurrentPosition - PreviousPosition) / delta1; // in ticks per second
 
   float rpm = (velocity / TICK_PER_REVOLUTION) * 60; // convert to rpm
-  rpmFilt = 0.854 * rpmFilt + 0.0728 * rpm + 0.0728 * rpmPrev; // 
+  rpmFilt = 0.854f * rpmFilt + 0.0728f * rpm + 0.0728f * rpmPrev; // 
   rpmPrev = rpm; // store previous rpm value   
   PreviousPosition = CurrentPosition; //      
   PreviousTime = CurrentTime;
-  return (rpmFilt * wheel_radius * 2 * 3.14) / 60;  // return linear velocity in m/s
+  return (rpmFilt * wheel_radius * 2 * 3.14f) / 60.0f;  // return linear velocity in m/s
 }
 
 
@@ -77,21 +82,21 @@ float MotorController::pid(float setpoint) {
   }
   display_interval_counter++;
 #endif
-  CurrentTimeforError = millis();
+  CurrentTimeForError = millis();
   if(!enabled){
     previousError = 0;
     eintegral = 0;
-    PreviousTimeForError = CurrentTimeforError;
+    PreviousTimeForError = CurrentTimeForError;
     return 0.0f;
   }
-  float delta2 = ((float)CurrentTimeforError - PreviousTimeForError) / 1.0e3;
+  float delta2 = ((float)CurrentTimeForError - PreviousTimeForError) / 1.0e3;
   error = setpoint - current_velocity;
   eintegral = eintegral + (error * delta2);
   ederivative = (error - previousError) / delta2;
   float control_signal = (kp * error) + (ki * eintegral) + (kd * ederivative);
 
   previousError = error;
-  PreviousTimeForError = CurrentTimeforError;
+  PreviousTimeForError = CurrentTimeForError;
 
   #ifdef DEBUG_MOTOR_CONTROLLER
   if((display_interval_counter % 100) == 0){

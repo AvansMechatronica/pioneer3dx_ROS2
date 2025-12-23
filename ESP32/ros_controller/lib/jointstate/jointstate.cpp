@@ -3,7 +3,7 @@
 // =============================================================
 // Author: Gerard Harkema
 // Date: November 2025
-// Description: RPLIDAR interface implementation for ESP32 with micro-ROS
+// Description: JointState publisher implementation for ESP32 with micro-ROS
 // License: CC BY-NC-SA 4.0
 // Note: Comments added for clarity and explanation.
 
@@ -48,7 +48,25 @@ Jointstate::Jointstate(const rcl_node_t *node){
 
     // Check allocation success
     if (!joint_state_msg.position.data || !joint_state_msg.velocity.data || !joint_state_msg.effort.data) {
-        // Allocation failed — ideally log or handle this safely
+        // Allocation failed — clean up any successfully allocated memory.
+        if (joint_state_msg.position.data) {
+            free(joint_state_msg.position.data);
+            joint_state_msg.position.data = NULL;
+            joint_state_msg.position.size = 0;
+            joint_state_msg.position.capacity = 0;
+        }
+        if (joint_state_msg.velocity.data) {
+            free(joint_state_msg.velocity.data);
+            joint_state_msg.velocity.data = NULL;
+            joint_state_msg.velocity.size = 0;
+            joint_state_msg.velocity.capacity = 0;
+        }
+        if (joint_state_msg.effort.data) {
+            free(joint_state_msg.effort.data);
+            joint_state_msg.effort.data = NULL;
+            joint_state_msg.effort.size = 0;
+            joint_state_msg.effort.capacity = 0;
+        }
         return;
     }
 
@@ -58,6 +76,11 @@ Jointstate::Jointstate(const rcl_node_t *node){
         joint_state_msg.velocity.data[i] = 0.0;
         joint_state_msg.effort.data[i] = 0.0;
     }
+
+    // Initialize timestamp
+    unsigned long now_ms = millis();
+    joint_state_msg.header.stamp.sec = now_ms / 1000;
+    joint_state_msg.header.stamp.nanosec = (now_ms % 1000) * 1000000;
 }
 
 // Update joint positions and velocities

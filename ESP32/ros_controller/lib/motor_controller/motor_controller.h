@@ -5,8 +5,8 @@
 #include "std_msgs/msg/int32.h"
 
 // Define these constants if not already defined elsewhere
-#ifndef PWM_FRQUENCY
-#define PWM_FRQUENCY 20000
+#ifndef PWM_FREQUENCY
+#define PWM_FREQUENCY 20000
 #endif
 
 #ifndef PWM_RESOLUTION
@@ -45,7 +45,7 @@ public:
   volatile long PreviousPosition;
   volatile long CurrentTime;
   volatile long PreviousTime;
-  volatile long CurrentTimeforError;
+  volatile long CurrentTimeForError;
   volatile long PreviousTimeForError;
   float rpmFilt;
   float eintegral;

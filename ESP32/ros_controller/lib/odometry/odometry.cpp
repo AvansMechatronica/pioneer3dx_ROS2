@@ -3,7 +3,7 @@
 // =============================================================
 // Author: Gerard Harkema
 // Date: November 2025
-// Description: RPLIDAR interface implementation for ESP32 with micro-ROS
+// Description: Odometry implementation for ESP32 with micro-ROS
 // License: CC BY-NC-SA 4.0
 // Note: Comments added for clarity and explanation.
 
@@ -29,7 +29,7 @@ Odometry::Odometry(const rcl_node_t *node):
     rosidl_runtime_c__String__init(&odom_msg.child_frame_id);
     odom_msg.child_frame_id = micro_ros_string_utilities_set(odom_msg.child_frame_id, "p3dx_base");
     for(int i = 0; i < COVARIANCE_SIZE; i++) {
-        odom_msg.pose.covariance[i] = 0.0; // Default to 1 meter(dummy value)
+        odom_msg.pose.covariance[i] = 0.0; // Default to 0.0 (initial pose covariance)
     }
 
     // Initialize pose to zero
@@ -116,7 +116,7 @@ void Odometry::update(float vel_dt, float linear_vel_x, float linear_vel_y, floa
 // =============================================================
 // Convert Euler angles (roll, pitch, yaw) to quaternion order: [w, x, y, z]
 // =============================================================
-const void Odometry::euler_to_quat(float roll, float pitch, float yaw, float* q)
+void Odometry::euler_to_quat(float roll, float pitch, float yaw, float* q)
 {
     float cy = cos(yaw * 0.5);
     float sy = sin(yaw * 0.5);
@@ -137,8 +137,9 @@ const void Odometry::euler_to_quat(float roll, float pitch, float yaw, float* q)
 // =============================================================
 rcl_ret_t Odometry::publish() {
     // Timestamp in ROS2 format
-    odom_msg.header.stamp.sec = millis() / 1000;
-    odom_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+    uint32_t now_ms = millis();
+    odom_msg.header.stamp.sec = now_ms / 1000;
+    odom_msg.header.stamp.nanosec = (now_ms % 1000) * 1000000;
 
     return rcl_publish(&odom_publisher, &odom_msg, NULL);
 }

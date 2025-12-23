@@ -9,7 +9,7 @@
 #include <geometry_msgs/msg/twist.h>
 #include <std_msgs/msg/int32.h>
 #include <nav_msgs/msg/odometry.h>
-#include <geometry_msgs/msg/twist.h>
+
 #include <geometry_msgs/msg/vector3.h>
 
 #include "motor_controller.h"
@@ -38,7 +38,7 @@
 
 #define TICK_PER_REVOLUTION  19150  //encoder tick per revolution
 
-// No used
+// Not used
 //#define L_ENA_PIN        25
 //#define R_ENA_PIN         5
 
@@ -79,12 +79,12 @@ unsigned long long time_offset = 0;
 unsigned long prev_cmd_time = 0;
 unsigned long prev_odom_update = 0;
 
-int64_t encodervalue_l;
+int64_t encodervalue = 0;
 
 float setpoint = 0.0;
 
 //creating objects for right wheel and left wheel
-MotorController wheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
+MotorController wheel(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue, WHEELS_RADIUS);
 
 #define LED_PIN 2
 #define RCCHECK(fn) \
@@ -124,9 +124,9 @@ struct timespec getTime() {
 //interrupt function for left wheel encoder.
 void updateEncoder() {
   if (digitalRead(wheel.EncoderPinA) == digitalRead(wheel.EncoderPinB))
-    encodervalue_l--;
+    encodervalue--;
   else
-    encodervalue_l++;
+    encodervalue++;
 }
 
 void syncTime() {
@@ -139,7 +139,7 @@ void syncTime() {
 }
 
 
-bool errorLedState = false;
+
 
 void executerTask(void *pvParameters);
 void inputTask(void *pvParameters);
@@ -162,16 +162,21 @@ void setup() {
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
 
+  pinMode(MOTOR_ENABLE_PIN, OUTPUT);
+  digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+
+#if 1
   delay(2000);
    // Create Task 1
   xTaskCreate(
     executerTask,                // Function that implements the task
     "executerTask",              // Name of the task (for debugging)
-    2048,                 // Stack size in words (not bytes)
+    4096,                 // Stack size in words (not bytes)
     NULL,                 // Task input parameter
     1,                    // Priority (higher = more important)
     NULL                  // Task handle
   );
+#endif
 
   // Create Task 2
   xTaskCreatePinnedToCore(
@@ -183,6 +188,8 @@ void setup() {
     NULL,                 // Task handle
     1                     // Core ID (0 or 1)
   );
+
+
 }
 
 void loop() {
@@ -219,7 +226,7 @@ void inputTask(void *pvParameters) {
 
       if (value < -100) value = -100;
       if (value > 100) value = 100;
-      setpoint = (float)value/100.0 * V_MAX; // convert to ticks/s
+      setpoint = (float)value/100.0 * V_MAX; // convert percentage input to m/s
       prev_cmd_time = millis();
 
       Serial.printf("Invoer: %d\n",  value);

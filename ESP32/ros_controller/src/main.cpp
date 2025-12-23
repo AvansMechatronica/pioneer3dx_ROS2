@@ -142,33 +142,68 @@ MotorController *rightWheel;
 SPIClass *spiClass;
 Adafruit_ST7735 *tft;
 
+/**
+ * Convert RCL return code to human-readable string
+ */
+const char* rcl_error_string(rcl_ret_t ret) {
+  switch(ret) {
+    case RCL_RET_OK: return "OK";
+    case RCL_RET_ERROR: return "Unspecified error";
+    case RCL_RET_TIMEOUT: return "Timeout";
+    case RCL_RET_BAD_ALLOC: return "Failed to allocate memory";
+    case RCL_RET_INVALID_ARGUMENT: return "Invalid argument";
+    case RCL_RET_UNSUPPORTED: return "Unsupported operation";
+    case RCL_RET_ALREADY_INIT: return "Already initialized";
+    case RCL_RET_NOT_INIT: return "Not initialized";
+    case RCL_RET_MISMATCHED_RMW_ID: return "RMW implementation mismatch";
+    case RCL_RET_TOPIC_NAME_INVALID: return "Invalid topic name";
+    case RCL_RET_SERVICE_NAME_INVALID: return "Invalid service name";
+    case RCL_RET_UNKNOWN_SUBSTITUTION: return "Unknown substitution";
+    case RCL_RET_ALREADY_SHUTDOWN: return "Already shutdown";
+    default: return "Unknown error";
+  }
+}
+
 // Macro to check ROS return codes and trigger error handler on failure
 #define RCCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { Serial.printf("Fatal Error, line %i, ", __LINE__); microros_error_handler(__LINE__); } \
+    if ((temp_rc != RCL_RET_OK)) { \
+      Serial.printf("Fatal Error: %s (code %d) at line %d\n", rcl_error_string(temp_rc), temp_rc, __LINE__); \
+      microros_error_handler(temp_rc, __LINE__); } \
   }
 
 // Soft check version (same as RCCHECK in this implementation)
 #define RCSOFTCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
-    if ((temp_rc != RCL_RET_OK)) { Serial.printf("Fatal Error, line %i, ", __LINE__);microros_error_handler(__LINE__); } \
+    if ((temp_rc != RCL_RET_OK)) { \
+      Serial.printf("uROS Error: %s (code %d) at line %d\n", rcl_error_string(temp_rc), temp_rc, __LINE__); \
+      microros_error_handler(temp_rc, __LINE__); } \
   }
 
 /**
  * Error handler that stops the lidar, displays error, and restarts ESP32
  */
-void microros_error_handler(int line) {
+void microros_error_handler(rcl_ret_t temp_rc, int line) {
 #if defined(INCLUDE_LIDAR)
     lidar->stopScan();
 #endif
     Serial.printf("Restarting...\n");
-    tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\n,Line: %d", line);
+    tft_printf(ST77XX_BLUE, "uROS Error\n%s\nline: %d", rcl_error_string(temp_rc), line);
     delay(5000);
     ESP.restart();
 }
 
+void error_handler(int line) {
+#if defined(INCLUDE_LIDAR)
+    lidar->stopScan();
+#endif
+    Serial.printf("Restarting...\n");
+    tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\nline: %d", line);
+    delay(5000);
+    ESP.restart();
+}
 /**
  * Callback for cmd_vel topic - receives velocity commands
  */
@@ -186,7 +221,6 @@ void cmd_vel_subscription_callback(const void* msgin) {
       rightWheel->enable();
       motors_enabled = true;
       tft_printf(ST77XX_MAGENTA, "Motors Enabled\n");
-      digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
     }
   }
   twist_msg = *msg;  // Copy velocity command
@@ -405,31 +439,9 @@ bool errorLedState = false;
 /**
  * Initialize SPI display
  */
-#if 0
-void init_display(){
-  SPIClass *spiClass = new SPIClass(HSPI);
-  spiClass->begin(DISPLAY_CLK_PIN, -1, DISPLAY_SDA_PIN, DISPLAY_CS_PIN);
-
-  tft = new Adafruit_ST7735(spiClass, DISPLAY_CS_PIN, DISPLAY_RS_DC_PIN, DISPLAY_RST_PIN);
-  tft_prinft_begin(tft);
-
-  tft->initR(INITR_GREENTAB);
-  tft->fillScreen(ST77XX_BLACK);
-  tft->setRotation(1);
-  tft->setFont(&FreeSansBold9pt7b);
-  tft->fillScreen(ST77XX_BLACK);
-  tft->setTextColor(ST77XX_CYAN);
-  tft->setTextSize(1);
-  tft->setCursor(1, 22);
-  tft->println("P3DX Control");
-
-  Serial.printf("Ready"); 
-}
-#endif
-
 void init_display(){
   // ESP32-S3 specific SPI initialization with explicit pins
-  SPIClass *spiClass = new SPIClass(HSPI);
+  SPIClass *spiClass = new SPIClass(FSPI); // was HSPI
   
   // Initialize SPI with explicit pins for ESP32-S3
   spiClass->begin(
@@ -471,7 +483,7 @@ char* convertToCamelCase(const char *input) {
     
     if(output == NULL) {
         Serial.printf("Error allocating memory\n");
-        microros_error_handler(__LINE__);
+        error_handler(__LINE__);
     }
 
     strcpy(output, input);
@@ -505,7 +517,7 @@ void setup() {
   const char *host_name = convertToCamelCase(NODE_NAME);
   Serial.printf("hostname :%s\n", host_name);
   WiFi.setHostname(host_name);
-#if 1
+#if 0
   
   NETWORK_CONFIG networkConfig;
   bool wifiUp = configureNetwork(false, &networkConfig);

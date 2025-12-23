@@ -34,7 +34,7 @@ class Odometry
     private:
         // Convert Euler angles (roll=x, pitch=y, yaw=z) to quaternion
         // q must be an array of 4 floats {w, x, y, z}
-        const void euler_to_quat(float x, float y, float z, float* q);
+        void euler_to_quat(float x, float y, float z, float* q);
 
         // micro-ROS publisher handle
         rcl_publisher_t odom_publisher;
