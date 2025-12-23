@@ -14,6 +14,7 @@
 #include <jointstate.h>
 #if defined(INCLUDE_LIDAR)
 #include <lds08_lidar.h>
+#include <buzzer.h>
 //#include <rplidar.h>
 #endif
 #if defined(INCLUDE_IMU)
@@ -134,6 +135,8 @@ lds08_lidar *lidar;
 imu_mpu6050 *imu;
 #endif
 
+Buzzer *buzzer;
+
 // Motor controller objects
 MotorController *leftWheel;
 MotorController *rightWheel;
@@ -189,9 +192,11 @@ void microros_error_handler(rcl_ret_t temp_rc, int line) {
 #if defined(INCLUDE_LIDAR)
     lidar->stopScan();
 #endif
-    Serial.printf("Restarting...\n");
     tft_printf(ST77XX_BLUE, "uROS Error\n%s\nline: %d", rcl_error_string(temp_rc), line);
+    buzzer->errorTune();
     delay(5000);
+    buzzer->byeTune();
+    delay(1000);
     ESP.restart();
 }
 
@@ -201,7 +206,10 @@ void error_handler(int line) {
 #endif
     Serial.printf("Restarting...\n");
     tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\nline: %d", line);
+    buzzer->errorTune();
     delay(5000);
+    buzzer->byeTune();
+    delay(1000);
     ESP.restart();
 }
 /**
@@ -274,15 +282,17 @@ void errorPublisher() {
 }
 
 // Voltage divider resistor values
-#define R1 330000.0f // Resistor R1 value in ohms
-#define R2 100000.0f // Resistor R2 value in ohms
+#define R2 560000.0f // Resistor R2 value in ohms, according schematics
+#define R3 100000.0f // Resistor R3 value in ohms, according schematics
 
 /**
  * Read and publish battery voltage
  */
 void batteryPublisher(){
-  float battery_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);  
-  battery_voltage_msg.data = battery_voltage * 3.1 * 2; // Compensate for voltage divider
+  float adc_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);
+  // Calculate actual battery voltage using voltage divider formula: Vout = Vin * R3/(R2+R3)
+  // Rearranged: Vin = Vout * (R2+R3)/R3
+  battery_voltage_msg.data = adc_voltage * ((R2 + R3) / R3) * 4; //??
   RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
 }
 
@@ -436,6 +446,17 @@ void bumber_hit(){
 
 bool errorLedState = false;
 
+
+void reset_button_hit(){
+  Serial.printf("Reset Button Hit!\n");
+  tft_printf(ST77XX_BLUE, "Reset Button\nHit!\n");
+}
+
+void motors_button_hit(){
+  Serial.printf("Motors Button Hit!\n");
+  tft_printf(ST77XX_BLUE, "Motors Button\nHit!\n");
+}
+
 /**
  * Initialize SPI display
  */
@@ -512,6 +533,14 @@ void setup() {
   Serial.println("Pioneer 3DX Controller Starting...");
 
   init_display();
+
+  pinMode(UCP_RESET_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(UCP_RESET_PIN), reset_button_hit, FALLING);
+
+  pinMode(UCP_MOTORS_PIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(UCP_MOTORS_PIN), motors_button_hit, FALLING);
+
+  buzzer = new Buzzer(UCP_BUZZER_PIN, UCP_BUZZER_PWM_CHANNEL);
 
 #if defined(WIFI)
   const char *host_name = convertToCamelCase(NODE_NAME);
@@ -688,6 +717,7 @@ void setup() {
 #endif
   
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
+  buzzer->welcomeTune();
 
 }
 
@@ -697,7 +727,7 @@ void setup() {
 void loop() {
 
   delay(100);
-
+  buzzer->update();
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
 
 }

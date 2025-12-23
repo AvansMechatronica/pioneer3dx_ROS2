@@ -6738,16 +6738,6 @@
 		)
 		(uuid "9aaa801d-2f5a-473e-a242-a11673ecff0a")
 	)
-	(label "rear_bumper"
-		(at 101.6 101.6 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "a0d8433e-147b-4fa7-8eff-a97b6d6b62f3")
-	)
 	(label "ucp_status"
 		(at 203.2 137.16 0)
 		(effects
@@ -6768,7 +6758,7 @@
 		)
 		(uuid "b03c8e77-fa47-4292-97dc-9448834a7580")
 	)
-	(label "rear_bumper"
+	(label "front_bumper"
 		(at 209.55 54.61 0)
 		(effects
 			(font
@@ -6798,7 +6788,7 @@
 		)
 		(uuid "bd99ed68-9a37-4c97-b5d2-c79bf825e50b")
 	)
-	(label "front_bumper"
+	(label "rear_bumper"
 		(at 182.88 54.61 0)
 		(effects
 			(font
@@ -6838,6 +6828,16 @@
 		)
 		(uuid "c70488f7-318b-4c11-9341-a313c76d630d")
 	)
+	(label "front_bumper"
+		(at 101.6 101.6 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "cced04b1-c5b8-4b7c-9a95-f45fc86916db")
+	)
 	(label "V_BATTERY"
 		(at 149.86 106.68 0)
 		(effects
@@ -6848,7 +6848,7 @@
 		)
 		(uuid "d0d1aa66-e6f6-4eec-9be2-be02eb4166bc")
 	)
-	(label "front_bumper"
+	(label "rear_bumper"
 		(at 101.6 104.14 0)
 		(effects
 			(font
@@ -7159,7 +7159,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "100k"
 			(at 67.31 182.8799 0)
 			(effects
 				(font
@@ -9978,7 +9978,7 @@
 				(justify left)
 			)
 		)
-		(property "Value" "10k"
+		(property "Value" "560k"
 			(at 67.31 175.2599 0)
 			(effects
 				(font

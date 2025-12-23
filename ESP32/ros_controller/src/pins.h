@@ -43,6 +43,7 @@
 #define UCP_RESET_PIN       40 // Pin to reset UCP
 #define UCP_MOTORS_PIN      41 // Pin to control UCP motor power
 #define UCP_BUZZER_PIN      42 // Pin to control UCP buzzer
+#define UCP_BUZZER_PWM_CHANNEL  1 // PWM channel for UCP buzzer
 
 #define I2C_SDA_PIN  36 //  
 #define I2C_SCL_PIN  37 // 
