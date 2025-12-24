@@ -263,6 +263,12 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     DEBUG_PRINT("Starting web server on port 80\n");
     server.begin();
     DEBUG_PRINT("Web server started\n");
+    Serial.flush();
+  #if 0
+    while(true){
+      vTaskDelay(1000);
+    }
+  #endif
   }
   return false;
 }

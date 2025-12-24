@@ -1,0 +1,5 @@
+bool motor_enable
+bool error
+float32 battery_voltage
+int8 wifi_rssi
+p3dx_interfaces/Bumpers bumpers

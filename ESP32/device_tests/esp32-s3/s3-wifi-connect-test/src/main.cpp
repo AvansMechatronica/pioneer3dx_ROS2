@@ -41,12 +41,13 @@ void setup() {
   
   NETWORK_CONFIG networkConfig;
   bool wifiUp = configureNetwork(true, &networkConfig);
+#if 0
   if(!wifiUp){
     Serial.printf("Error configuring WiFi Restarting...\n");
     delay(5000);
     ESP.restart();
   };
-
+#endif
   Serial.printf("Setup complete\n");  
 }
 
@@ -54,5 +55,6 @@ int i = 0;
 void loop() {
   Serial.printf("Count: %d\n", i++);
   delay(1000);
+  WiFi.
 }
 

@@ -1,0 +1,11 @@
+# WiFi micro-ROS agent configuration
+micro_ros_agent:
+  transport: 'udp4'
+  port: '8888'
+  verbosity: '5'  # Verbosity level (1-6)
+  respawn: false
+  respawn_delay: 2.0
+
+# Status monitor configuration
+status_monitor:
+  enabled: true

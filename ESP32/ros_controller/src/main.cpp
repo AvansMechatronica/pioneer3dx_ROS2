@@ -21,9 +21,8 @@
 #include <imu_mpu6050.h>
 #endif
 
-#if defined(HANDLE_BUMPERS)
-#include <p3dx_interfaces/msg/bumpers.h>
-#endif
+#include <p3dx_interfaces/msg/status.h>
+
 
 #include "wifi_network_config.h"
 
@@ -100,18 +99,12 @@ rcl_node_t node;
 // ROS2 publishers
 rcl_publisher_t error_publisher;
 rcl_publisher_t battery_voltage_publisher;
-#if defined(HANDLE_BUMPERS)
-rcl_publisher_t bumpers_publisher;
-#endif
+rcl_publisher_t status_publisher;
 
 // Published message objects
-std_msgs__msg__Bool error_msg;
-std_msgs__msg__Bool reset_msg;
-std_msgs__msg__Float32 battery_voltage_msg;
 
-#if defined(HANDLE_BUMPERS)
-p3dx_interfaces__msg__Bumpers  bumper_msg;
-#endif
+std_msgs__msg__Bool reset_msg;
+p3dx_interfaces__msg__Status  status_msg;
 
 // Encoder values
 int64_t encodervalue_l = 0;  // Left wheel encoder count
@@ -126,7 +119,7 @@ float prev_rpm_r;
 rcl_timer_t timer;
 rcl_timer_t motorControlTimer;         // Controls motor PID loop
 rcl_timer_t lowSpeedPublisherTimer;    // Publishes slow-rate data (battery, errors)
-rcl_timer_t highSpeedPublisherTimer;   // Publishes fast-rate data (odometry, lidar)
+rcl_timer_t PublisherTimer;   // Publishes fast-rate data (odometry, lidar)
 
 // Time synchronization
 unsigned long long time_offset = 0;  // Offset between ESP32 and ROS time
@@ -244,7 +237,7 @@ void cmd_vel_subscription_callback(const void* msgin) {
       static_cast<const geometry_msgs__msg__Twist*>(msgin);
 
   // Enable motors if no error and currently disabled
-  if(error_msg.data == false){
+  if(status_msg.error == false){
     if(!motors_enabled){
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
       leftWheel->enable();
@@ -264,7 +257,7 @@ void reset_by_button(){
     if(digitalRead(BUMPER_FRONT_PIN)==HIGH &&
        digitalRead(BUMPER_REAR_PIN)==HIGH){
       digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
-      error_msg.data = false;
+      status_msg.error = false;
     }
 #endif
 }
@@ -280,7 +273,7 @@ void reset_subscription_callback(const void* msgin) {
   reset_by_button();
 #else
     digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
-    error_msg.data = false; 
+    status_msg.error = false; 
 #endif
   }
 }
@@ -296,69 +289,70 @@ struct timespec getTime() {
   return tp;
 }
 
-/**
- * Publish error state
- */
-void errorPublisher() {
-    RCSOFTCHECK(rcl_publish(&error_publisher, &error_msg, NULL));
-}
+
 
 // Voltage divider resistor values
 #define R2 560000.0f // Resistor R2 value in ohms, according schematics
 #define R3 100000.0f // Resistor R3 value in ohms, according schematics
 
+
+
 /**
- * Read and publish battery voltage
+ * Read and publish the system state
  */
-void batteryPublisher(){
+void statusPublisher(){
+#if defined(HANDLE_BUMPERS)
+  status_msg.bumpers.front = !digitalRead(BUMPER_FRONT_PIN);  // Active low
+  status_msg.bumpers.rear = !digitalRead(BUMPER_REAR_PIN);    // Active low
+#else
+  status_msg.bumpers.front = false;
+  status_msg.bumpers.rear = false;
+#endif
   float adc_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);
   // Calculate actual battery voltage using voltage divider formula: Vout = Vin * R3/(R2+R3)
   // Rearranged: Vin = Vout * (R2+R3)/R3
-  battery_voltage_msg.data = adc_voltage * ((R2 + R3) / R3) * 4; //??
-  RCSOFTCHECK(rcl_publish(&battery_voltage_publisher, &battery_voltage_msg, NULL));
+  status_msg.battery_voltage = adc_voltage * ((R2 + R3) / R3) * 4; //??
+  status_msg.motor_enable = motors_enabled;
+
+#if defined(WIFI)
+  int rssi = WiFi.RSSI();
+  status_msg.wifi_rssi = rssi;
+  DEBUG_PRINT("WiFi RSSI: %d dBm\n", rssi);
+#else
+  status_msg.wifi_rssi = 0;
+#endif
+  RCSOFTCHECK(rcl_publish(&status_publisher, &status_msg, NULL));
 }
 
-#if defined(HANDLE_BUMPERS)
-/**
- * Read and publish bumper states
- */
-void bumpersPunblisher(){
-  bumper_msg.front = !digitalRead(BUMPER_FRONT_PIN);  // Active low
-  bumper_msg.rear = !digitalRead(BUMPER_REAR_PIN);    // Active low
-  RCSOFTCHECK(rcl_publish(&bumpers_publisher, &bumper_msg, NULL));
-}
-#endif
 
-/**
- * Timer callback for low-frequency publishers (1Hz)
- * Publishes battery voltage, error state, and bumper state
- */
-void lowSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-  batteryPublisher();
-  errorPublisher();
-#if defined(HANDLE_BUMPERS)
-  bumpersPunblisher();
-#endif
-}
+
 
 /**
  * Timer callback for high-frequency publishers (10Hz)
  * Publishes odometry, joint states, lidar data, and IMU data
  */
-void highSpeedPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+void Publisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCSOFTCHECK(odometry->publish());
   jointstate->update(leftWheel->getVelocity(), 
                      rightWheel->getVelocity(), 
                      encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
                      encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
+  RCSOFTCHECK(jointstate->publish());
+  delay(15);  // Small delay to avoid overwhelming the executor
 
 #if defined(INCLUDE_LIDAR)
   RCSOFTCHECK(lidar->publish());
+  delay(15);  // Small delay to avoid overwhelming the executor
 #endif
-  RCSOFTCHECK(jointstate->publish());
+
 #if defined(INCLUDE_IMU)
   RCSOFTCHECK(imu->publish());
+  delay(15);  // Small delay to avoid overwhelming the executor
 #endif
+
+  statusPublisher();
+  delay(15);  // Small delay to avoid overwhelming the executor
+
 }
 
 int display_interval_counter=0;  // Counter for display update rate limiting
@@ -460,7 +454,7 @@ void bumber_hit(){
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
   tft_printf(ST77XX_BLUE, "Bumper Hit!\nMotors Disabled\n");
   motors_enabled = false; 
-  error_msg.data = true;
+  status_msg.error = true;
 }
 #endif
 
@@ -557,10 +551,12 @@ void setup() {
   init_display();
 
   pinMode(UCP_RESET_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(UCP_RESET_PIN), reset_button_hit, FALLING);
+  // Use polling instead of interrupt to avoid accidental resets
+  //attachInterrupt(digitalPinToInterrupt(UCP_RESET_PIN), reset_button_hit, FALLING);
 
   pinMode(UCP_MOTORS_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(UCP_MOTORS_PIN), motors_button_hit, FALLING);
+  // Use polling instead of interrupt to avoid accidental motor enables
+  //attachInterrupt(digitalPinToInterrupt(UCP_MOTORS_PIN), motors_button_hit, FALLING);
 
   buzzer = new Buzzer(UCP_BUZZER_PIN, UCP_BUZZER_PWM_CHANNEL);
 
@@ -568,7 +564,7 @@ void setup() {
   const char *host_name = convertToCamelCase(NODE_NAME);
   DEBUG_PRINT("hostname :%s\n", host_name);
   WiFi.setHostname(host_name);
-#if 1
+#if 0
   
   NETWORK_CONFIG networkConfig;
   bool wifiUp = configureNetwork(false, &networkConfig);
@@ -623,7 +619,6 @@ void setup() {
   prev_rpm_l = leftWheel->getVelocity();
   prev_rpm_r = rightWheel->getVelocity();
 
-
   // Initialize pins
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, HIGH);
@@ -634,19 +629,19 @@ void setup() {
 #if defined(HANDLE_BUMPERS)
   // Setup bumper interrupts
   pinMode(BUMPER_FRONT_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_PIN), bumber_hit, FALLING);
+  //attachInterrupt(digitalPinToInterrupt(BUMPER_FRONT_PIN), bumber_hit, FALLING);
   pinMode(BUMPER_REAR_PIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_PIN), bumber_hit, FALLING);
+  //attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_PIN), bumber_hit, FALLING);
   
   // Check initial bumper state
   if(digitalRead(BUMPER_FRONT_PIN)==HIGH && digitalRead(BUMPER_REAR_PIN)==HIGH){
-    error_msg.data = false;
+    status_msg.error = false;
   }
   else{
-    error_msg.data = true;
+    status_msg.error = true;
   }
 #else
-  error_msg.data = false;
+  status_msg.error = false;
 #endif
 
   // Ensure motors are disabled
@@ -667,7 +662,6 @@ void setup() {
   }
 
 
-
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   // Initialize subscribers
@@ -675,19 +669,12 @@ void setup() {
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel"));
 
   RCCHECK(rclc_subscription_init_default(&reset_subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "reset"));
+    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "p3dx/reset"));
 
   // Initialize publishers
-#if defined(HANDLE_BUMPERS)
-  RCCHECK(rclc_publisher_init_default(&bumpers_publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(p3dx_interfaces, msg, Bumpers), "bumpers"));
-#endif  
+  RCCHECK(rclc_publisher_init_default(&status_publisher, &node,
+    ROSIDL_GET_MSG_TYPE_SUPPORT(p3dx_interfaces, msg, Status), "p3dx/status"));
 
-  RCCHECK(rclc_publisher_init_default(&error_publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "error"));
-
-  RCCHECK(rclc_publisher_init_default(&battery_voltage_publisher, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Float32), "battery_voltage"));
     
   // Initialize sensors
 #if defined(INCLUDE_LIDAR)
@@ -711,22 +698,17 @@ void setup() {
   RCCHECK(rclc_timer_init_default(&motorControlTimer, &support,
     RCL_MS_TO_NS(samplingT), MotorControll_timerCallback));
 
-  RCCHECK(rclc_timer_init_default(&lowSpeedPublisherTimer, &support,
-    RCL_MS_TO_NS(1000), lowSpeedPublisher_timerCallBack));  // 1Hz
 
-  RCCHECK(rclc_timer_init_default(&highSpeedPublisherTimer, &support,
-    RCL_MS_TO_NS(100), highSpeedPublisher_timerCallBack));  // 10Hz
+  RCCHECK(rclc_timer_init_default(&PublisherTimer, &support,
+    RCL_MS_TO_NS(100), Publisher_timerCallBack));  // 10Hz
 
   // Setup executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 6, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
-  RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
-  RCCHECK(rclc_executor_add_timer(&executor, &highSpeedPublisherTimer));
-#if defined(HANDLE_BUMPERS)
-  RCCHECK(rclc_executor_add_timer(&executor, &lowSpeedPublisherTimer));
-#endif
+  //RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &PublisherTimer));
+
 
   // Start lidar
 #if defined(INCLUDE_LIDAR)
@@ -747,8 +729,24 @@ void setup() {
  */
 void loop() {
 
-  delay(100);
+  vTaskDelay(20);
   buzzer->update();
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+
+  // Poll reset button - edge detection
+  static bool prev_reset_state = HIGH;
+  bool current_reset_state = digitalRead(UCP_RESET_PIN);
+  if(prev_reset_state == HIGH && current_reset_state == LOW){
+    reset_button_hit();
+  }
+  prev_reset_state = current_reset_state;
+
+  // Poll motors button - edge detection
+  static bool prev_motors_state = HIGH;
+  bool current_motors_state = digitalRead(UCP_MOTORS_PIN);
+  if(prev_motors_state == HIGH && current_motors_state == LOW){
+    motors_button_hit();
+  }
+  prev_motors_state = current_motors_state;
 
 }
