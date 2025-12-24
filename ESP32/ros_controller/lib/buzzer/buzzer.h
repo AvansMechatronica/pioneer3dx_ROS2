@@ -66,6 +66,11 @@ public:
     void errorTune();
 
     /**
+     * @brief Play a warning tune (caution sound)
+     */
+    void warningTune();
+
+    /**
      * @brief Play a goodbye tune (shutdown melody)
      */
     void byeTune();

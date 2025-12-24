@@ -76,6 +76,16 @@ void Buzzer::errorTune() {
     tone(400, 300);   // Low (longer)
 }
 
+void Buzzer::warningTune() {
+    // Play a warning sound (alternating beeps)
+    tone(1000, 150);  // High beep
+    delay(100);
+    tone(1000, 150);  // High beep
+    delay(100);
+    tone(1000, 150);  // High beep
+    delay(200);
+}
+
 void Buzzer::byeTune() {
     // Play a goodbye melody (descending)
     tone(1047, 150);  // C6

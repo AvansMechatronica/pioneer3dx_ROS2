@@ -38,6 +38,19 @@
 //#include <SPI.h>
 #include "tft_printf.h"
 
+#define DEBUG
+#ifdef DEBUG
+#define DEBUG_PRINT(fmt, ...) \
+    do { \
+        Serial.printf("DEBUG: %s:%d:%s(): " fmt, \
+                __FILE__, __LINE__, __func__, ##__VA_ARGS__); \
+    } while (0)
+#else
+#define DEBUG_PRINT(fmt, ...) \
+    do {} while (0)
+#endif
+
+
 #ifdef RPLIDAR_H
 #define EXPRESS_LIDAR_MODE  false
 #endif
@@ -172,17 +185,17 @@ const char* rcl_error_string(rcl_ret_t ret) {
   { \
     rcl_ret_t temp_rc = fn; \
     if ((temp_rc != RCL_RET_OK)) { \
-      Serial.printf("Fatal Error: %s (code %d) at line %d\n", rcl_error_string(temp_rc), temp_rc, __LINE__); \
+      DEBUG_PRINT("Fatal Error: %s (code %d) at line %d\n", rcl_error_string(temp_rc), temp_rc, __LINE__); \
       microros_error_handler(temp_rc, __LINE__); } \
   }
 
-// Soft check version (same as RCCHECK in this implementation)
+// Soft check version 
 #define RCSOFTCHECK(fn) \
   { \
     rcl_ret_t temp_rc = fn; \
     if ((temp_rc != RCL_RET_OK)) { \
-      Serial.printf("uROS Error: %s (code %d) at line %d\n", rcl_error_string(temp_rc), temp_rc, __LINE__); \
-      microros_error_handler(temp_rc, __LINE__); } \
+      DEBUG_PRINT("uROS Warning: %s (code %d) at line %d\n", rcl_error_string(temp_rc), temp_rc, __LINE__); \
+      microros_warning_handler(temp_rc, __LINE__); } \
   }
 
 /**
@@ -192,7 +205,7 @@ void microros_error_handler(rcl_ret_t temp_rc, int line) {
 #if defined(INCLUDE_LIDAR)
     lidar->stopScan();
 #endif
-    tft_printf(ST77XX_BLUE, "uROS Error\n%s\nline: %d", rcl_error_string(temp_rc), line);
+    tft_printf(ST77XX_BLUE, "uROS Error\n%s\nline: %d\nRestarting...", rcl_error_string(temp_rc), line);
     buzzer->errorTune();
     delay(5000);
     buzzer->byeTune();
@@ -200,11 +213,19 @@ void microros_error_handler(rcl_ret_t temp_rc, int line) {
     ESP.restart();
 }
 
+/**
+ * Error warning that stops the lidar, displays error, and restarts ESP32
+ */
+void microros_warning_handler(rcl_ret_t temp_rc, int line) {
+  tft_printf(ST77XX_RED, "uROS Warning\n%s\nline: %d\nContinuing...", rcl_error_string(temp_rc), line);
+  buzzer->warningTune();
+};  
+
 void error_handler(int line) {
 #if defined(INCLUDE_LIDAR)
     lidar->stopScan();
 #endif
-    Serial.printf("Restarting...\n");
+    DEBUG_PRINT("Fatal Error\nRestarting...\nline: %d\n", line);
     tft_printf(ST77XX_BLUE, "Fatal Error\nRestarting...\nline: %d", line);
     buzzer->errorTune();
     delay(5000);
@@ -212,6 +233,7 @@ void error_handler(int line) {
     delay(1000);
     ESP.restart();
 }
+
 /**
  * Callback for cmd_vel topic - receives velocity commands
  */
@@ -448,12 +470,12 @@ bool errorLedState = false;
 
 
 void reset_button_hit(){
-  Serial.printf("Reset Button Hit!\n");
+  DEBUG_PRINT("Reset Button Hit!\n");
   tft_printf(ST77XX_BLUE, "Reset Button\nHit!\n");
 }
 
 void motors_button_hit(){
-  Serial.printf("Motors Button Hit!\n");
+  DEBUG_PRINT("Motors Button Hit!\n");
   tft_printf(ST77XX_BLUE, "Motors Button\nHit!\n");
 }
 
@@ -491,7 +513,7 @@ void init_display(){
   tft->setCursor(1, 22);
   tft->println("P3DX Control");
 
-  Serial.printf("Display Ready\n"); 
+  DEBUG_PRINT("Display Ready\n"); 
 }
 
 /**
@@ -503,7 +525,7 @@ char* convertToCamelCase(const char *input) {
     char *output = (char *)malloc((len + 1) * sizeof(char));
     
     if(output == NULL) {
-        Serial.printf("Error allocating memory\n");
+        DEBUG_PRINT("Error allocating memory\n");
         error_handler(__LINE__);
     }
 
@@ -544,9 +566,9 @@ void setup() {
 
 #if defined(WIFI)
   const char *host_name = convertToCamelCase(NODE_NAME);
-  Serial.printf("hostname :%s\n", host_name);
+  DEBUG_PRINT("hostname :%s\n", host_name);
   WiFi.setHostname(host_name);
-#if 0
+#if 1
   
   NETWORK_CONFIG networkConfig;
   bool wifiUp = configureNetwork(false, &networkConfig);
@@ -579,7 +601,6 @@ void setup() {
   set_microros_serial_transports(Serial);
   delay(2000);
 #endif
-  Serial.printf("micro-ROS Transports Set");
   // Initialize ADC for battery voltage reading
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
