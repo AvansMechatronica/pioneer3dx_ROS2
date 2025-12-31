@@ -160,3 +160,15 @@ void MotorController::disable() {
 void MotorController::enable() {
   enabled = true;
 }
+
+void MotorController::reset() {
+  PreviousPosition = 0;
+  CurrentPosition = 0;
+  //*encoderCount = 0;
+  PreviousTime = millis();
+  CurrentTime = millis();
+  PreviousTimeForError = millis();
+  CurrentTimeForError = millis();
+  eintegral = 0;
+  previousError = 0;
+}

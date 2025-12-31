@@ -14,8 +14,8 @@
 #define R_ENCODER_PINB   8
 
 #if defined(HANDLE_BUMPERS)
-#define BUMPER_FRONT_PIN    45
-#define BUMPER_REAR_PIN     46
+#define BUMPER_FRONT_PIN    46
+#define BUMPER_REAR_PIN     45
 #endif
 
 

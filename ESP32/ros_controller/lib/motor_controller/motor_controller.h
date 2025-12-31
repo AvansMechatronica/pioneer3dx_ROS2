@@ -74,6 +74,7 @@ public:
   void moveBase(float ActuatingSignal);
   void disable();
   void enable();
+  void reset();
 
 private:
   float getVelocityInt();

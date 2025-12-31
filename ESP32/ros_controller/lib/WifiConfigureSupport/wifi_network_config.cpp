@@ -16,7 +16,7 @@
 #endif
 
 #include "wifi_network_config.h"
-#ifndef IGNOR_TFT_PRINT
+#if defined (WIFI_INCLUDE_TFT_PRINT)
 #include "tft_printf.h"
 #endif
 
@@ -52,7 +52,7 @@ String ros_agent_port;
 // File paths to save input values permanently
 const char* ssidPath = "/ssid.txt";
 const char* passPath = "/pass.txt";
-const char* ros_server_ipPath = "/ros_agent_ipPath.txt";
+const char* ros_server_ipPath = "/ros_agent_ip.txt";
 const char* ros_server_portPath = "/ros_agent_port.txt";
 
 // Timer variables
@@ -64,14 +64,14 @@ void initFS() {
   bool result;
   
 #ifdef USE_SPIFFS
-  result = SPIFFS.begin(true);
+  result = SPIFFS.begin(false);
 #else
-  result = LittleFS.begin(false);
+  result = LittleFS.begin(true);
 #endif
 
   if (!result) {
     DEBUG_PRINT("An error has occurred while mounting %s\n", FS_NAME);
-#ifndef IGNOR_TFT_PRINT
+#if defined (WIFI_INCLUDE_TFT_PRINT)
     tft_printf(ST77XX_BLUE, "No filesystem\ndetected\nInstall by\nPlatformIO\n");
 #endif
     while(true){};
@@ -95,6 +95,7 @@ String readFile(fs::FS &fs, const char * path){
     break;     
   }
   file.close();
+  DEBUG_PRINT("- read from file: %s\n", fileContent.c_str());
   return fileContent;
 }
 
@@ -125,7 +126,7 @@ bool testWifi() {
   WiFi.mode(WIFI_STA);
   WiFi.begin(ssid.c_str(), pass.c_str());
   DEBUG_PRINT("Connecting to WiFi...\n");
-#ifndef IGNOR_TFT_PRINT
+#if defined (WIFI_INCLUDE_TFT_PRINT)
   tft_printf(ST77XX_MAGENTA, "Connecting\nto WiFi...\n");
 #endif
 
@@ -136,7 +137,7 @@ bool testWifi() {
     currentMillis = millis();
     if (currentMillis - previousMillis >= interval) {
       DEBUG_PRINT("Failed to connect\n");
-#ifndef IGNOR_TFT_PRINT
+#if defined (WIFI_INCLUDE_TFT_PRINT)
       tft_printf(ST77XX_MAGENTA, "Failed to\nconnect to\nWiFi\n");
 #endif
       return false;
@@ -150,6 +151,50 @@ bool testWifi() {
 
 NETWORK_CONFIG network_config;
 
+// Handle POST request for WiFi configuration
+void handleConfigPost(AsyncWebServerRequest *request) {
+  int params = request->params();
+  for(int i=0; i<params; i++){
+    const AsyncWebParameter* p = request->getParam(i);
+    if(p->isPost()){
+      // HTTP POST ssid value
+      if (p->name() == PARAM_INPUT_1) {
+        ssid = p->value().c_str();
+        DEBUG_PRINT("SSID set to: %s\n", ssid.c_str());
+        // Write file to save value
+        writeFile(FS_SYSTEM, ssidPath, ssid.c_str());
+      }
+      // HTTP POST pass value
+      if (p->name() == PARAM_INPUT_2) {
+        pass = p->value().c_str();
+        DEBUG_PRINT("Password set to: %s\n", pass.c_str());
+        // Write file to save value
+        writeFile(FS_SYSTEM, passPath, pass.c_str());
+      }
+      // HTTP POST microROS server ip value
+      if (p->name() == PARAM_INPUT_3) {
+        ros_agent_ipPath = p->value().c_str();
+        DEBUG_PRINT("micoROS server IP Address set to: %s\n", ros_agent_ipPath.c_str());
+        // Write file to save value
+        writeFile(FS_SYSTEM, ros_server_ipPath, ros_agent_ipPath.c_str());
+      }
+      // HTTP POST microROS port value
+      if (p->name() == PARAM_INPUT_4) {
+        ros_agent_port = p->value().c_str();
+        DEBUG_PRINT("microROS Port-number set to: %s\n", ros_agent_port.c_str());
+        // Write file to save value
+        writeFile(FS_SYSTEM, ros_server_portPath, ros_agent_port.c_str());
+      }
+    }
+  }
+  request->send(200, "text/plain", "Done. Controller will restart");
+#if defined (WIFI_INCLUDE_TFT_PRINT)
+  tft_printf(ST77XX_MAGENTA, "WiFi\nconfiguration\nstored\nRestarting...\n");
+#endif
+  delay(3000);
+  ESP.restart();
+}
+
 // Returns true if the network was configured and WiFi connection succeeded (station mode).
 // Returns false if the device entered AP mode for configuration or if configuration is incomplete.
 bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
@@ -160,7 +205,7 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
   File file = FS_SYSTEM.open("/wifimanager.html");
   if(!file){
     DEBUG_PRINT("No webpages file found\n");
-#ifndef IGNOR_TFT_PRINT
+#if defined (WIFI_INCLUDE_TFT_PRINT)
     tft_printf(ST77XX_BLUE, "No webpages\nfound\nInstall by\nPlatformIO\n");
 #endif
     while(true){};
@@ -215,61 +260,27 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     IPAddress IP = WiFi.softAPIP();
     DEBUG_PRINT("AP IP address: %s\n", IP.toString().c_str());
 
-    // Web Server Root URL
+    // Web Server Root URL - serve static files first
+    server.serveStatic("/style.css", FS_SYSTEM, "/style.css");
+    
+
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(FS_SYSTEM, "/wifimanager.html", "text/html");
     });
     
-    server.serveStatic("/", FS_SYSTEM, "/");
-    
+#if 1
     server.on("/", HTTP_POST, [](AsyncWebServerRequest *request) {
-      int params = request->params();
-      for(int i=0; i<params; i++){
-        const AsyncWebParameter* p = request->getParam(i);  // Changed: Add 'const'
-        if(p->isPost()){
-          // HTTP POST ssid value
-          if (p->name() == PARAM_INPUT_1) {
-            ssid = p->value().c_str();
-            DEBUG_PRINT("SSID set to: %s\n", ssid.c_str());
-            writeFile(FS_SYSTEM, ssidPath, ssid.c_str());
-          }
-          // HTTP POST pass value
-          if (p->name() == PARAM_INPUT_2) {
-            pass = p->value().c_str();
-            DEBUG_PRINT("Password set to: %s\n", pass.c_str());
-            writeFile(FS_SYSTEM, passPath, pass.c_str());
-          }
-          // HTTP POST microROS server ip value
-          if (p->name() == PARAM_INPUT_3) {
-            ros_agent_ipPath = p->value().c_str();
-            DEBUG_PRINT("microROS server IP Address set to: %s\n", ros_agent_ipPath.c_str());
-            writeFile(FS_SYSTEM, ros_server_ipPath, ros_agent_ipPath.c_str());
-          }
-          // HTTP POST microROS port value
-          if (p->name() == PARAM_INPUT_4) {
-            ros_agent_port = p->value().c_str();
-            DEBUG_PRINT("microROS Port-number set to: %s\n", ros_agent_port.c_str());
-            writeFile(FS_SYSTEM, ros_server_portPath, ros_agent_port.c_str());
-          }
-        }
-      }
-      request->send(200, "text/plain", "Done. Controller will restart");
-    #ifndef IGNOR_TFT_PRINT
-      tft_printf(ST77XX_MAGENTA, "WiFi\nconfiguration\nstored\nRestarting...\n");
-    #endif
-      delay(3000);
-      ESP.restart();
+      handleConfigPost(request);
     });
-    DEBUG_PRINT("Starting web server on port 80\n");
+#endif 
+    // Handle not found
+    //server.onNotFound([](AsyncWebServerRequest *request){
+    //  request->send(404, "text/plain", "Not found");
+    //});
+    
     server.begin();
     DEBUG_PRINT("Web server started\n");
-    Serial.flush();
-  #if 0
-    while(true){
-      vTaskDelay(1000);
-    }
-  #endif
+    return false;
   }
-  return false;
 }
-#endif
+#endif //WIFI

@@ -116,10 +116,20 @@ float prev_rpm_l;
 float prev_rpm_r;
 
 // ROS2 timers
-rcl_timer_t timer;
 rcl_timer_t motorControlTimer;         // Controls motor PID loop
-rcl_timer_t lowSpeedPublisherTimer;    // Publishes slow-rate data (battery, errors)
-rcl_timer_t PublisherTimer;   // Publishes fast-rate data (odometry, lidar)
+#if 0
+rcl_timer_t odomPublisherTimer;        // Publishes odometry
+rcl_timer_t jointstatePublisherTimer;  // Publishes joint states
+rcl_timer_t statusPublisherTimer;      // Publishes system status
+#if defined(INCLUDE_LIDAR)
+rcl_timer_t lidarPublisherTimer;      // Publishes lidar data
+#endif
+#if defined(INCLUDE_IMU)
+rcl_timer_t imuPublisherTimer;        // Publishes IMU data
+#endif
+#else
+rcl_timer_t PublisherTimer;        // Publishes all high-frequency data
+#endif
 
 // Time synchronization
 unsigned long long time_offset = 0;  // Offset between ESP32 and ROS time
@@ -210,8 +220,10 @@ void microros_error_handler(rcl_ret_t temp_rc, int line) {
  * Error warning that stops the lidar, displays error, and restarts ESP32
  */
 void microros_warning_handler(rcl_ret_t temp_rc, int line) {
-  tft_printf(ST77XX_RED, "uROS Warning\n%s\nline: %d\nContinuing...", rcl_error_string(temp_rc), line);
-  buzzer->warningTune();
+  if(temp_rc != RCL_RET_ERROR){ // Ignore generic errors
+    tft_printf(ST77XX_RED, "uROS Warning\n%s\nline: %d\nContinuing...", rcl_error_string(temp_rc), line);
+    buzzer->warningTune();
+  } 
 };  
 
 void error_handler(int line) {
@@ -252,13 +264,27 @@ void cmd_vel_subscription_callback(const void* msgin) {
 /**
  * Reset error state by checking both bumpers are pressed
  */
-void reset_by_button(){
+void reset_p3dx(){
+  tft_printf(ST77XX_BLUE, "Resetting...\n");
+  leftWheel->reset();
+  rightWheel->reset();
 #if defined(HANDLE_BUMPERS)
-    if(digitalRead(BUMPER_FRONT_PIN)==HIGH &&
-       digitalRead(BUMPER_REAR_PIN)==HIGH){
-      digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
-      status_msg.error = false;
-    }
+//  if(digitalRead(BUMPER_FRONT_PIN)==HIGH && digitalRead(BUMPER_REAR_PIN)==HIGH){
+  if(digitalRead(digitalRead(BUMPER_REAR_PIN)==HIGH)){
+    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+    status_msg.error = false; 
+    delay(3000);
+    tft_printf(ST77XX_MAGENTA, "Reset Done\nMotors Enabled\n");
+  }
+  else{
+    tft_printf(ST77XX_RED, "Cannot Reset!\nBumpers\nNot Clear\n");
+    delay(3000);
+  }
+#else
+  digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
+  status_msg.error = false; 
+  delay(3000);
+  tft_printf(ST77XX_MAGENTA, "Reset Done\nMotors Enabled\n");
 #endif
 }
 
@@ -269,12 +295,7 @@ void reset_subscription_callback(const void* msgin) {
   const std_msgs__msg__Bool* msg = 
       static_cast<const std_msgs__msg__Bool*>(msgin);
   if (msg->data == true) {
-#if defined(HANDLE_BUMPERS)
-  reset_by_button();
-#else
-    digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
-    status_msg.error = false; 
-#endif
+  reset_p3dx();
   }
 }
 
@@ -300,6 +321,7 @@ struct timespec getTime() {
 /**
  * Read and publish the system state
  */
+
 void statusPublisher(){
 #if defined(HANDLE_BUMPERS)
   status_msg.bumpers.front = !digitalRead(BUMPER_FRONT_PIN);  // Active low
@@ -317,7 +339,6 @@ void statusPublisher(){
 #if defined(WIFI)
   int rssi = WiFi.RSSI();
   status_msg.wifi_rssi = rssi;
-  DEBUG_PRINT("WiFi RSSI: %d dBm\n", rssi);
 #else
   status_msg.wifi_rssi = 0;
 #endif
@@ -331,30 +352,76 @@ void statusPublisher(){
  * Timer callback for high-frequency publishers (10Hz)
  * Publishes odometry, joint states, lidar data, and IMU data
  */
+#if 1
 void Publisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-  RCSOFTCHECK(odometry->publish());
-  jointstate->update(leftWheel->getVelocity(), 
-                     rightWheel->getVelocity(), 
-                     encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
-                     encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
-  RCSOFTCHECK(jointstate->publish());
-  delay(15);  // Small delay to avoid overwhelming the executor
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL){
+    RCSOFTCHECK(odometry->publish());
+    delay(15);  // Small delay to avoid overwhelming the executor
+    jointstate->update(leftWheel->getVelocity(), 
+                      rightWheel->getVelocity(), 
+                      encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
+                      encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
+    RCSOFTCHECK(jointstate->publish());
+    delay(15);  // Small delay to avoid overwhelming the executor
 
-#if defined(INCLUDE_LIDAR)
-  RCSOFTCHECK(lidar->publish());
-  delay(15);  // Small delay to avoid overwhelming the executor
-#endif
+  #if defined(INCLUDE_LIDAR)
+    RCSOFTCHECK(lidar->publish());
+    delay(15);  // Small delay to avoid overwhelming the executor
+  #endif
 
-#if defined(INCLUDE_IMU)
-  RCSOFTCHECK(imu->publish());
-  delay(15);  // Small delay to avoid overwhelming the executor
-#endif
+  #if defined(INCLUDE_IMU)
+    RCSOFTCHECK(imu->publish());
+    delay(15);  // Small delay to avoid overwhelming the executor
+  #endif
 
-  statusPublisher();
-  delay(15);  // Small delay to avoid overwhelming the executor
-
+    statusPublisher();
+    delay(15);  // Small delay to avoid overwhelming the executor
+  }
+}
+#else
+void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL){
+    //RCSOFTCHECK(odometry->publish());
+  }
 }
 
+#if defined(INCLUDE_IMU)
+void imuPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL){
+    RCSOFTCHECK(imu->publish());
+  }
+}
+#endif
+void statusPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL){
+    statusPublisher();
+  }
+}
+
+#if defined(INCLUDE_LIDAR)
+void lidarPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL){
+    //RCSOFTCHECK(lidar->publish());
+  }
+}
+#endif
+
+void jointstatePublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL){
+    jointstate->update(leftWheel->getVelocity(), 
+                  rightWheel->getVelocity(), 
+                  encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
+                  encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
+    //RCSOFTCHECK(jointstate->publish());
+  }
+}
+#endif
 int display_interval_counter=0;  // Counter for display update rate limiting
 
 /**
@@ -364,56 +431,58 @@ int display_interval_counter=0;  // Counter for display update rate limiting
 void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
   float linearVelocity;
   float angularVelocity;
+  RCLC_UNUSED(last_call_time);
+  if (timer != NULL){
+    // Disable motors if no cmd_vel received for 100ms (safety timeout)
+    if((millis() - prev_cmd_time) > 100) {
+      if(motors_enabled) {
+        twist_msg.linear.x = 0;
+        twist_msg.angular.z = 0;
+        tft_printf(ST77XX_MAGENTA, "Motor Stop\nNo cmd_vel\nReceived\n");
+        digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
+        motors_enabled = false;
+        leftWheel->disable();
+        rightWheel->disable();
+      }  
+    }
 
-  // Disable motors if no cmd_vel received for 100ms (safety timeout)
-  if((millis() - prev_cmd_time) > 100) {
-    if(motors_enabled) {
-      twist_msg.linear.x = 0;
-      twist_msg.angular.z = 0;
-      tft_printf(ST77XX_MAGENTA, "Motor Stop\nNo cmd_vel\nReceived\n");
-      digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
-      motors_enabled = false;
-      leftWheel->disable();
-      rightWheel->disable();
-    }  
+    // Get commanded velocities
+    linearVelocity = twist_msg.linear.x;
+    angularVelocity = twist_msg.angular.z;
+
+    // Convert to differential drive wheel velocities
+    float vL = (linearVelocity - ((WHEELS_Y_DISTANCE/2.0) * angularVelocity));
+    float vR = (linearVelocity + ((WHEELS_Y_DISTANCE/2.0) * angularVelocity));
+
+    // Apply PID control
+    float actuating_signal_LW = leftWheel->pid(-vL);
+    float actuating_signal_RW = rightWheel->pid(vR);
+
+    // Update display every 10 cycles (200ms)
+    if(display_interval_counter % 10 == 0 && motors_enabled){
+      tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
+    }
+    display_interval_counter++;
+
+    // Send PWM commands to motors
+    rightWheel->moveBase(actuating_signal_RW);
+    leftWheel->moveBase(actuating_signal_LW);
+
+    // Calculate actual wheel velocities and update odometry
+    float currentRpmL = leftWheel->getVelocity();
+    float currentRpmR = rightWheel->getVelocity();
+    float average_rps_x = ((float)(currentRpmL + currentRpmR) / 2) / 60.0;
+    float linear_x = average_rps_x * WHEELS_CIRCUMFERENCE;  // m/s
+    float average_rps_a = ((float)(-currentRpmL + currentRpmR) / 2) / 60.0;
+    float angular_z = (average_rps_a * WHEELS_CIRCUMFERENCE) / (WHEELS_Y_DISTANCE / 2.0);  // rad/s
+    float linear_y = 0;
+
+    unsigned long now = millis();
+    float vel_dt = (now - prev_odom_update) / 1000.0;
+    prev_odom_update = now;
+
+    odometry->update(vel_dt, linear_x, linear_y, angular_z);
   }
-
-  // Get commanded velocities
-  linearVelocity = twist_msg.linear.x;
-  angularVelocity = twist_msg.angular.z;
-
-  // Convert to differential drive wheel velocities
-  float vL = (linearVelocity - ((WHEELS_Y_DISTANCE/2.0) * angularVelocity));
-  float vR = (linearVelocity + ((WHEELS_Y_DISTANCE/2.0) * angularVelocity));
-
-  // Apply PID control
-  float actuating_signal_LW = leftWheel->pid(-vL);
-  float actuating_signal_RW = rightWheel->pid(vR);
-
-  // Update display every 10 cycles (200ms)
-  if(display_interval_counter % 10 == 0 && motors_enabled){
-    tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
-  }
-  display_interval_counter++;
-
-  // Send PWM commands to motors
-  rightWheel->moveBase(actuating_signal_RW);
-  leftWheel->moveBase(actuating_signal_LW);
-
-  // Calculate actual wheel velocities and update odometry
-  float currentRpmL = leftWheel->getVelocity();
-  float currentRpmR = rightWheel->getVelocity();
-  float average_rps_x = ((float)(currentRpmL + currentRpmR) / 2) / 60.0;
-  float linear_x = average_rps_x * WHEELS_CIRCUMFERENCE;  // m/s
-  float average_rps_a = ((float)(-currentRpmL + currentRpmR) / 2) / 60.0;
-  float angular_z = (average_rps_a * WHEELS_CIRCUMFERENCE) / (WHEELS_Y_DISTANCE / 2.0);  // rad/s
-  float linear_y = 0;
-
-  unsigned long now = millis();
-  float vel_dt = (now - prev_odom_update) / 1000.0;
-  prev_odom_update = now;
-
-  odometry->update(vel_dt, linear_x, linear_y, angular_z);
 }
 
 /**
@@ -466,6 +535,8 @@ bool errorLedState = false;
 void reset_button_hit(){
   DEBUG_PRINT("Reset Button Hit!\n");
   tft_printf(ST77XX_BLUE, "Reset Button\nHit!\n");
+  delay(3000);
+  reset_p3dx();
 }
 
 void motors_button_hit(){
@@ -538,7 +609,7 @@ char* convertToCamelCase(const char *input) {
 }
 
 
-
+bool wifiUp = false;
 /**
  * Setup function - initializes hardware and ROS2 components
  */
@@ -567,12 +638,15 @@ void setup() {
 #if 0
   
   NETWORK_CONFIG networkConfig;
-  bool wifiUp = configureNetwork(false, &networkConfig);
+  wifiUp = configureNetwork(false, &networkConfig);
+#if 0
   if(!wifiUp){
     tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\nRestarting...\n");
     delay(5000);
     ESP.restart();
   };
+#endif  
+  
 #else
 
   const char* ssid     = "BirdsBoven";
@@ -582,7 +656,7 @@ void setup() {
   networkConfig.password = password;
   networkConfig.microros_agent_ip_address.fromString("192.168.2.150");
   networkConfig.microros_agent_port = 8888;
-
+  wifiUp = true;
 
 #endif
 
@@ -634,7 +708,8 @@ void setup() {
   //attachInterrupt(digitalPinToInterrupt(BUMPER_REAR_PIN), bumber_hit, FALLING);
   
   // Check initial bumper state
-  if(digitalRead(BUMPER_FRONT_PIN)==HIGH && digitalRead(BUMPER_REAR_PIN)==HIGH){
+//  if(digitalRead(BUMPER_FRONT_PIN)==HIGH && digitalRead(BUMPER_REAR_PIN)==HIGH){
+  if(digitalRead(digitalRead(BUMPER_REAR_PIN)==HIGH)){
     status_msg.error = false;
   }
   else{
@@ -698,18 +773,44 @@ void setup() {
   RCCHECK(rclc_timer_init_default(&motorControlTimer, &support,
     RCL_MS_TO_NS(samplingT), MotorControll_timerCallback));
 
-
+#if 1
   RCCHECK(rclc_timer_init_default(&PublisherTimer, &support,
-    RCL_MS_TO_NS(100), Publisher_timerCallBack));  // 10Hz
+    RCL_MS_TO_NS(200), Publisher_timerCallBack));  // 5Hz
+#else
+  RCCHECK(rclc_timer_init_default(&odomPublisherTimer, &support,
+    RCL_MS_TO_NS(200), odomPublisher_timerCallBack));  // 5Hz
 
+#if defined(INCLUDE_IMU)
+  RCCHECK(rclc_timer_init_default(&imuPublisherTimer, &support,
+    RCL_MS_TO_NS(200), imuPublisher_timerCallBack));  // 5Hz
+#endif
+  RCCHECK(rclc_timer_init_default(&statusPublisherTimer, &support,
+    RCL_MS_TO_NS(1000), statusPublisher_timerCallBack));  // 1Hz
+#if defined(INCLUDE_LIDAR)
+  RCCHECK(rclc_timer_init_default(&lidarPublisherTimer, &support,
+    RCL_MS_TO_NS(200), lidarPublisher_timerCallBack));  // 5Hz
+#endif
+  RCCHECK(rclc_timer_init_default(&jointstatePublisherTimer, &support,
+    RCL_MS_TO_NS(200), jointstatePublisher_timerCallBack));  // 5Hz
+#endif
   // Setup executor
-  RCCHECK(rclc_executor_init(&executor, &support.context, 4, &allocator));
+  RCCHECK(rclc_executor_init(&executor, &support.context, 8, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
-  //RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+#if 1
   RCCHECK(rclc_executor_add_timer(&executor, &PublisherTimer));
-
-
+#else
+  RCCHECK(rclc_executor_add_timer(&executor, &odomPublisherTimer));
+#if defined(INCLUDE_IMU)
+  RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
+#endif
+  RCCHECK(rclc_executor_add_timer(&executor, &statusPublisherTimer));
+#if defined(INCLUDE_LIDAR)
+//  RCCHECK(rclc_executor_add_timer(&executor, &lidarPublisherTimer));
+#endif
+  RCCHECK(rclc_executor_add_timer(&executor, &jointstatePublisherTimer)); 
+#endif
   // Start lidar
 #if defined(INCLUDE_LIDAR)
 #ifdef RPLIDAR_H
@@ -729,9 +830,16 @@ void setup() {
  */
 void loop() {
 
+#if defined(WIFI)
+  if(!wifiUp){
+    delay(1000);
+    return;
+  }
+#endif
+
   vTaskDelay(20);
   buzzer->update();
-  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+  RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));
 
   // Poll reset button - edge detection
   static bool prev_reset_state = HIGH;
@@ -748,5 +856,23 @@ void loop() {
     motors_button_hit();
   }
   prev_motors_state = current_motors_state;
+
+  // Poll bumpers - edge detection 
+  // Poll bumpers - edge detection 
+#if defined(HANDLE_BUMPERS)
+  static bool prev_front_bumper_state = HIGH;
+  static bool prev_rear_bumper_state = HIGH;
+  
+  bool current_front_bumper_state = digitalRead(BUMPER_FRONT_PIN);
+  bool current_rear_bumper_state = digitalRead(BUMPER_REAR_PIN);
+  
+  if((prev_front_bumper_state == HIGH && current_front_bumper_state == LOW) ||
+     (prev_rear_bumper_state == HIGH && current_rear_bumper_state == LOW)){
+    bumber_hit();   
+  }
+  
+  prev_front_bumper_state = current_front_bumper_state;
+  prev_rear_bumper_state = current_rear_bumper_state;
+#endif
 
 }

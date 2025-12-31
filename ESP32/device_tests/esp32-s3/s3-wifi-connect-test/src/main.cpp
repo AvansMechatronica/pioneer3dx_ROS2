@@ -29,6 +29,8 @@ char* convertToCamelCase(const char *input) {
     return output;
 }
 
+bool wifiUp;
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(115200);
@@ -40,21 +42,34 @@ void setup() {
   WiFi.setHostname(host_name);
   
   NETWORK_CONFIG networkConfig;
-  bool wifiUp = configureNetwork(true, &networkConfig);
-#if 0
-  if(!wifiUp){
-    Serial.printf("Error configuring WiFi Restarting...\n");
-    delay(5000);
-    ESP.restart();
-  };
-#endif
-  Serial.printf("Setup complete\n");  
+  wifiUp = configureNetwork(false, &networkConfig);
+
+  // Give async tasks time to initialize
+  delay(500);
+//  yield();
+
+  Serial.printf("Setup complete\n");
+  
+  if(wifiUp) {
+    Serial.printf("WiFi connected to: %s\n", networkConfig.ssid.c_str());
+    Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
+    Serial.printf("microROS agent: %s:%d\n", 
+                  networkConfig.microros_agent_ip_address.toString().c_str(),
+                  networkConfig.microros_agent_port);
+  } else {
+    Serial.printf("Started AP mode for configuration\n");
+    Serial.printf("Connect to WiFi: Pioneer3DX\n");
+    Serial.printf("Open browser to: 192.168.4.1\n");
+  }
 }
 
 int i = 0;
 void loop() {
+  if(!wifiUp) {
+    delay(100);  // In AP mode, give async tasks time to run
+    return;
+  }
   Serial.printf("Count: %d\n", i++);
   delay(1000);
-  WiFi.
 }
 
