@@ -73,12 +73,12 @@
 
 // PID controller constants for left wheel
 #define KP_L        (float)30
-#define KI_L        (float)80
+#define KI_L        (float)160
 #define KD_L        (float)0.1
 
 // PID controller constants for right wheel
 #define KP_R        (float)30
-#define KI_R       (float)80
+#define KI_R        (float)160
 #define KD_R        (float)0.1
 
 // PWM channel assignments
@@ -116,7 +116,7 @@ float prev_rpm_l;
 float prev_rpm_r;
 
 // ROS2 timers
-rcl_timer_t motorControlTimer;         // Controls motor PID loop
+//rcl_timer_t motorControlTimer;         // Controls motor PID loop
 #if 0
 rcl_timer_t odomPublisherTimer;        // Publishes odometry
 rcl_timer_t jointstatePublisherTimer;  // Publishes joint states
@@ -130,6 +130,8 @@ rcl_timer_t imuPublisherTimer;        // Publishes IMU data
 #else
 rcl_timer_t PublisherTimer;        // Publishes all high-frequency data
 #endif
+
+TaskHandle_t motorcontrolTaskHandle;
 
 // Time synchronization
 unsigned long long time_offset = 0;  // Offset between ESP32 and ROS time
@@ -266,24 +268,23 @@ void cmd_vel_subscription_callback(const void* msgin) {
  */
 void reset_p3dx(){
   tft_printf(ST77XX_BLUE, "Resetting...\n");
-  leftWheel->reset();
-  rightWheel->reset();
+
 #if defined(HANDLE_BUMPERS)
 //  if(digitalRead(BUMPER_FRONT_PIN)==HIGH && digitalRead(BUMPER_REAR_PIN)==HIGH){
   if(digitalRead(digitalRead(BUMPER_REAR_PIN)==HIGH)){
     digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
     status_msg.error = false; 
-    delay(3000);
+    delay(1500);
     tft_printf(ST77XX_MAGENTA, "Reset Done\nMotors Enabled\n");
   }
   else{
     tft_printf(ST77XX_RED, "Cannot Reset!\nBumpers\nNot Clear\n");
-    delay(3000);
+    delay(1500);
   }
 #else
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
   status_msg.error = false; 
-  delay(3000);
+  delay(1500);
   tft_printf(ST77XX_MAGENTA, "Reset Done\nMotors Enabled\n");
 #endif
 }
@@ -428,13 +429,15 @@ int display_interval_counter=0;  // Counter for display update rate limiting
  * Motor control timer callback (50Hz)
  * Performs PID control, odometry calculation, and motor command execution
  */
-void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
+//void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
+void motorcontrolTaskFunction(void* parameter){
   float linearVelocity;
   float angularVelocity;
-  RCLC_UNUSED(last_call_time);
-  if (timer != NULL){
-    // Disable motors if no cmd_vel received for 100ms (safety timeout)
-    if((millis() - prev_cmd_time) > 100) {
+//  RCLC_UNUSED(last_call_time);
+//  if (timer != NULL){
+  while(true){ 
+    // Disable motors if no cmd_vel received for 500ms (safety timeout)
+    if((millis() - prev_cmd_time) > 500) {
       if(motors_enabled) {
         twist_msg.linear.x = 0;
         twist_msg.angular.z = 0;
@@ -458,8 +461,8 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
     float actuating_signal_LW = leftWheel->pid(-vL);
     float actuating_signal_RW = rightWheel->pid(vR);
 
-    // Update display every 10 cycles (200ms)
-    if(display_interval_counter % 10 == 0 && motors_enabled){
+    // Update display every 25 cycles (500ms)
+    if(display_interval_counter % 25 == 0 && motors_enabled){
       tft_printf(ST77XX_MAGENTA, "Linear: %.2f\nAngular: %.2f\nvL: %.2f\nvR: %.2f", linearVelocity, angularVelocity, vL, vR);
     }
     display_interval_counter++;
@@ -482,6 +485,7 @@ void MotorControll_timerCallback(rcl_timer_t* timer, int64_t last_call_time) {
     prev_odom_update = now;
 
     odometry->update(vel_dt, linear_x, linear_y, angular_z);
+    vTaskDelay(20); // 50Hz
   }
 }
 
@@ -523,6 +527,8 @@ void bumber_hit(){
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
   tft_printf(ST77XX_BLUE, "Bumper Hit!\nMotors Disabled\n");
   motors_enabled = false; 
+  leftWheel->disable();
+  rightWheel->disable();
   status_msg.error = true;
 }
 #endif
@@ -535,7 +541,7 @@ bool errorLedState = false;
 void reset_button_hit(){
   DEBUG_PRINT("Reset Button Hit!\n");
   tft_printf(ST77XX_BLUE, "Reset Button\nHit!\n");
-  delay(3000);
+  delay(1500);
   reset_p3dx();
 }
 
@@ -740,7 +746,7 @@ void setup() {
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   // Initialize subscribers
-  RCCHECK(rclc_subscription_init_default(&cmd_vel_subscriber, &node,
+  RCCHECK(rclc_subscription_init_best_effort(&cmd_vel_subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel"));
 
   RCCHECK(rclc_subscription_init_default(&reset_subscriber, &node,
@@ -769,9 +775,9 @@ void setup() {
 #endif
 
   // Initialize timers
-  const unsigned int samplingT = 20;  // 50Hz motor control
-  RCCHECK(rclc_timer_init_default(&motorControlTimer, &support,
-    RCL_MS_TO_NS(samplingT), MotorControll_timerCallback));
+//  const unsigned int samplingT = 20;  // 50Hz motor control
+//  RCCHECK(rclc_timer_init_default(&motorControlTimer, &support,
+//    RCL_MS_TO_NS(samplingT), MotorControll_timerCallback));
 
 #if 1
   RCCHECK(rclc_timer_init_default(&PublisherTimer, &support,
@@ -797,7 +803,7 @@ void setup() {
   RCCHECK(rclc_executor_init(&executor, &support.context, 8, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
-  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+//  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
 #if 1
   RCCHECK(rclc_executor_add_timer(&executor, &PublisherTimer));
 #else
@@ -819,6 +825,22 @@ void setup() {
   lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM);
 #endif
 #endif
+  // Create FreeRTOS task for scanning
+  const uint16_t stackSize = 8192; // Stack size in bytes
+  const UBaseType_t priority = 1;   // Task priority
+  BaseType_t result = xTaskCreate(
+      motorcontrolTaskFunction,       // Task function
+      "Motor_Control",          // Task name
+      stackSize,             // Stack size
+      nullptr,               // Task parameter (no context)
+      priority,              // Priority
+      &motorcontrolTaskHandle        // Task handle
+  );
+  if (result != pdPASS) {
+      tft_printf(ST77XX_MAGENTA, "Error\ncreating\nmotor control\ntask\n");
+      delay(5000);
+      // Handle task creation error appropriately
+  }  
   
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
   buzzer->welcomeTune();
@@ -837,7 +859,7 @@ void loop() {
   }
 #endif
 
-  vTaskDelay(20);
+  vTaskDelay(10);
   buzzer->update();
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(10)));
 

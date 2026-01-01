@@ -124,8 +124,7 @@ void lds08_lidar::scanTaskFunction(void* parameter) {
     lidar->scan_start_time = millis();
 
     while (true) {
-        taskYIELD();
-        //vTaskDelay(1/ portTICK_PERIOD_MS);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
         if (lidar->scan_enable == false) {
             continue;
         }
