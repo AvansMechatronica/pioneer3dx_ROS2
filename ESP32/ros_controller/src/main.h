@@ -46,6 +46,37 @@
 #define R2 560000.0f // Resistor R2 value in ohms, according schematics
 #define R3 100000.0f // Resistor R3 value in ohms, according schematics
 
+// Encoder ticks per full wheel revolution
+#define TICK_PER_REVOLUTION  19150
+
+// Command to test robot movement:
+//ros2 topic pub /cmd_vel geometry_msgs/msg/Twist "{linear: {x: 0.4, y: 0.0, z: 0.0}, angular: {x: 0.0, y: 0.0, z: 0.0}}" -r 10
+
+// Robot physical parameters
+#define WHEELS_Y_DISTANCE       (float)0.34      // Distance between wheels (meters)
+#define WHEELS_RADIUS           (float)0.09765   // Wheel radius (meters)
+#define WHEELS_CIRCUMFERENCE    (2 * 3.14 * WHEELS_RADIUS)
+
+// Motor direction definitions
+#define CLOCK_WISE            HIGH
+#define COUNTER_CLOCK_WISE    LOW
+
+#define THRESHOLD   0
+
+// PID controller constants for left wheel
+#define KP_L        (float)30
+#define KI_L        (float)160
+#define KD_L        (float)0.1
+
+// PID controller constants for right wheel
+#define KP_R        (float)30
+#define KI_R        (float)160
+#define KD_R        (float)0.1
+
+// PWM channel assignments
+#define PWM_CHANNEL_LEFT 0
+#define PWM_CHANNEL_RIGHT 1
+
 
 #define DEBUG
 #ifdef DEBUG
