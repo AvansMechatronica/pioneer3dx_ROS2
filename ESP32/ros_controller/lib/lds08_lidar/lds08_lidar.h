@@ -120,6 +120,7 @@ private:
     float *distance;
     // Control motor speed (PWM percent)
     void setupMotorPWM(int percent);
+    bool syncronized = false;
 
 
 #ifndef TESTING
@@ -151,6 +152,8 @@ public:
 
     // Stops scan
     void stopScan();
+
+    bool isSyncronized();
 #ifndef TESTING
     static void scanTaskFunction(void* parameter);
 

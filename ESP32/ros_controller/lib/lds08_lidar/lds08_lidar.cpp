@@ -248,6 +248,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     while (LIDARSerial->available() < 1) {
         if (millis() - startTime > timeout_ms){
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
+            syncronized = false;
             return false;
         }
         //vTaskDelay(1/ portTICK_PERIOD_MS);
@@ -256,12 +257,14 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     // Read header bytes
     if (LIDARSerial->readBytes((uint8_t*)&frame, 1) != 1) {
         DEBUG_PRINT("Fout bij lezen scan data\n");
+        syncronized = false;
         return false;
     }
 
     if(frame.header != PKG_HEADER) {
         // Invalid start byte, discard and continue
         DEBUG_PRINT("Ongeldige start byte: 0x%02X\n", frame.header);
+        syncronized = false;
         return false;
     }
 
@@ -269,6 +272,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     while (LIDARSerial->available() < 1) {
         if (millis() - startTime > timeout_ms){
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
+            syncronized = false;
             return false;
         }
         //vTaskDelay(1/ portTICK_PERIOD_MS);
@@ -278,12 +282,14 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     // Read length byte
     if (LIDARSerial->readBytes((uint8_t*)&frame + 1, 1) != 1) {
         DEBUG_PRINT("Fout bij lezen scan data\n");
+        syncronized = false;
         return false;
     }
 
     if(frame.ver_len != PKG_VER_LEN) {
         // Invalid version/length byte, discard and continue
         DEBUG_PRINT("Ongeldige lengte byte: 0x%02X, expected 0x2C\n", frame.ver_len);
+        syncronized = false;
         return false;
     }   
 
@@ -291,6 +297,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     while (LIDARSerial->available() < size_of_frame){
         if (millis() - startTime > timeout_ms){
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
+            syncronized = false;
             return false;
         }
         //vTaskDelay(1/ portTICK_PERIOD_MS);
@@ -298,6 +305,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
 
     if(LIDARSerial->readBytes(((uint8_t*)&frame) + 2, size_of_frame) != size_of_frame) {
         DEBUG_PRINT("Fout bij lezen volledige scan frame\n");
+        syncronized = false;
         return false;
     }
 
@@ -306,6 +314,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
     while (LIDARSerial->available() < size_of_frame){
         if (millis() - startTime > timeout_ms){
             DEBUG_PRINT("Timeout: geen scan data ontvangen\n");
+            syncronized = false;
             return false;
         }
         //vTaskDelay(1/ portTICK_PERIOD_MS);
@@ -313,18 +322,21 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
 
     if(LIDARSerial->readBytes(((uint8_t*)&frame), size_of_frame) != size_of_frame) {
         DEBUG_PRINT("Fout bij lezen volledige scan frame\n");
+        syncronized = false;
         return false;
     }
 
     if(frame.header != PKG_HEADER) {
         // Invalid start byte, discard and continue
         DEBUG_PRINT("Ongeldige start byte: 0x%02X\n", frame.header);
+        syncronized = false;
         return false;
     }
 
     if(frame.ver_len != PKG_VER_LEN) {
         // Invalid version/length byte, discard and continue
         DEBUG_PRINT("Ongeldige lengte byte: 0x%02X, expected 0x2C\n", frame.ver_len);
+        syncronized = false;
         return false;
     }   
 
@@ -336,6 +348,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
 
     if (crc != frame.crc8){
         DEBUG_PRINT("CRC fout: berekend 0x%02X, ontvangen 0x%02X\n", crc, frame.crc8);
+        syncronized = false;
         return false;
     }
     
@@ -357,7 +370,13 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
         }
         value->point[i].quality = frame.point[i].confidence;
     }
+    syncronized = true;
     return true;
+}
+
+
+bool lds08_lidar::isSyncronized() {
+    return syncronized;
 }
 
 lds08_lidar::~lds08_lidar() {}

@@ -51,10 +51,10 @@ void microros_error_handler(rcl_ret_t temp_rc, int line) {
  * Error warning that stops the lidar, displays error, and restarts ESP32
  */
 void microros_warning_handler(rcl_ret_t temp_rc, int line) {
-//  if(temp_rc != RCL_RET_ERROR){ // Ignore generic errors
+  if(temp_rc != RCL_RET_ERROR){ // Ignore generic errors
     tft_printf(ST77XX_RED, "uROS Warning\n%s\nline: %d\nContinuing...", rcl_error_string(temp_rc), line);
     buzzer->warningTune();
-//  } 
+  } 
 };  
 
 void error_handler(int line) {

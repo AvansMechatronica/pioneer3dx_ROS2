@@ -120,7 +120,7 @@ void setup() {
   };
 #endif  
   
-#else
+#else // 0
 
   const char* ssid     = "BirdsBoven";
   const char* password = "Highway12!";
@@ -131,7 +131,7 @@ void setup() {
   networkConfig.microros_agent_port = 8888;
   wifiUp = true;
 
-#endif
+#endif // 0
 
   set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
                                const_cast<char*>(networkConfig.password.c_str()), 
@@ -139,11 +139,11 @@ void setup() {
                                networkConfig.microros_agent_port);
   tft_printf(ST77XX_MAGENTA, "WiFi Connected\n");
   delay(2000);
-#else
+#else // WIFI
   Serial.begin(115200);
   set_microros_serial_transports(Serial);
   delay(2000);
-#endif
+#endif // 
   // Initialize ADC for battery voltage reading
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
@@ -188,9 +188,9 @@ void setup() {
   else{
     status_msg.error = true;
   }
-#else
+#else // HANDLE_BUMPERS
   status_msg.error = false;
-#endif
+#endif // HANDLE_BUMPERS
 
   // Ensure motors are disabled
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_DISABLE);
@@ -234,17 +234,19 @@ void setup() {
 #ifdef RPLIDAR_H
   lidar = new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   Serial.println("RPlidar A1M8 - Setup gestart");
-#else
+#else // RPLIDAR_H
   lidar = new lds08_lidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   Serial.println("LDS08 Lidar - Setup gestart");
-#endif
-#endif
+#endif // RPLIDAR_H
+#endif // INCLUDE_LIDAR
 
   odometry = new Odometry(&node);
   jointstate = new Jointstate(&node);
 #if defined(INCLUDE_IMU)
   imu = new imu_mpu6050(&node, I2C_SCL_PIN, I2C_SDA_PIN, IMU_INT_PIN);
-#endif
+#endif // INCLUDE_IMU
+
+  // Initialize timers and executor
 
 int executer_count = 2; // cmd_vel + reset subscriptions
 
@@ -258,7 +260,7 @@ int executer_count = 2; // cmd_vel + reset subscriptions
   RCCHECK(rclc_timer_init_default(&imuPublisherTimer, &support,
     RCL_MS_TO_NS(200), imuPublisher_timerCallBack));  // 5Hz
   executer_count++;
-#endif
+#endif // INCLUDE_IMU
   RCCHECK(rclc_timer_init_default(&statusPublisherTimer, &support,
     RCL_MS_TO_NS(1000), statusPublisher_timerCallBack));  // 1Hz
   executer_count++;
@@ -266,42 +268,55 @@ int executer_count = 2; // cmd_vel + reset subscriptions
   RCCHECK(rclc_timer_init_default(&lidarPublisherTimer, &support,
     RCL_MS_TO_NS(200), lidarPublisher_timerCallBack));  // 5Hz
   executer_count++;
-#endif
+#endif // INCLUDE_LIDAR
   RCCHECK(rclc_timer_init_default(&jointstatePublisherTimer, &support,
     RCL_MS_TO_NS(200), jointstatePublisher_timerCallBack));  // 5Hz
   executer_count++;
-#else
+#else // MULTIPLE_PUBLISH_EXECUTORS
   RCCHECK(rclc_timer_init_default(&PublisherTimer, &support,
     RCL_MS_TO_NS(200), Publisher_timerCallBack));  // 5Hz
   executer_count++;
-#endif
+#endif // MULTIPLE_PUBLISH_EXECUTORS
 
   // Setup executor
   RCCHECK(rclc_executor_init(&executor, &support.context, executer_count, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
 //  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
+
 #if defined(MULTIPLE_PUBLISH_EXECUTORS)
   RCCHECK(rclc_executor_add_timer(&executor, &odomPublisherTimer));
+
 #if defined(INCLUDE_IMU)
   RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
-#endif
+#endif // INCLUDE_IMU
+
   RCCHECK(rclc_executor_add_timer(&executor, &statusPublisherTimer));
-#if defined(INCLUDE_LIDAR)
-//  RCCHECK(rclc_executor_add_timer(&executor, &lidarPublisherTimer));
-#endif
+ 
   RCCHECK(rclc_executor_add_timer(&executor, &jointstatePublisherTimer)); 
-#endif
+
   // Start lidar
+#if defined(INCLUDE_LIDAR)
+  RCCHECK(rclc_executor_add_timer(&executor, &lidarPublisherTimer));
+#endif // INCLUDE_LIDAR
+
+#else // MULTIPLE_PUBLISH_EXECUTORS
+  RCCHECK(rclc_executor_add_timer(&executor, &PublisherTimer));
+#endif // MULTIPLE_PUBLISH_EXECUTORS
+
 #if defined(INCLUDE_LIDAR)
 #ifdef RPLIDAR_H
   lidar->startScan(EXPRESS_LIDAR_MODE, DEFAULT_LIDAR_MOTOR_PWM);
-#else
+#else // RPLIDAR_H
   lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM);
-#endif
-#else
-  RCCHECK(rclc_executor_add_timer(&executor, &PublisherTimer));
-#endif
+  tft_printf(ST77XX_MAGENTA, "LDS08 Lidar\nWait for sync\n");
+  while(!lidar->isSyncronized()){
+    delay(100);
+  }
+  tft_printf(ST77XX_MAGENTA, "LDS08 Lidar\nSyncronized\n");
+  delay(2000);
+#endif // RPLIDAR_H
+#endif // INCLUDE_LIDAR
 
   // Create FreeRTOS task for scanning
   const uint16_t stackSize = 8192; // Stack size in bytes
@@ -418,13 +433,9 @@ void reset_subscription_callback(const void* msgin) {
   }
 }
 
-
-
-
 /**
  * Read and publish the system state
  */
-
 void statusPublisher(){
 #if defined(HANDLE_BUMPERS)
   status_msg.bumpers.front = !digitalRead(BUMPER_FRONT_PIN);  // Active low
@@ -456,7 +467,7 @@ void statusPublisher(){
 void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
-    //RCSOFTCHECK(odometry->publish());
+    RCSOFTCHECK(odometry->publish());
   }
 }
 
@@ -479,7 +490,7 @@ void statusPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
 void lidarPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
-    //RCSOFTCHECK(lidar->publish());
+    RCSOFTCHECK(lidar->publish());
   }
 }
 #endif
@@ -491,7 +502,7 @@ void jointstatePublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_tim
                   rightWheel->getVelocity(), 
                   encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
                   encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
-    //RCSOFTCHECK(jointstate->publish());
+    RCSOFTCHECK(jointstate->publish());
   }
 }
 #else

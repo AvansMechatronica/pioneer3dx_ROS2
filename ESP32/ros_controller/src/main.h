@@ -159,7 +159,7 @@ void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time);
  * Timer callback for IMU publisher
  */
 void imuPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time);
-#endif
+#endif // INCLUDE_IMU
 
 /**
  * Timer callback for status publisher
@@ -171,15 +171,15 @@ void statusPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time);
  * Timer callback for lidar publisher
  */
 void lidarPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time);
-#endif
+#endif // INCLUDE_LIDAR
 
 /**
  * Timer callback for joint state publisher
  */
 void jointstatePublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time);
-#else
+#else // MULTIPLE_PUBLISH_EXECUTORS
 void Publisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time);
-#endif
+#endif // MULTIPLE_PUBLISH_EXECUTORS
 
 
 
@@ -206,7 +206,7 @@ void updateEncoderR();
  * Interrupt handler for bumper collision
  */
 void bumber_hit();
-#endif
+#endif // HANDLE_BUMPERS
 
 /**
  * Reset button interrupt handler
@@ -244,6 +244,6 @@ struct timespec getTime();
  */
 void syncTime();
 
-#endif
+#endif // 0
 
 #endif // MAIN_H
