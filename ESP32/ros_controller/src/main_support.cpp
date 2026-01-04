@@ -96,7 +96,7 @@ void init_display(){
 
   tft->initR(INITR_GREENTAB);
   tft->fillScreen(ST77XX_BLACK);
-  tft->setRotation(1);
+  tft->setRotation(3);
   tft->setFont(&FreeSansBold9pt7b);
   tft->fillScreen(ST77XX_BLACK);
   tft->setTextColor(ST77XX_CYAN);
