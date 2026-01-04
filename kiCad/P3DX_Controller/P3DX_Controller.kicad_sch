@@ -6005,7 +6005,7 @@
 				)
 				(uuid "41073616-c2ed-4454-b375-ece0559c1823")
 			)
-			(table_cell "RoRedod"
+			(table_cell "Red"
 				(exclude_from_sim no)
 				(at 219.71 21.59 0)
 				(size 12.7 2.54)
@@ -6209,7 +6209,7 @@
 				)
 				(uuid "d7713445-2f5d-4308-b0db-f7acfdd1486f")
 			)
-			(table_cell "Black"
+			(table_cell "Green"
 				(exclude_from_sim no)
 				(at 219.71 31.75 0)
 				(size 12.7 2.54)
