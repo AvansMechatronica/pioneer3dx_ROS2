@@ -28,7 +28,7 @@ De P3DX-robot heeft de volgende eigenschappen:
 Gemodificeerde P3DX-robot met lidar en 1.77" status display.
 
 
-![Pioneer 3DX robot showing mounted LIDAR sensor on top and 1.77 inch status display mounted on front panel, both integrated into the modified chassis for autonomous navigation capabilities](../images/p3dxWithLidarAndDisplay.jpg)
+![Pioneer 3DX robot showing mounted LIDAR sensor on top and 1.77 inch status display mounted on front panel, both integrated into the modified chassis for autonomous navigation capabilities](../images/lidaAndDisplay.jpg)
 
 Detail van lidar en status display
 
