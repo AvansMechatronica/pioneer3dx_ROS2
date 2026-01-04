@@ -24,6 +24,7 @@ Welcome to Pioneer 3DX's documentation!
    documentation/mapping.md
    documentation/navigation.md
    documentation/advanced_features.md
+   documentation/background.md
    documentation/troubleshooting.md
    documentation/faq.md
 
