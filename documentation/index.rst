@@ -3,10 +3,10 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to PIONEER 3DX's documentation!
+Welcome to Pioneer 3DX's documentation!
 =========================================
 
-**Welcome to Pioneer 3dx** 
+**Welcome to Pioneer 3DX** 
 
 .. note::
    This project is under active development.
@@ -16,10 +16,18 @@ Welcome to PIONEER 3DX's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   documentation/main.md
-   documentation/orig.md
+   documentation/summary.md
+   documentation/installation.md
+   documentation/simulation.md
+   documentation/real_robot_setup.md
+   documentation/teleoperation.md
+   documentation/mapping.md
+   documentation/navigation.md
+   documentation/advanced_features.md
+   documentation/troubleshooting.md
+   documentation/faq.md
 
 
-
-# License
-[License CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/)
+License
+=======
+`License CC BY-NC-SA 4.0 <https://creativecommons.org/licenses/by-nc-sa/4.0/>`_
