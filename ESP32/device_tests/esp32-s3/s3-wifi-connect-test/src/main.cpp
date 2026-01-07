@@ -42,7 +42,7 @@ void setup() {
   WiFi.setHostname(host_name);
   
   NETWORK_CONFIG networkConfig;
-  wifiUp = configureNetwork(true, &networkConfig);
+  wifiUp = configureNetwork(false, &networkConfig);
 
   // Give async tasks time to initialize
   delay(500);
