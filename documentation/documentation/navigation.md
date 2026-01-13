@@ -1,7 +1,7 @@
-## Navigatie
+# Navigatie
 
 
-## Bouwen
+## Bouwen navigatie package
 Open `p3dx_navigation/launch/navigation.launch.py` en wijzig *MAP_NAME* naar de naam van de nieuw aangemaakte kaart. 
 
 Bouw de p3dx_navigatie package(er zijn nieuwe bestanden toegevoegd):
