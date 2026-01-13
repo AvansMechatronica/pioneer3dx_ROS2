@@ -20,8 +20,7 @@ Bestuur de robot [handmatig](./teleoperation.md) totdat de robot het volledige w
 ## Sla de kaart op
 
 ```bash
-mkdir ~/maps
-cd ~/maps
-ros2 run nav2_map_server map_saver_cli -f <kaartnaam> --ros-args -p save_map_timeout:=10000.
+cd p3dx/p3dx_navigation/maps
+ros2 run nav2_map_server map_saver_cli -f <map_name> --ros-args -p save_map_timeout:=10000.
 ```
-De kaart wordt opgeslagen in de `~/maps` directory.
+
