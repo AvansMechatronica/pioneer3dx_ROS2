@@ -19,7 +19,7 @@ void setup() {
   Serial.printf("IMU initialized\n");
   
   // Test the connection to the MPU6050 sensor
-  delay(1000);
+  delay(2000);
   if(imu->testConnection()) {
     Serial.printf("MPU6050 connection successful\n");
   } else {
@@ -27,20 +27,27 @@ void setup() {
     Serial.printf("MPU6050 connection failed\n");
     while(1);
   } 
+  delay(5000);
 }
 
 
 // ------------------- Loop -------------------
+int i = 0;
 void loop() {
   // Update IMU readings
   imu->update();
-  
+
+  // Convert radians to degrees
+  float roll_deg = imu->getRoll() * 180.0 / PI;
+  float pitch_deg = imu->getPitch() * 180.0 / PI;
+  float yaw_deg = imu->getYaw() * 180.0 / PI;
+
   // Print orientation angles (in degrees)
-  Serial.printf("Roll: %.2f, Pitch: %.2f, Yaw: %.2f\n", imu->getRoll(), imu->getPitch(), imu->getYaw());
-  
+  Serial.printf("%i, Roll: %.2f, Pitch: %.2f, Yaw: %.2f\n", i, roll_deg, pitch_deg, yaw_deg);
+
   // Print gravity vector components
-  Serial.printf("Gravity: X: %.2f, Y: %.2f, Z: %.2f\n", imu->getGravity().x, imu->getGravity().y, imu->getGravity().z); 
-  
+  Serial.printf("Gravity: X: %.2f, Y: %.2f, Z: %.2f\n", imu->getGravity().x, imu->getGravity().y, imu->getGravity().z);
+  i++;
   // Wait 500ms before next reading
-  delay(500); 
+  delay(500);
 }

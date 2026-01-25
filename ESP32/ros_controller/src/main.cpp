@@ -99,6 +99,8 @@ void setup() {
   //attachInterrupt(digitalPinToInterrupt(UCP_RESET_PIN), reset_button_hit, FALLING);
 
   pinMode(UCP_MOTORS_PIN, INPUT_PULLUP);
+
+  pinMode(UCP_MOTORS_PIN, INPUT_PULLUP);
   // Use polling instead of interrupt to avoid accidental motor enables
   //attachInterrupt(digitalPinToInterrupt(UCP_MOTORS_PIN), motors_button_hit, FALLING);
 
@@ -108,30 +110,17 @@ void setup() {
   const char *host_name = convertToCamelCase(NODE_NAME);
   DEBUG_PRINT("hostname :%s\n", host_name);
   WiFi.setHostname(host_name);
-#if 0
   
+  // UCP_MOTORS_PIN low to force WiFi configuration mode
+  bool force_configure_wifi = digitalRead(UCP_MOTORS_PIN) == LOW;
+
   NETWORK_CONFIG networkConfig;
-  wifiUp = configureNetwork(false, &networkConfig);
-#if 0
+  wifiUp = configureNetwork(force_configure_wifi, &networkConfig);
   if(!wifiUp){
     tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\nRestarting...\n");
     delay(5000);
     ESP.restart();
   };
-#endif  
-  
-#else // 0
-
-  const char* ssid     = "BirdsBoven";
-  const char* password = "Highway12!";
-  NETWORK_CONFIG networkConfig;
-  networkConfig.ssid = ssid;
-  networkConfig.password = password;
-  networkConfig.microros_agent_ip_address.fromString("192.168.2.150");
-  networkConfig.microros_agent_port = 8888;
-  wifiUp = true;
-
-#endif // 0
 
   set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
                                const_cast<char*>(networkConfig.password.c_str()), 
@@ -361,12 +350,6 @@ int executer_count = 2; // cmd_vel + reset subscriptions
  * Main loop - spins ROS2 executor
  */
 void loop() {
-#if defined(WIFI)
-  if(!wifiUp){
-    delay(1000);
-    return;
-  }
-#endif
 
   vTaskDelay(1 / portTICK_PERIOD_MS); // Allow other tasks to run
   buzzer->update();

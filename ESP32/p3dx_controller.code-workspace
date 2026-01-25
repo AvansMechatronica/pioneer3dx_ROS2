@@ -34,6 +34,10 @@
 		},
 		{
 			"path": "device_tests/esp32-s3/s3-wifi-connect-test"
+		},
+		{
+			"name": "eps32_host",
+			"path": "../../../../rpc_esp32/eps32_host"
 		}
 	],
 	"settings": {

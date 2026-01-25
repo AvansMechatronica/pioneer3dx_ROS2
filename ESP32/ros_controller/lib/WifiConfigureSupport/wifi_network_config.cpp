@@ -260,6 +260,10 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     IPAddress IP = WiFi.softAPIP();
     DEBUG_PRINT("AP IP address: %s\n", IP.toString().c_str());
 
+#if defined (WIFI_INCLUDE_TFT_PRINT)
+    tft_printf(ST77XX_MAGENTA, "Connect to AP:\n%s\nIP: %s\n", ap_name, IP.toString().c_str());
+#endif
+
     // Web Server Root URL - serve static files first
     server.serveStatic("/style.css", FS_SYSTEM, "/style.css");
     
@@ -280,6 +284,10 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     
     server.begin();
     DEBUG_PRINT("Web server started\n");
+    while(true){
+      // Stay in AP mode until configured
+      vTaskDelay(1000 / portTICK_PERIOD_MS);
+    }
     return false;
   }
 }
