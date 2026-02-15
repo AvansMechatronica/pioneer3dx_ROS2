@@ -17,6 +17,8 @@
 // MPU6050 Digital Motion Processor (DMP) library
 #include "MPU6050_6Axis_MotionApps20.h"
 
+
+
 #include "Arduino.h"
 
 // Conditional compilation: exclude ROS dependencies during testing
@@ -29,6 +31,11 @@
 #include <micro_ros_utilities/string_utilities.h>
 #include <sensor_msgs/msg/imu.h>
 #endif
+
+/*Conversion variables*/
+#define EARTH_GRAVITY_MS2 9.80665  //m/s2
+#define DEG_TO_RAD        0.017453292519943295769236907684886
+#define RAD_TO_DEG        57.295779513082320876798154814105
 
 // Main IMU class for MPU6050 sensor integration
 class imu_mpu6050 {
@@ -46,7 +53,7 @@ class imu_mpu6050 {
     ~imu_mpu6050();
     
     // Initialize I2C communication and MPU6050
-    void initialize(int scl_pin, int sda_pin);
+    bool initialize(int scl_pin, int sda_pin);
     
     // Test if MPU6050 is connected and responding
     bool testConnection();
@@ -100,6 +107,13 @@ class imu_mpu6050 {
     
     // Yaw, Pitch, Roll container [yaw, pitch, roll]
     float ypr[3];
+
+    VectorInt16 aa;         // [x, y, z]            Accel sensor measurements
+    VectorInt16 gg;         // [x, y, z]            Gyro sensor measurements
+    VectorInt16 aaWorld;    // [x, y, z]            World-frame accel sensor measurements
+    VectorInt16 ggWorld;    // [x, y, z]            World-frame gyro sensor measurements
+    float euler[3];         // [psi, theta, phi]    Euler angle container
+
 
 #ifndef TESTING
     // FreeRTOS task handle for IMU processing
