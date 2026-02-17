@@ -5,15 +5,9 @@
 #include <AsyncTCP.h>
 
 // Include appropriate filesystem
-#ifdef USE_SPIFFS
-  #include "SPIFFS.h"
-  #define FS_SYSTEM SPIFFS
-  #define FS_NAME "SPIFFS"
-#else
-  #include "LittleFS.h"
-  #define FS_SYSTEM LittleFS
-  #define FS_NAME "LittleFS"
-#endif
+#include "LittleFS.h"
+#define FS_SYSTEM LittleFS
+#define FS_NAME "LittleFS"
 
 #include "wifi_network_config.h"
 #if defined (WIFI_INCLUDE_TFT_PRINT)
@@ -22,8 +16,8 @@
 
 #include <string>
 
-#define DEBUG
-#ifdef DEBUG
+
+#ifdef NETWORK_CONFIG_DEBUG
 #define DEBUG_PRINT(fmt, ...) \
     do { \
         Serial.printf("DEBUG: %s:%d:%s(): " fmt, \
@@ -63,11 +57,7 @@ const long interval = 10000;  // interval to wait for Wi-Fi connection (millisec
 void initFS() {
   bool result;
   
-#ifdef USE_SPIFFS
-  result = SPIFFS.begin(false);
-#else
   result = LittleFS.begin(true);
-#endif
 
   if (!result) {
     DEBUG_PRINT("An error has occurred while mounting %s\n", FS_NAME);

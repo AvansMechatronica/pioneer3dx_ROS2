@@ -53,7 +53,7 @@ class imu_mpu6050 {
     ~imu_mpu6050();
     
     // Initialize I2C communication and MPU6050
-    bool initialize(int scl_pin, int sda_pin);
+    bool initialize(int scl_pin, int sda_pin, int speed = 400000);
     
     // Test if MPU6050 is connected and responding
     bool testConnection();

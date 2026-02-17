@@ -35,7 +35,6 @@ float prev_rpm_r;
 
 // ROS2 timers
 //rcl_timer_t motorControlTimer;         // Controls motor PID loop
-#if defined(MULTIPLE_PUBLISH_EXECUTORS)
 rcl_timer_t odomPublisherTimer;        // Publishes odometry
 rcl_timer_t jointstatePublisherTimer;  // Publishes joint states
 rcl_timer_t statusPublisherTimer;      // Publishes system status
@@ -44,9 +43,6 @@ rcl_timer_t lidarPublisherTimer;      // Publishes lidar data
 #endif
 #if defined(INCLUDE_IMU)
 rcl_timer_t imuPublisherTimer;        // Publishes IMU data
-#endif
-#else
-rcl_timer_t PublisherTimer;        // Publishes all high-frequency data
 #endif
 
 TaskHandle_t motorcontrolTaskHandle;
@@ -202,13 +198,9 @@ void setup() {
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
   // Initialize subscribers
-  #if 1
   RCCHECK(rclc_subscription_init_default(&cmd_vel_subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel"));
-  #else 
-  RCCHECK(rclc_subscription_init_best_effort(&cmd_vel_subscriber, &node,
-    ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel"));
-  #endif
+
 
   RCCHECK(rclc_subscription_init_default(&reset_subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(std_msgs, msg, Bool), "p3dx/reset"));
@@ -231,16 +223,20 @@ void setup() {
 
   odometry = new Odometry(&node);
   jointstate = new Jointstate(&node);
+
 #if defined(INCLUDE_IMU)
   imu = new imu_mpu6050(&node, I2C_SCL_PIN, I2C_SDA_PIN, IMU_INT_PIN);
 #endif // INCLUDE_IMU
 
   // Initialize timers and executor
 
-int executer_count = 2; // cmd_vel + reset subscriptions
+  int executer_count = 2; // cmd_vel + reset subscriptions
 
-// Initialize timers
-#if defined(MULTIPLE_PUBLISH_EXECUTORS)
+  // Initialize timers
+  RCCHECK(rclc_timer_init_default(&statusPublisherTimer, &support,
+    RCL_MS_TO_NS(1000), statusPublisher_timerCallBack));  // 1Hz
+  executer_count++;
+
   RCCHECK(rclc_timer_init_default(&odomPublisherTimer, &support,
     RCL_MS_TO_NS(200), odomPublisher_timerCallBack));  // 5Hz
   executer_count++;
@@ -250,10 +246,6 @@ int executer_count = 2; // cmd_vel + reset subscriptions
     RCL_MS_TO_NS(200), imuPublisher_timerCallBack));  // 5Hz
   executer_count++;
 #endif // INCLUDE_IMU
-
-  RCCHECK(rclc_timer_init_default(&statusPublisherTimer, &support,
-    RCL_MS_TO_NS(1000), statusPublisher_timerCallBack));  // 1Hz
-  executer_count++;
 
 #if defined(INCLUDE_LIDAR)
   RCCHECK(rclc_timer_init_default(&lidarPublisherTimer, &support,
@@ -265,23 +257,15 @@ int executer_count = 2; // cmd_vel + reset subscriptions
     RCL_MS_TO_NS(200), jointstatePublisher_timerCallBack));  // 5Hz
   executer_count++;
 
-#else // MULTIPLE_PUBLISH_EXECUTORS
-  RCCHECK(rclc_timer_init_default(&PublisherTimer, &support,
-    RCL_MS_TO_NS(200), Publisher_timerCallBack));  // 5Hz
-  executer_count++;
-#endif // MULTIPLE_PUBLISH_EXECUTORS
-
   // Setup executor
   RCCHECK(rclc_executor_init(&executor, &support.context, executer_count, &allocator));
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
 //  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
 
-#if defined(MULTIPLE_PUBLISH_EXECUTORS)
-  RCCHECK(rclc_executor_add_timer(&executor, &odomPublisherTimer));
 
 #if defined(INCLUDE_IMU)
-//  RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
+  RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
 #endif // INCLUDE_IMU
 
   RCCHECK(rclc_executor_add_timer(&executor, &statusPublisherTimer));
@@ -293,9 +277,6 @@ int executer_count = 2; // cmd_vel + reset subscriptions
   RCCHECK(rclc_executor_add_timer(&executor, &lidarPublisherTimer));
 #endif // INCLUDE_LIDAR
 
-#else // MULTIPLE_PUBLISH_EXECUTORS
-  RCCHECK(rclc_executor_add_timer(&executor, &PublisherTimer));
-#endif // MULTIPLE_PUBLISH_EXECUTORS
 
 #if defined(INCLUDE_LIDAR)
 #ifdef RPLIDAR_H
@@ -450,7 +431,6 @@ void statusPublisher(){
  * Timer callback for high-frequency publishers (10Hz)
  * Publishes odometry, joint states, lidar data, and IMU data
  */
-#if defined(MULTIPLE_PUBLISH_EXECUTORS)
 void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
@@ -462,7 +442,7 @@ void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
 void imuPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
-    RCSOFTCHECK(imu->publish());
+//    RCSOFTCHECK(imu->publish());
   }
 }
 #endif
@@ -493,34 +473,6 @@ void jointstatePublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_tim
     RCSOFTCHECK(jointstate->publish());
   }
 }
-#else
-void Publisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-  RCLC_UNUSED(last_call_time);
-  if (timer != NULL){
-    RCSOFTCHECK(odometry->publish());
-    delay(15);  // Small delay to avoid overwhelming the executor
-    jointstate->update(leftWheel->getVelocity(), 
-                      rightWheel->getVelocity(), 
-                      encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
-                      encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
-    RCSOFTCHECK(jointstate->publish());
-    delay(15);  // Small delay to avoid overwhelming the executor
-
-  #if defined(INCLUDE_LIDAR)
-    RCSOFTCHECK(lidar->publish());
-    delay(15);  // Small delay to avoid overwhelming the executor
-  #endif
-
-  #if defined(INCLUDE_IMU)
-    RCSOFTCHECK(imu->publish());
-    delay(15);  // Small delay to avoid overwhelming the executor
-  #endif
-
-    statusPublisher();
-    delay(15);  // Small delay to avoid overwhelming the executor
-  }
-}
-#endif
 
 int display_interval_counter=0;  // Counter for display update rate limiting
 
