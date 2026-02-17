@@ -9,8 +9,8 @@
 
 #include "lds08_lidar.h"
 
-#define DEBUG
-#ifdef DEBUG
+//#define DEBUG
+#ifdef DEBUG_LIDAR
 #define DEBUG_PRINT(fmt, ...) \
     do { \
         Serial.printf("LIDAR DEBUG: %s:%d:%s(): " fmt, \

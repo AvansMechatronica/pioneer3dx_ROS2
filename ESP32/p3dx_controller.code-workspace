@@ -22,7 +22,10 @@
 			"path": "device_tests/lds08_lidar_tests/lds08_lidar_test"
 		},
 		{
-			"path": "device_tests/imu_mpu6050_test"
+			"path": "device_tests/imu_mpu6050_tests/imu_mpu6050_test"
+		},
+		{
+			"path": "device_tests/imu_mpu6050_tests/imu_mpu6050_test_library"
 		},
 		{
 			"name": "s3-basic-test",

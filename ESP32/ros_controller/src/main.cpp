@@ -250,17 +250,21 @@ int executer_count = 2; // cmd_vel + reset subscriptions
     RCL_MS_TO_NS(200), imuPublisher_timerCallBack));  // 5Hz
   executer_count++;
 #endif // INCLUDE_IMU
+
   RCCHECK(rclc_timer_init_default(&statusPublisherTimer, &support,
     RCL_MS_TO_NS(1000), statusPublisher_timerCallBack));  // 1Hz
   executer_count++;
+
 #if defined(INCLUDE_LIDAR)
   RCCHECK(rclc_timer_init_default(&lidarPublisherTimer, &support,
     RCL_MS_TO_NS(200), lidarPublisher_timerCallBack));  // 5Hz
   executer_count++;
 #endif // INCLUDE_LIDAR
+
   RCCHECK(rclc_timer_init_default(&jointstatePublisherTimer, &support,
     RCL_MS_TO_NS(200), jointstatePublisher_timerCallBack));  // 5Hz
   executer_count++;
+
 #else // MULTIPLE_PUBLISH_EXECUTORS
   RCCHECK(rclc_timer_init_default(&PublisherTimer, &support,
     RCL_MS_TO_NS(200), Publisher_timerCallBack));  // 5Hz
@@ -277,7 +281,7 @@ int executer_count = 2; // cmd_vel + reset subscriptions
   RCCHECK(rclc_executor_add_timer(&executor, &odomPublisherTimer));
 
 #if defined(INCLUDE_IMU)
-  RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
+//  RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
 #endif // INCLUDE_IMU
 
   RCCHECK(rclc_executor_add_timer(&executor, &statusPublisherTimer));
@@ -462,6 +466,7 @@ void imuPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   }
 }
 #endif
+
 void statusPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){

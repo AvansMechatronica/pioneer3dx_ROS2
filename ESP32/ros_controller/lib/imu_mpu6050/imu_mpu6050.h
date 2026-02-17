@@ -79,10 +79,10 @@ class imu_mpu6050 {
 
   private:
     // MPU6050 sensor object
-    MPU6050 mpu;
+    MPU6050 *mpu;
     
     // Flag indicating DMP is ready to use
-    bool dmpReady;
+    bool dmpReady = false;
     
     // Stores interrupt status byte from MPU
     uint8_t mpuIntStatus;
@@ -115,12 +115,13 @@ class imu_mpu6050 {
     float euler[3];         // [psi, theta, phi]    Euler angle container
 
 
-#ifndef TESTING
     // FreeRTOS task handle for IMU processing
     TaskHandle_t imuTaskHandle;
     
     // Static task function for FreeRTOS
     static void imuTaskFunction(void* parameter);
+
+#ifndef TESTING
 
     // micro-ROS publisher for IMU data
     rcl_publisher_t imu_pub;

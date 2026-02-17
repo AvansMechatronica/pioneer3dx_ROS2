@@ -10,8 +10,8 @@
 #include "imu_mpu6050.h"
 
 // Debug macro configuration - enables serial output for debugging
-#define DEBUG
-#ifdef DEBUG
+
+#ifdef DEBUG_IMU
 #define DEBUG_PRINT(fmt, ...) \
     do { \
         Serial.printf("IMU DEBUG: %s:%d:%s(): " fmt, \
@@ -29,11 +29,15 @@
 //   - sda_pin: I2C data pin
 //   - int_pin: Interrupt pin (currently unused)
 #ifndef TESTING
-imu_mpu6050::imu_mpu6050(const rcl_node_t *node, int scl_pin, int sda_pin, int int_pin) : dmpReady(false), mpu() {
+imu_mpu6050::imu_mpu6050(const rcl_node_t *node, int scl_pin, int sda_pin, int int_pin){
 #else
-imu_mpu6050::imu_mpu6050(int scl_pin, int sda_pin, int int_pin) : dmpReady(false), mpu() {
+//imu_mpu6050::imu_mpu6050(int scl_pin, int sda_pin, int int_pin) : dmpReady(false), mpu() {
+imu_mpu6050::imu_mpu6050(int scl_pin, int sda_pin, int int_pin){
 #endif
-    
+    DEBUG_PRINT("Initialiseer IMU op SCL pin %d, SDA pin %d, INT pin %d\n", scl_pin, sda_pin, int_pin);
+
+    mpu = new MPU6050();
+
     // Initialize I2C communication and MPU6050 sensor
     initialize(scl_pin, sda_pin);
 
@@ -56,6 +60,7 @@ imu_mpu6050::imu_mpu6050(int scl_pin, int sda_pin, int int_pin) : dmpReady(false
     // Initialize and set the frame_id for the IMU message
     rosidl_runtime_c__String__init(&imu_msg.header.frame_id);
     imu_msg.header.frame_id = micro_ros_string_utilities_set(imu_msg.header.frame_id, "imu_link");
+#endif
 
     // Create dedicated FreeRTOS task for continuous IMU data reading
     const uint16_t stackSize = 4096; // Stack size in bytes
@@ -72,8 +77,6 @@ imu_mpu6050::imu_mpu6050(int scl_pin, int sda_pin, int int_pin) : dmpReady(false
         DEBUG_PRINT("Fout bij aanmaken scan taak\n"); // Error creating scan task
         // Handle task creation error appropriately
     }   
-#endif
-
 }
 
 // Destructor: Cleans up ROS resources
@@ -84,19 +87,21 @@ imu_mpu6050::~imu_mpu6050() {
 #endif
 }
 
-#ifndef TESTING
 // Static task function for FreeRTOS - continuously updates IMU data
 // This runs in a separate thread on the ESP32
 void imu_mpu6050::imuTaskFunction(void* parameter) {
     // Cast void pointer back to imu_mpu6050 object
     imu_mpu6050* imu = static_cast<imu_mpu6050*>(parameter);
     while (true) {
+#ifdef TESTING
+        vTaskDelay(500/ portTICK_PERIOD_MS); 
+#else
         taskYIELD(); // Yield to allow other tasks to run
         //vTaskDelay(1/ portTICK_PERIOD_MS); // Optional delay
+#endif
         imu->update(); // Update IMU readings
     }
 }
-#endif
 
 // Initialize I2C communication and configure MPU6050 DMP (Digital Motion Processor)
 bool imu_mpu6050::initialize(int scl_pin, int sda_pin) {
@@ -104,9 +109,9 @@ bool imu_mpu6050::initialize(int scl_pin, int sda_pin) {
     Wire.begin(sda_pin, scl_pin);
     
     // Initialize MPU6050 sensor
-    mpu.initialize();
+    mpu->initialize();
 
-    if(mpu.testConnection() == false){
+    if(mpu->testConnection() == false){
         DEBUG_PRINT("MPU6050 connection failed");
         return false;
     }
@@ -115,31 +120,33 @@ bool imu_mpu6050::initialize(int scl_pin, int sda_pin) {
     }
 
     // Initialize DMP (Digital Motion Processor) for sensor fusion
-    devStatus = mpu.dmpInitialize();
+    devStatus = mpu->dmpInitialize();
 
     /* Supply your gyro offsets here, scaled for min sensitivity */
-    mpu.setXGyroOffset(0);
-    mpu.setYGyroOffset(0);
-    mpu.setZGyroOffset(0);
-    mpu.setXAccelOffset(0);
-    mpu.setYAccelOffset(0);
-    mpu.setZAccelOffset(0);
+    mpu->setXGyroOffset(0);
+    mpu->setYGyroOffset(0);
+    mpu->setZGyroOffset(0);
+    mpu->setXAccelOffset(0);
+    mpu->setYAccelOffset(0);
+    mpu->setZAccelOffset(0);
 
 
     /* Making sure it worked (returns 0 if so) */ 
     if (devStatus == 0) {
-        mpu.CalibrateAccel(6);  // Calibration Time: generate offsets and calibrate our MPU6050
-        mpu.CalibrateGyro(6);
+        mpu->CalibrateAccel(6);  // Calibration Time: generate offsets and calibrate our MPU6050
+        mpu->CalibrateGyro(6);
+#if defined(DEBUG_IMU)
         DEBUG_PRINT("These are the Active offsets: ");
-        mpu.PrintActiveOffsets();
+        mpu->PrintActiveOffsets();
         DEBUG_PRINT("Enabling DMP...");   //Turning ON DMP
-        mpu.setDMPEnabled(true); 
-        mpuIntStatus = mpu.getIntStatus();
-
+#endif
+        mpu->setDMPEnabled(true); 
+        mpuIntStatus = mpu->getIntStatus();
         /* Set the DMP Ready flag so the main loop() function knows it is okay to use it */
+
         DEBUG_PRINT("DMP ready! Waiting for first interrupt...");
         dmpReady = true;
-        packetSize = mpu.dmpGetFIFOPacketSize(); //Get expected DMP packet size for later comparison
+        packetSize = mpu->dmpGetFIFOPacketSize(); //Get expected DMP packet size for later comparison
     } else {
         DEBUG_PRINT("DMP Initialization failed");
         return false;
@@ -149,13 +156,14 @@ bool imu_mpu6050::initialize(int scl_pin, int sda_pin) {
 
 // Test if MPU6050 is connected and responding
 bool imu_mpu6050::testConnection() {
-    return mpu.testConnection();
+    return false;//mpu->testConnection();
 }
 
 // Publish IMU data to ROS topic
 // Returns: RCL_RET_OK on success, RCL_RET_ERROR on failure
 #ifndef TESTING
 rcl_ret_t imu_mpu6050::publish() {
+
 
     // Populate ROS message with linear acceleration (world-frame, gravity-compensated)
     imu_msg.linear_acceleration.x = aaWorld.x * mpu.get_acce_resolution() * EARTH_GRAVITY_MS2;
@@ -180,47 +188,6 @@ rcl_ret_t imu_mpu6050::publish() {
     // Publish message to ROS topic
     return rcl_publish(&imu_pub, &imu_msg, nullptr);
 
-#if 0
-    if (!dmpReady) return RCL_RET_ERROR; // DMP not initialized
-
-    // Get number of bytes available in FIFO buffer
-    fifoCount = mpu.getFIFOCount();
-
-    // Check for FIFO overflow
-    if (fifoCount >= 1024) {
-        mpu.resetFIFO(); // Reset FIFO if overflow detected
-        return RCL_RET_ERROR;
-    } else if (fifoCount >= packetSize) {
-        // Read data from FIFO
-        mpu.getFIFOBytes(fifoBuffer, packetSize);
-
-        // Extract quaternion orientation from FIFO data
-        mpu.dmpGetQuaternion(&q, fifoBuffer);
-        // Calculate gravity vector
-        mpu.dmpGetGravity(&gravity, &q);
-        // Calculate Yaw, Pitch, Roll angles
-        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-
-        // Populate ROS message with orientation (quaternion)
-        imu_msg.orientation.x = q.x;
-        imu_msg.orientation.y = q.y;
-        imu_msg.orientation.z = q.z;
-        imu_msg.orientation.w = q.w;
-
-        // Populate angular velocity (using YPR - note: this is not true angular velocity)
-        imu_msg.angular_velocity.x = ypr[0];
-        imu_msg.angular_velocity.y = ypr[1];
-        imu_msg.angular_velocity.z = ypr[2];
-
-        // Set timestamp from system milliseconds
-        imu_msg.header.stamp.sec = millis() / 1000;
-        imu_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
-
-        // Publish message to ROS topic
-        return rcl_publish(&imu_pub, &imu_msg, nullptr);
-    }
-    return RCL_RET_OK;
-#endif
 }
 #endif
 
@@ -229,57 +196,29 @@ rcl_ret_t imu_mpu6050::publish() {
 void imu_mpu6050::update(){
 
     if (!dmpReady) return;
-
     /* Read a packet from FIFO */
-    if (mpu.dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
+    if (mpu->dmpGetCurrentFIFOPacket(fifoBuffer)) { // Get the Latest packet 
         /*Display quaternion values in easy matrix form: w x y z */
-        mpu.dmpGetQuaternion(&q, fifoBuffer);
-        DEBUG_PRINT("quat\t");
-        DEBUG_PRINT("%f", q.w);
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT("%f", q.x);
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT("%f", q.y);
-        DEBUG_PRINT("\t");
-        DEBUG_PRINT("%f\n", q.z);
+        mpu->dmpGetQuaternion(&q, fifoBuffer);
+        DEBUG_PRINT("quat: %f, %f, %f, %f\n", q.w, q.x, q.y, q.z);
 
-        mpu.dmpGetGravity(&gravity, &q);
+        mpu->dmpGetGravity(&gravity, &q);
 
         /* Display initial world-frame acceleration, adjusted to remove gravity
         and rotated based on known orientation from Quaternion */
-        mpu.dmpGetAccel(&aa, fifoBuffer);
-        mpu.dmpConvertToWorldFrame(&aaWorld, &aa, &q);
-        DEBUG_PRINT("aworld\t%f\t%f\t%f\n", aaWorld.x * mpu.get_acce_resolution() * EARTH_GRAVITY_MS2, aaWorld.y * mpu.get_acce_resolution() * EARTH_GRAVITY_MS2, aaWorld.z * mpu.get_acce_resolution() * EARTH_GRAVITY_MS2);
+        mpu->dmpGetAccel(&aa, fifoBuffer);
+        mpu->dmpConvertToWorldFrame(&aaWorld, &aa, &q);
+        DEBUG_PRINT("aworld: %f, %f, %f\n", aaWorld.x * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2, aaWorld.y * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2, aaWorld.z * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2);
 
         /* Display gyro data in world frame (rotated based on known orientation from Quaternion) */
-        mpu.dmpGetGyro(&gg, fifoBuffer);
-        mpu.dmpConvertToWorldFrame(&ggWorld, &gg, &q);
-        DEBUG_PRINT("ggWorld\t%f\t%f\t%f\n", ggWorld.x * mpu.get_gyro_resolution() * DEG_TO_RAD, ggWorld.y * mpu.get_gyro_resolution() * DEG_TO_RAD, ggWorld.z * mpu.get_gyro_resolution() * DEG_TO_RAD);
+        mpu->dmpGetGyro(&gg, fifoBuffer);
+        mpu->dmpConvertToWorldFrame(&ggWorld, &gg, &q);
+        DEBUG_PRINT("ggWorld: %f, %f, %f\n", ggWorld.x * mpu->get_gyro_resolution() * DEG_TO_RAD, ggWorld.y * mpu->get_gyro_resolution() * DEG_TO_RAD, ggWorld.z * mpu->get_gyro_resolution() * DEG_TO_RAD);
 
         /* Display Euler angles in degrees */
-        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-        DEBUG_PRINT("ypr\t%f\t%f\t%f\n", ypr[0] * RAD_TO_DEG, ypr[1] * RAD_TO_DEG, ypr[2] * RAD_TO_DEG);
+        mpu->dmpGetYawPitchRoll(ypr, &q, &gravity);
+        DEBUG_PRINT("ypr: %f, %f, %f\n\n", ypr[0] * RAD_TO_DEG, ypr[1] * RAD_TO_DEG, ypr[2] * RAD_TO_DEG);
     }
-
-#if 0
-    if (!dmpReady) return; // DMP not initialized
-
-    // Get number of bytes available in FIFO
-    fifoCount = mpu.getFIFOCount();
-
-    // Check for FIFO overflow
-    if (fifoCount >= 1024) {
-        mpu.resetFIFO(); // Reset FIFO if overflow detected
-    } else if (fifoCount >= packetSize) {
-        // Read data from FIFO
-        mpu.getFIFOBytes(fifoBuffer, packetSize);
-
-        // Extract and calculate orientation data
-        mpu.dmpGetQuaternion(&q, fifoBuffer);
-        mpu.dmpGetGravity(&gravity, &q);
-        mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
-    }
-#endif
 }
 
 // Get roll angle in radians
