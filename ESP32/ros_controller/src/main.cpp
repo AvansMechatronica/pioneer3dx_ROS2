@@ -41,9 +41,7 @@ rcl_timer_t statusPublisherTimer;      // Publishes system status
 #if defined(INCLUDE_LIDAR)
 rcl_timer_t lidarPublisherTimer;      // Publishes lidar data
 #endif
-#if defined(INCLUDE_IMUx)
-rcl_timer_t imuPublisherTimer;        // Publishes IMU data
-#endif
+
 
 TaskHandle_t motorcontrolTaskHandle;
 TaskHandle_t pollingTaskHandle;
@@ -249,11 +247,6 @@ void setup() {
     RCL_MS_TO_NS(100), odomPublisher_timerCallBack));  // 5Hz, toggle between odometry and IMU publishing
   executer_count++;
 
-#if defined(INCLUDE_IMUx)
-  RCCHECK(rclc_timer_init_default(&imuPublisherTimer, &support,
-    RCL_MS_TO_NS(500), imuPublisher_timerCallBack));  // 5Hz
-  executer_count++;
-#endif // INCLUDE_IMU
 
 #if defined(INCLUDE_LIDAR)
   RCCHECK(rclc_timer_init_default(&lidarPublisherTimer, &support,
@@ -270,11 +263,6 @@ void setup() {
   RCCHECK(rclc_executor_add_subscription(&executor, &cmd_vel_subscriber, &twist_msg, &cmd_vel_subscription_callback, ON_NEW_DATA));
   RCCHECK(rclc_executor_add_subscription(&executor, &reset_subscriber, &reset_msg, &reset_subscription_callback, ON_NEW_DATA));
 //  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
-
-
-#if defined(INCLUDE_IMUx)
-  RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
-#endif // INCLUDE_IMU
 
   RCCHECK(rclc_executor_add_timer(&executor, &statusPublisherTimer));
  
@@ -458,14 +446,7 @@ void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   }
 }
 
-#if defined(INCLUDE_IMUx)
-void imuPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
-  RCLC_UNUSED(last_call_time);
-  if (timer != NULL){
-    RCSOFTCHECK(imu->publish());
-  }
-}
-#endif
+
 
 void statusPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
