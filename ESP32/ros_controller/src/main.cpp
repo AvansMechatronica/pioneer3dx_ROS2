@@ -41,7 +41,7 @@ rcl_timer_t statusPublisherTimer;      // Publishes system status
 #if defined(INCLUDE_LIDAR)
 rcl_timer_t lidarPublisherTimer;      // Publishes lidar data
 #endif
-#if defined(INCLUDE_IMU)
+#if defined(INCLUDE_IMUx)
 rcl_timer_t imuPublisherTimer;        // Publishes IMU data
 #endif
 
@@ -99,6 +99,9 @@ void setup() {
   pinMode(UCP_MOTORS_PIN, INPUT_PULLUP);
   // Use polling instead of interrupt to avoid accidental motor enables
   //attachInterrupt(digitalPinToInterrupt(UCP_MOTORS_PIN), motors_button_hit, FALLING);
+
+  pinMode(RPLIDAR_MOTOR_PIN, OUTPUT);
+  digitalWrite(RPLIDAR_MOTOR_PIN, LOW);
 
   buzzer = new Buzzer(UCP_BUZZER_PIN, UCP_BUZZER_PWM_CHANNEL);
 
@@ -188,8 +191,13 @@ void setup() {
   // Initialize micro-ROS
   allocator = rcl_get_default_allocator();
 
-  if(rclc_support_init(&support, 0, NULL, &allocator)){
-    tft_printf(ST77XX_BLUE, "microROS agent\nnot found\nRestarting...\n");
+  rcl_ret_t support_rc = rclc_support_init(&support, 0, NULL, &allocator);
+  if(support_rc != RCL_RET_OK){
+    Serial.printf("micro-ROS init failed rc=%d, free_heap=%u, free_psram=%u\n",
+                  (int)support_rc,
+                  ESP.getFreeHeap(),
+                  ESP.getFreePsram());
+    tft_printf(ST77XX_BLUE, "microROS init\nfailed rc=%d\nRestarting...\n", (int)support_rc);
     delay(3000);
     ESP.restart();
   }
@@ -238,12 +246,12 @@ void setup() {
   executer_count++;
 
   RCCHECK(rclc_timer_init_default(&odomPublisherTimer, &support,
-    RCL_MS_TO_NS(200), odomPublisher_timerCallBack));  // 5Hz
+    RCL_MS_TO_NS(100), odomPublisher_timerCallBack));  // 5Hz, toggle between odometry and IMU publishing
   executer_count++;
 
-#if defined(INCLUDE_IMU)
+#if defined(INCLUDE_IMUx)
   RCCHECK(rclc_timer_init_default(&imuPublisherTimer, &support,
-    RCL_MS_TO_NS(200), imuPublisher_timerCallBack));  // 5Hz
+    RCL_MS_TO_NS(500), imuPublisher_timerCallBack));  // 5Hz
   executer_count++;
 #endif // INCLUDE_IMU
 
@@ -264,13 +272,15 @@ void setup() {
 //  RCCHECK(rclc_executor_add_timer(&executor, &motorControlTimer));
 
 
-#if defined(INCLUDE_IMU)
+#if defined(INCLUDE_IMUx)
   RCCHECK(rclc_executor_add_timer(&executor, &imuPublisherTimer));
 #endif // INCLUDE_IMU
 
   RCCHECK(rclc_executor_add_timer(&executor, &statusPublisherTimer));
  
   RCCHECK(rclc_executor_add_timer(&executor, &jointstatePublisherTimer)); 
+
+  RCCHECK(rclc_executor_add_timer(&executor, &odomPublisherTimer));
 
   // Start lidar
 #if defined(INCLUDE_LIDAR)
@@ -431,18 +441,28 @@ void statusPublisher(){
  * Timer callback for high-frequency publishers (10Hz)
  * Publishes odometry, joint states, lidar data, and IMU data
  */
+bool odom_publish_toggle = false; // Toggle to alternate between odometry and imu publishing
 void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
-    RCSOFTCHECK(odometry->publish());
+    Serial.printf(".");
+    if(odom_publish_toggle){
+      RCSOFTCHECK(odometry->publish());
+    }
+    else{
+#if defined(INCLUDE_IMU)
+      RCSOFTCHECK(imu->publish());
+#endif
+    }
+    odom_publish_toggle = !odom_publish_toggle; // Alternate next time
   }
 }
 
-#if defined(INCLUDE_IMU)
+#if defined(INCLUDE_IMUx)
 void imuPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
-//    RCSOFTCHECK(imu->publish());
+    RCSOFTCHECK(imu->publish());
   }
 }
 #endif

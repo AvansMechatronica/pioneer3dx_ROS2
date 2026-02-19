@@ -17,9 +17,11 @@
 #include <jointstate.h>
 #if defined(INCLUDE_LIDAR)
 #include <lds08_lidar.h>
-#include <buzzer.h>
 //#include <rplidar.h>
 #endif
+
+#include <buzzer.h>
+
 #if defined(INCLUDE_IMU)
 #include <imu_mpu6050.h>
 #endif

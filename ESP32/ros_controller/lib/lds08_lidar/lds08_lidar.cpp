@@ -98,7 +98,7 @@ lds08_lidar::lds08_lidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lid
 
     // Create FreeRTOS task for scanning
     const uint16_t stackSize = 8192; // Stack size in bytes
-    const UBaseType_t priority = 1;   // Task priority
+    const UBaseType_t priority = configMAX_PRIORITIES - 1;   // Task priority
     BaseType_t result = xTaskCreate(
         scanTaskFunction,       // Task function
         "LIDAR_Scan",          // Task name

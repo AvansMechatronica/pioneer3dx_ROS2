@@ -56,9 +56,6 @@ Odometry::Odometry(const rcl_node_t *node):
     odom_msg.twist.covariance[0] = 0.0001; // of 0.001 m/s
     odom_msg.twist.covariance[7] = 0.0001;
     odom_msg.twist.covariance[35] = 0.0001;
-
-
-
 }
 
 // =============================================================

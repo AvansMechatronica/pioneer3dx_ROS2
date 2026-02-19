@@ -42,31 +42,50 @@ imu_mpu6050::imu_mpu6050(int scl_pin, int sda_pin, int int_pin){
 
 #ifndef TESTING
 
-
-    // Configure ROS publisher with default options
-    rcl_publisher_options_t publisher_options = rcl_publisher_get_default_options();
-    
     // Initialize publisher for IMU data on topic "imu/data"
-    rcl_ret_t ret = rcl_publisher_init(
+    rcl_ret_t ret = rclc_publisher_init_default(
         &imu_pub,
         node,
         ROSIDL_GET_MSG_TYPE_SUPPORT(sensor_msgs, msg, Imu),
-        "imu/data",
-        &publisher_options
-    );
+        "imu/data"
+    );  
+
     if (ret != RCL_RET_OK) {
         DEBUG_PRINT("Fout bij initialiseren IMU publisher: %d\n", ret); // Error initializing IMU publisher
         // Handle error - publisher initialization failed
+    }
+
+    if (!sensor_msgs__msg__Imu__init(&imu_msg)) {
+        DEBUG_PRINT("Fout bij initialiseren IMU message\n");
     }
 
     // Initialize and set the frame_id for the IMU message
     rosidl_runtime_c__String__init(&imu_msg.header.frame_id);
     imu_msg.header.frame_id = micro_ros_string_utilities_set(imu_msg.header.frame_id, "imu_link");
 
-#endif
+    // Covariances (row-major). Non-zero values indicate known/estimated uncertainty.
+    // Start with all zeros, then set diagonal variances.
+    for (int i = 0; i < 9; i++) {
+        imu_msg.orientation_covariance[i] = 0.0;
+        imu_msg.angular_velocity_covariance[i] = 0.0;
+        imu_msg.linear_acceleration_covariance[i] = 0.0;
+    }
+    imu_msg.orientation_covariance[0] = 0.02;
+    imu_msg.orientation_covariance[4] = 0.02;
+    imu_msg.orientation_covariance[8] = 0.02;
 
+    imu_msg.angular_velocity_covariance[0] = 0.03;
+    imu_msg.angular_velocity_covariance[4] = 0.03;
+    imu_msg.angular_velocity_covariance[8] = 0.03;
+
+    imu_msg.linear_acceleration_covariance[0] = 0.10;
+    imu_msg.linear_acceleration_covariance[4] = 0.10;
+    imu_msg.linear_acceleration_covariance[8] = 0.10;
+
+
+#endif
     // Create dedicated FreeRTOS task for continuous IMU data reading
-    const uint16_t stackSize = 4096; // Stack size in bytes
+    const uint16_t stackSize = 4096 * 2; // Stack size in bytes
     const UBaseType_t priority = 1;   // Task priority
     BaseType_t result = xTaskCreate(
         imuTaskFunction,       // Task function pointer
@@ -86,6 +105,7 @@ imu_mpu6050::imu_mpu6050(int scl_pin, int sda_pin, int int_pin){
 imu_mpu6050::~imu_mpu6050() {
 #ifndef TESTING
     // Clean up publisher and release resources
+    sensor_msgs__msg__Imu__fini(&imu_msg);
     rcl_publisher_fini(&imu_pub, nullptr);  
 #endif
 }
@@ -171,10 +191,10 @@ rcl_ret_t imu_mpu6050::publish() {
     //update();
 
 
-    // Populate ROS message with linear acceleration (world-frame, gravity-compensated)
-    imu_msg.linear_acceleration.x = aaWorld.x * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2;
-    imu_msg.linear_acceleration.y = aaWorld.y * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2;
-    imu_msg.linear_acceleration.z = aaWorld.z * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2;
+    // Populate ROS message with linear acceleration in sensor frame (m/s^2)
+    imu_msg.linear_acceleration.x = aa.x * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2;
+    imu_msg.linear_acceleration.y = aa.y * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2;
+    imu_msg.linear_acceleration.z = aa.z * mpu->get_acce_resolution() * EARTH_GRAVITY_MS2;
 
     // Populate ROS message with orientation (quaternion)
     imu_msg.orientation.x = q.x;
@@ -182,10 +202,10 @@ rcl_ret_t imu_mpu6050::publish() {
     imu_msg.orientation.z = q.z;
     imu_msg.orientation.w = q.w;
 
-    // Populate angular velocity (using YPR - note: this is not true angular velocity)
-    imu_msg.angular_velocity.x = ypr[0];
-    imu_msg.angular_velocity.y = ypr[1];
-    imu_msg.angular_velocity.z = ypr[2];
+    // Populate angular velocity in rad/s (sensor frame)
+    imu_msg.angular_velocity.x = gg.x * mpu->get_gyro_resolution() * DEG_TO_RAD;
+    imu_msg.angular_velocity.y = gg.y * mpu->get_gyro_resolution() * DEG_TO_RAD;
+    imu_msg.angular_velocity.z = gg.z * mpu->get_gyro_resolution() * DEG_TO_RAD;
 
     // Set timestamp from system milliseconds
     imu_msg.header.stamp.sec = millis() / 1000;
