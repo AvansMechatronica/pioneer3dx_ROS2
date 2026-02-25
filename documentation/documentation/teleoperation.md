@@ -19,9 +19,16 @@ Druk op:
 ## Joystick
 Voer onderstaand commando uit om de robot te besturen met je joystick:
 
+
 ```bash
 ros2 launch p3dx_bringup joy_teleop.launch.py
 ```
+
+Linkshandig
+```bash
+ros2 launch p3dx_bringup joy_teleop.launch.py left_handed:=true
+```
+
 
 - Op de F710 Gamepad moet de bovenste schakelaar op 'X' staan en de 'MODE' LED moet uit zijn.
 

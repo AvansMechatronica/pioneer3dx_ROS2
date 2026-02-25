@@ -1,8 +1,10 @@
 teleop_twist_joy_node:
   ros__parameters:
+    require_enable_button: true
+    enable_button: 5  # RB button on F710 gamepad
 
     axis_linear:
-      x: 1
+      x: 1  # Left joystick up/down
       y: 0
 
     scale_linear:
@@ -10,7 +12,7 @@ teleop_twist_joy_node:
       y: 0.5
 
     axis_angular:
-      yaw: 3
+      yaw: 0  # Left joystick left/right
 
     scale_angular:
       yaw: 1.0

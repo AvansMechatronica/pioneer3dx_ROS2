@@ -14,19 +14,34 @@
 
 import os
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, IncludeLaunchDescription
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.substitutions import FindPackageShare
 from launch_ros.actions import Node
 
 
 def generate_launch_description():
-    joy_config_path = PathJoinSubstitution(
-        [FindPackageShare("p3dx_bringup"), "config", "joy.yaml"]
+    left_handed_arg = DeclareLaunchArgument(
+        'left_handed',
+        default_value='false',
+        description='Use left-handed joystick configuration (default: false for right-handed)'
     )
 
+    joy_config_file = PythonExpression([
+        "'joy_left_handed.yaml' if '",
+        LaunchConfiguration('left_handed'),
+        "' == 'true' else 'joy_right_handed.yaml'"
+    ])
+
+    joy_config_path = PathJoinSubstitution([
+        FindPackageShare("p3dx_bringup"), 
+        "config", 
+        joy_config_file
+    ])
+
     return LaunchDescription([
+        left_handed_arg,
+        
         Node(
             package='joy_linux',
             executable='joy_linux_node',
