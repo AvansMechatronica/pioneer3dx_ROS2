@@ -21,3 +21,10 @@ ekf_filter_node:
                        true, true, false,
                        false, false, true,
                        false, false, false]
+
+        imu0: imu/data
+        imu0_config: [false, false, false,
+                      false, false, false,
+                      false, false, false,
+                      false, false, true,
+                      false, false, false]

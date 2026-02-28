@@ -8,6 +8,7 @@
 // Note: Comments added for clarity and explanation.
 
 #include "jointstate.h"
+#include <rmw_microros/time_sync.h>
 
 // Constructor initializes the JointState publisher and message fields
 Jointstate::Jointstate(const rcl_node_t *node){
@@ -78,9 +79,12 @@ Jointstate::Jointstate(const rcl_node_t *node){
     }
 
     // Initialize timestamp
-    unsigned long now_ms = millis();
-    joint_state_msg.header.stamp.sec = now_ms / 1000;
-    joint_state_msg.header.stamp.nanosec = (now_ms % 1000) * 1000000;
+    int64_t now_ms = rmw_uros_epoch_millis();
+    if (now_ms <= 0) {
+        now_ms = static_cast<int64_t>(millis());
+    }
+    joint_state_msg.header.stamp.sec = static_cast<int32_t>(now_ms / 1000);
+    joint_state_msg.header.stamp.nanosec = static_cast<uint32_t>((now_ms % 1000) * 1000000ULL);
 }
 
 // Update joint positions and velocities
@@ -97,8 +101,12 @@ void Jointstate::update(double current_rpm_l, double current_rpm_r, double pos_l
 // Publish the joint state message
 rcl_ret_t Jointstate::publish(){
     // Update timestamp
-    joint_state_msg.header.stamp.sec = millis() / 1000;
-    joint_state_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+    int64_t now_ms = rmw_uros_epoch_millis();
+    if (now_ms <= 0) {
+        now_ms = static_cast<int64_t>(millis());
+    }
+    joint_state_msg.header.stamp.sec = static_cast<int32_t>(now_ms / 1000);
+    joint_state_msg.header.stamp.nanosec = static_cast<uint32_t>((now_ms % 1000) * 1000000ULL);
 
     return rcl_publish(&joint_state_publisher, &joint_state_msg, NULL);
 }

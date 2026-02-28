@@ -9,6 +9,10 @@
 
 #include "lds08_lidar.h"
 
+#ifndef TESTING
+#include <rmw_microros/time_sync.h>
+#endif
+
 //#define DEBUG
 #ifdef DEBUG_LIDAR
 #define DEBUG_PRINT(fmt, ...) \
@@ -98,7 +102,7 @@ lds08_lidar::lds08_lidar(uint8_t uart_channel, uint8_t lidar_tx_pin, uint8_t lid
 
     // Create FreeRTOS task for scanning
     const uint16_t stackSize = 8192; // Stack size in bytes
-    const UBaseType_t priority = configMAX_PRIORITIES - 1;   // Task priority
+    const UBaseType_t priority = 1;   // Task priority
     BaseType_t result = xTaskCreate(
         scanTaskFunction,       // Task function
         "LIDAR_Scan",          // Task name
@@ -225,8 +229,12 @@ void lds08_lidar::stopScan() {
 rcl_ret_t lds08_lidar::publish() {
 
     rcl_ret_t return_code;
-    scan_msg.header.stamp.sec = millis() / 1000;
-    scan_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+    int64_t now_ms = rmw_uros_epoch_millis();
+    if (now_ms <= 0) {
+        now_ms = static_cast<int64_t>(millis());
+    }
+    scan_msg.header.stamp.sec = static_cast<int32_t>(now_ms / 1000);
+    scan_msg.header.stamp.nanosec = static_cast<uint32_t>((now_ms % 1000) * 1000000ULL);
 
     return_code = rcl_publish(&laser_pub, &scan_msg, NULL);
 
@@ -317,7 +325,7 @@ bool lds08_lidar::getScanValue(lds08_lidarMeasurement* value, uint32_t timeout_m
             syncronized = false;
             return false;
         }
-        //vTaskDelay(1/ portTICK_PERIOD_MS);
+        vTaskDelay(1 / portTICK_PERIOD_MS);
     }
 
     if(LIDARSerial->readBytes(((uint8_t*)&frame), size_of_frame) != size_of_frame) {

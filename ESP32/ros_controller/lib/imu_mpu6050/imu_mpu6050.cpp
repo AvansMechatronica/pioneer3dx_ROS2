@@ -9,6 +9,10 @@
 
 #include "imu_mpu6050.h"
 
+#ifndef TESTING
+#include <rmw_microros/time_sync.h>
+#endif
+
 // Debug macro configuration - enables serial output for debugging
 
 #ifdef DEBUG_IMU
@@ -207,9 +211,13 @@ rcl_ret_t imu_mpu6050::publish() {
     imu_msg.angular_velocity.y = gg.y * mpu->get_gyro_resolution() * DEG_TO_RAD;
     imu_msg.angular_velocity.z = gg.z * mpu->get_gyro_resolution() * DEG_TO_RAD;
 
-    // Set timestamp from system milliseconds
-    imu_msg.header.stamp.sec = millis() / 1000;
-    imu_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+    // Set timestamp from synchronized micro-ROS epoch time
+    int64_t now_ms = rmw_uros_epoch_millis();
+    if (now_ms <= 0) {
+        now_ms = static_cast<int64_t>(millis());
+    }
+    imu_msg.header.stamp.sec = static_cast<int32_t>(now_ms / 1000);
+    imu_msg.header.stamp.nanosec = static_cast<uint32_t>((now_ms % 1000) * 1000000ULL);
 
     // Publish message to ROS topic
     return rcl_publish(&imu_pub, &imu_msg, nullptr);

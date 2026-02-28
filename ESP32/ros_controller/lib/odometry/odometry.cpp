@@ -8,6 +8,7 @@
 // Note: Comments added for clarity and explanation.
 
 #include "odometry.h"
+#include <rmw_microros/time_sync.h>
 
 # define COVARIANCE_SIZE 36
 // Constructor initializes odometry state and sets up the ROS2 publisher
@@ -27,7 +28,7 @@ Odometry::Odometry(const rcl_node_t *node):
     rosidl_runtime_c__String__init(&odom_msg.header.frame_id);
     odom_msg.header.frame_id = micro_ros_string_utilities_set(odom_msg.header.frame_id, "odom");
     rosidl_runtime_c__String__init(&odom_msg.child_frame_id);
-    odom_msg.child_frame_id = micro_ros_string_utilities_set(odom_msg.child_frame_id, "p3dx_base");
+    odom_msg.child_frame_id = micro_ros_string_utilities_set(odom_msg.child_frame_id, "base_footprint");
     for(int i = 0; i < COVARIANCE_SIZE; i++) {
         odom_msg.pose.covariance[i] = 0.0; // Default to 0.0 (initial pose covariance)
     }
@@ -53,6 +54,9 @@ Odometry::Odometry(const rcl_node_t *node):
     odom_msg.twist.twist.angular.z = 0.0;
 
     // Twist covariance
+    for(int i = 0; i < COVARIANCE_SIZE; i++) {
+        odom_msg.twist.covariance[i] = 0.0;
+    }
     odom_msg.twist.covariance[0] = 0.0001; // of 0.001 m/s
     odom_msg.twist.covariance[7] = 0.0001;
     odom_msg.twist.covariance[35] = 0.0001;
@@ -134,9 +138,12 @@ void Odometry::euler_to_quat(float roll, float pitch, float yaw, float* q)
 // =============================================================
 rcl_ret_t Odometry::publish() {
     // Timestamp in ROS2 format
-    uint32_t now_ms = millis();
-    odom_msg.header.stamp.sec = now_ms / 1000;
-    odom_msg.header.stamp.nanosec = (now_ms % 1000) * 1000000;
+    int64_t now_ms = rmw_uros_epoch_millis();
+    if (now_ms <= 0) {
+        now_ms = static_cast<int64_t>(millis());
+    }
+    odom_msg.header.stamp.sec = static_cast<int32_t>(now_ms / 1000);
+    odom_msg.header.stamp.nanosec = static_cast<uint32_t>((now_ms % 1000) * 1000000ULL);
 
     return rcl_publish(&odom_publisher, &odom_msg, NULL);
 }

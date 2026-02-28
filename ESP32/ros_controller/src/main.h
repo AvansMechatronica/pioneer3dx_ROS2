@@ -45,7 +45,7 @@
 #define NODE_NAME "p3dx_controller"
 
 // Voltage divider resistor values
-#define R2 560000.0f // Resistor R2 value in ohms, according schematics
+#define R2 100000.0f // Resistor R2 value in ohms, according schematics
 #define R3 100000.0f // Resistor R3 value in ohms, according schematics
 
 // Encoder ticks per full wheel revolution

@@ -1,4 +1,5 @@
 #include "main.h"
+#include <rmw_microros/time_sync.h>
 
 #ifdef RPLIDAR_H
 #define EXPRESS_LIDAR_MODE  false
@@ -203,6 +204,13 @@ void setup() {
 
   RCCHECK(rclc_node_init_default(&node, NODE_NAME, "", &support));
 
+  rmw_ret_t time_sync_rc = rmw_uros_sync_session(1000);
+  if (time_sync_rc == RMW_RET_OK && rmw_uros_epoch_synchronized()) {
+    DEBUG_PRINT("micro-ROS time synchronized\n");
+  } else {
+    DEBUG_PRINT("micro-ROS time sync failed rc=%d, fallback to millis timestamps\n", (int)time_sync_rc);
+  }
+
   // Initialize subscribers
   RCCHECK(rclc_subscription_init_default(&cmd_vel_subscriber, &node,
     ROSIDL_GET_MSG_TYPE_SUPPORT(geometry_msgs, msg, Twist), "cmd_vel"));
@@ -369,8 +377,7 @@ void reset_p3dx(){
   tft_printf(ST77XX_BLUE, "Resetting...\n");
 
 #if defined(HANDLE_BUMPERS)
-//  if(digitalRead(BUMPER_FRONT_PIN)==HIGH && digitalRead(BUMPER_REAR_PIN)==HIGH){
-  if(digitalRead(digitalRead(BUMPER_REAR_PIN)==HIGH)){
+  if(digitalRead(BUMPER_FRONT_PIN) == HIGH && digitalRead(BUMPER_REAR_PIN) == HIGH){
     digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE);
     status_msg.error = false; 
     delay(1500);
@@ -433,7 +440,7 @@ bool odom_publish_toggle = false; // Toggle to alternate between odometry and im
 void odomPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
-    Serial.printf(".");
+
     if(odom_publish_toggle){
       RCSOFTCHECK(odometry->publish());
     }

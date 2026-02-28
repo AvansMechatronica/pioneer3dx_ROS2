@@ -9,6 +9,10 @@
 
 #include "rplidar.h"
 
+#ifndef TESTING
+#include <rmw_microros/time_sync.h>
+#endif
+
 #define DEBUG
 #ifdef DEBUG
 #define DEBUG_PRINT(fmt, ...) \
@@ -770,8 +774,12 @@ bool rplidar::getScanValuesExpress(RplidarMeasurement* values, uint32_t timeout_
 rcl_ret_t rplidar::publish() {
 
     rcl_ret_t return_code;
-    scan_msg.header.stamp.sec = millis() / 1000;
-    scan_msg.header.stamp.nanosec = (millis() % 1000) * 1000000;
+    int64_t now_ms = rmw_uros_epoch_millis();
+    if (now_ms <= 0) {
+        now_ms = static_cast<int64_t>(millis());
+    }
+    scan_msg.header.stamp.sec = static_cast<int32_t>(now_ms / 1000);
+    scan_msg.header.stamp.nanosec = static_cast<uint32_t>((now_ms % 1000) * 1000000ULL);
 
     return_code = rcl_publish(&laser_pub, &scan_msg, NULL);
 
