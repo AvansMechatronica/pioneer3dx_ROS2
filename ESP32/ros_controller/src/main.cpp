@@ -139,16 +139,20 @@ void setup() {
   tft_printf(ST77XX_MAGENTA, "Pioneer 3DX\nController\nStarted\n");
 
   // Initialize motor controllers
-  leftWheel = new MotorController(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, L_ENCODER_PINA, L_ENCODER_PINB, &encodervalue_l, WHEELS_RADIUS);
-  rightWheel = new MotorController(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, R_ENCODER_PINA, R_ENCODER_PINB, &encodervalue_r, WHEELS_RADIUS);
+  leftWheel = new MotorController(PWM_CHANNEL_LEFT, L_PWM_PIN, L_DIR_PIN, &encodervalue_l, WHEELS_RADIUS);
+  rightWheel = new MotorController(PWM_CHANNEL_RIGHT, R_PWM_PIN, R_DIR_PIN, &encodervalue_r, WHEELS_RADIUS);
 
   // Set PID parameters
   leftWheel->setPIDvalues(KP_L, KI_L, KD_L);
   rightWheel->setPIDvalues(KP_R, KI_R, KD_R);
 
+  pinMode(L_ENCODER_PINA, INPUT);
+  pinMode(L_ENCODER_PINB, INPUT);
+  pinMode(R_ENCODER_PINA, INPUT);
+  pinMode(R_ENCODER_PINB, INPUT);
   // Attach encoder interrupts
-  attachInterrupt(digitalPinToInterrupt(leftWheel->EncoderPinB), updateEncoderL, RISING);
-  attachInterrupt(digitalPinToInterrupt(rightWheel->EncoderPinB), updateEncoderR, RISING);
+  attachInterrupt(digitalPinToInterrupt(L_ENCODER_PINB), updateEncoderL, RISING);
+  attachInterrupt(digitalPinToInterrupt(R_ENCODER_PINB), updateEncoderR, RISING);
 
   prev_rpm_l = leftWheel->getVelocity();
   prev_rpm_r = rightWheel->getVelocity();
@@ -420,7 +424,7 @@ void statusPublisher(){
   float adc_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);
   // Calculate actual battery voltage using voltage divider formula: Vout = Vin * R3/(R2+R3)
   // Rearranged: Vin = Vout * (R2+R3)/R3
-  status_msg.battery_voltage = adc_voltage * ((R2 + R3) / R3) * 4; //??
+  status_msg.battery_voltage = adc_voltage * ((R2 + R3) / R3) * 4; // Multiply by 4 to account for voltage divider scaling (since we want the actual battery voltage, not just the divided voltage)
   status_msg.motor_enable = motors_enabled;
 
 #if defined(WIFI)
@@ -474,8 +478,10 @@ void lidarPublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
 void jointstatePublisher_timerCallBack(rcl_timer_t* timer, int64_t last_call_time) {
   RCLC_UNUSED(last_call_time);
   if (timer != NULL){
-    jointstate->update(leftWheel->getVelocity(), 
-                  rightWheel->getVelocity(), 
+    double left_wheel_rad_s = leftWheel->getVelocity() / WHEELS_RADIUS;
+    double right_wheel_rad_s = rightWheel->getVelocity() / WHEELS_RADIUS;
+    jointstate->update(left_wheel_rad_s, 
+                  right_wheel_rad_s, 
                   encodervalue_l / (TICK_PER_REVOLUTION / (2.0 * M_PI)), 
                   encodervalue_r / (TICK_PER_REVOLUTION / (2.0 * M_PI)));
     RCSOFTCHECK(jointstate->publish());
@@ -531,12 +537,11 @@ void motorcontrolTaskFunction(void* parameter){
     leftWheel->moveBase(actuating_signal_LW);
 
     // Calculate actual wheel velocities and update odometry
-    float currentRpmL = leftWheel->getVelocity();
-    float currentRpmR = rightWheel->getVelocity();
-    float average_rps_x = ((float)(currentRpmL + currentRpmR) / 2) / 60.0;
-    float linear_x = average_rps_x * WHEELS_CIRCUMFERENCE;  // m/s
-    float average_rps_a = ((float)(-currentRpmL + currentRpmR) / 2) / 60.0;
-    float angular_z = (average_rps_a * WHEELS_CIRCUMFERENCE) / (WHEELS_Y_DISTANCE / 2.0);  // rad/s
+    // getVelocity() already returns wheel linear speed in m/s.
+    float currentVelL = leftWheel->getVelocity();
+    float currentVelR = rightWheel->getVelocity();
+    float linear_x = (currentVelL + currentVelR) / 2.0f;   // m/s
+    float angular_z = (-currentVelL + currentVelR) / WHEELS_Y_DISTANCE;  // rad/s
     float linear_y = 0;
 
     unsigned long now = millis();
@@ -552,7 +557,7 @@ void motorcontrolTaskFunction(void* parameter){
  * Interrupt handler for left wheel encoder
  */
 void updateEncoderL() {
-  if (digitalRead(leftWheel->EncoderPinA) == digitalRead(leftWheel->EncoderPinB))
+  if (digitalRead(L_ENCODER_PINA) == digitalRead(L_ENCODER_PINB))
     encodervalue_l--;
   else
     encodervalue_l++;
@@ -562,7 +567,7 @@ void updateEncoderL() {
  * Interrupt handler for right wheel encoder
  */
 void updateEncoderR() {
-  if (digitalRead(rightWheel->EncoderPinA) == digitalRead(rightWheel->EncoderPinB))
+  if (digitalRead(R_ENCODER_PINA) == digitalRead(R_ENCODER_PINB))
     encodervalue_r--;
   else
     encodervalue_r++;

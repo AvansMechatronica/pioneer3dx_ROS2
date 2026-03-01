@@ -38,15 +38,10 @@ public:
   int8_t ledcChannel;
   int8_t Pwm;
   int8_t Dir;
-  int8_t EncoderPinA;
-  int8_t EncoderPinB;
   int64_t *encoderCount;
-  volatile long CurrentPosition;
-  volatile long PreviousPosition;
-  volatile long CurrentTime;
-  volatile long PreviousTime;
-  volatile long CurrentTimeForError;
-  volatile long PreviousTimeForError;
+  int64_t previous_encoder_count;
+  uint32_t PreviousTime;
+  uint32_t PreviousTimeForError;
   float rpmFilt;
   float eintegral;
   float ederivative;
@@ -62,8 +57,6 @@ public:
   MotorController(int8_t ledcChannel,
                   int8_t PwmPin, 
                   int8_t DirPin, 
-                  int8_t EncoderA, 
-                  int8_t EncoderB,
                   int64_t *encoderCount,
                   float wheel_radius
                   );
@@ -78,7 +71,7 @@ public:
 
 private:
   float getVelocityInternal();
-  float current_velocity;
+  float current_velocity = 0.0f;
 };
 
 #endif // MOTOR_CONTROLLER_H

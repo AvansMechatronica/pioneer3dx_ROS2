@@ -24,8 +24,8 @@ class Jointstate
         // Constructor: initializes publisher and message fields
         Jointstate(const rcl_node_t *node);
 
-        // Updates joint positions & velocities before publishing
-        void update(double current_rpm_l, double current_rpm_r,
+        // Updates joint positions (rad) and velocities (rad/s) before publishing
+        void update(double left_wheel_rad_s, double right_wheel_rad_s,
                     double pos_left, double pos_right);
 
         // Publishes the JointState message to ROS2

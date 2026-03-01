@@ -5,33 +5,26 @@
 MotorController::MotorController(int8_t ledcChannel,
                                  int8_t PwmPin, 
                                  int8_t DirPin, 
-                                 int8_t EncoderA, 
-                                 int8_t EncoderB,
                                  int64_t *encoderCount,
                                  float wheel_radius) {
   this->ledcChannel = ledcChannel;
   this->Pwm = PwmPin;
   this->Dir = DirPin;
-  this->EncoderPinA = EncoderA;
-  this->EncoderPinB = EncoderB;
+
   this->wheel_radius = wheel_radius;
 
   this->previousError = 0;
   this->eintegral = 0;
   this->rpmFilt = 0;
   this->rpmPrev = 0;
-  this->PreviousPosition = 0;
-  this->CurrentPosition = 0;
+  this->previous_encoder_count = 0;
   this->PreviousTime = millis();
-  this->CurrentTime = millis();
   this->PreviousTimeForError = millis();
-  this->CurrentTimeForError = millis();
   this->encoderCount = encoderCount;
 
   pinMode(Pwm, OUTPUT);
   pinMode(Dir, OUTPUT);
-  pinMode(EncoderPinA, INPUT);
-  pinMode(EncoderPinB, INPUT);
+
 
   // initializing PWM signal parameters
   ledcSetup(this->ledcChannel, PWM_FREQUENCY, PWM_RESOLUTION);
@@ -47,21 +40,21 @@ void MotorController::setPIDvalues(float proportionalGain, float integralGain, f
 }
 
 float MotorController::getVelocityInternal(){// returns linear velocity in m/s
-  CurrentPosition = *encoderCount;
-  CurrentTime = millis();
-  float deltaMs = (float)CurrentTime - PreviousTime;
-  if (deltaMs <= 0.0f) {
+  int64_t current_encoder_count = *encoderCount;
+  uint32_t currentTime = millis();
+  uint32_t deltaMs = currentTime - PreviousTime;
+  if (deltaMs == 0U) {
     // Avoid division by zero or negative time intervals; return current filtered velocity
     return (rpmFilt * wheel_radius * 2 * 3.14f) / 60.0f;  // linear velocity in m/s
   }
-  float delta1 = deltaMs / 1.0e3f; // convert to seconds
-  float velocity = ((float)CurrentPosition - PreviousPosition) / delta1; // in ticks per second
+  float delta1 = ((float)deltaMs) / 1.0e3f; // convert to seconds
+  float velocity = ((float)(current_encoder_count - previous_encoder_count)) / delta1; // in ticks per second
 
   float rpm = (velocity / TICK_PER_REVOLUTION) * 60; // convert to rpm
-  rpmFilt = 0.854f * rpmFilt + 0.0728f * rpm + 0.0728f * rpmPrev; // 
+  rpmFilt = rpm;//0.854f * rpmFilt + 0.0728f * rpm + 0.0728f * rpmPrev; // 
   rpmPrev = rpm; // store previous rpm value   
-  PreviousPosition = CurrentPosition; //      
-  PreviousTime = CurrentTime;
+  previous_encoder_count = current_encoder_count; //      
+  PreviousTime = currentTime;
   return (rpmFilt * wheel_radius * 2 * 3.14f) / 60.0f;  // return linear velocity in m/s
 }
 
@@ -82,7 +75,7 @@ float MotorController::pid(float setpoint) {
   }
   mc_display_interval_counter++;
 #endif
-  CurrentTimeForError = millis();
+  long CurrentTimeForError = millis();
   if(!enabled){
     setpoint = 0.0f;
 //    previousError = 0;

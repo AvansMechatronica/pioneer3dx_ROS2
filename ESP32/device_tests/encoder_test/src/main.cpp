@@ -2,7 +2,7 @@
 #include "pins.h"
 
 
-#define R_CHANNEL         1
+//#define R_CHANNEL         1
 
 #if defined(R_CHANNEL)
 #undef L_PWM_PIN        

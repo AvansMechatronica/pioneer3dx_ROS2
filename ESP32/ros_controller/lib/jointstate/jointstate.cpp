@@ -87,15 +87,15 @@ Jointstate::Jointstate(const rcl_node_t *node){
     joint_state_msg.header.stamp.nanosec = static_cast<uint32_t>((now_ms % 1000) * 1000000ULL);
 }
 
-// Update joint positions and velocities
-void Jointstate::update(double current_rpm_l, double current_rpm_r, double pos_left, double pos_right){
+// Update joint positions (rad) and velocities (rad/s)
+void Jointstate::update(double left_wheel_rad_s, double right_wheel_rad_s, double pos_left, double pos_right){
     // Position values; right wheel inverted for ROS coordinate conventions
     joint_state_msg.position.data[0] = pos_left;
     joint_state_msg.position.data[1] = -pos_right;
 
-    // Wheel RPMs (converted externally if needed)
-    joint_state_msg.velocity.data[0] = current_rpm_l;
-    joint_state_msg.velocity.data[1] = -current_rpm_r;
+    // Wheel angular velocities in rad/s
+    joint_state_msg.velocity.data[0] = left_wheel_rad_s;
+    joint_state_msg.velocity.data[1] = -right_wheel_rad_s;
 }
 
 // Publish the joint state message
