@@ -540,8 +540,8 @@ void motorcontrolTaskFunction(void* parameter){
     // getVelocity() already returns wheel linear speed in m/s.
     float currentVelL = leftWheel->getVelocity();
     float currentVelR = rightWheel->getVelocity();
-    float linear_x = (currentVelL + currentVelR) / 2.0f;   // m/s
-    float angular_z = (-currentVelL + currentVelR) / WHEELS_Y_DISTANCE;  // rad/s
+    float linear_x = (-currentVelL + currentVelR) / 2.0f;   // m/s
+    float angular_z = (currentVelL + currentVelR) / WHEELS_Y_DISTANCE;  // rad/s
     float linear_y = 0;
 
     unsigned long now = millis();
@@ -549,7 +549,7 @@ void motorcontrolTaskFunction(void* parameter){
     prev_odom_update = now;
 
     odometry->update(vel_dt, linear_x, linear_y, angular_z);
-    vTaskDelay(20); // 50Hz
+    vTaskDelay(pdMS_TO_TICKS(20)); // 50Hz
   }
 }
 

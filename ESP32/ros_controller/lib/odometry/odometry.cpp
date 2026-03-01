@@ -68,12 +68,20 @@ Odometry::Odometry(const rcl_node_t *node):
 // =============================================================
 void Odometry::update(float vel_dt, float linear_vel_x, float linear_vel_y, float angular_vel_z)
 {
+    // Guard against invalid dt (or very large startup hiccups)
+    if (vel_dt <= 0.0f || vel_dt > 1.0f) {
+        return;
+    }
+
     // Change in heading (yaw) in radians
     float delta_heading = angular_vel_z * vel_dt;
 
-    // Cache cos/sin of current heading
-    float cos_h = cos(heading_);
-    float sin_h = sin(heading_);
+    // Use midpoint heading for better integration accuracy
+    float heading_mid = heading_ + (delta_heading * 0.5f);
+
+    // Cache cos/sin of midpoint heading
+    float cos_h = cos(heading_mid);
+    float sin_h = sin(heading_mid);
 
     // Compute robot-relative motion transformed to world frame
     float delta_x = (linear_vel_x * cos_h - linear_vel_y * sin_h) * vel_dt;
@@ -83,6 +91,11 @@ void Odometry::update(float vel_dt, float linear_vel_x, float linear_vel_y, floa
     x_pos_ += delta_x;
     y_pos_ += delta_y;
     heading_ += delta_heading;
+
+    // Keep yaw bounded to [-pi, pi]
+    if (heading_ > PI || heading_ < -PI) {
+        heading_ = atan2(sin(heading_), cos(heading_));
+    }
 
     // Convert Euler heading to quaternion
     float q[4];

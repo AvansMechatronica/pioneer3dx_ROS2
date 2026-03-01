@@ -70,8 +70,8 @@ int mc_display_interval_counter = 0;
 float MotorController::pid(float setpoint) {
   current_velocity = getVelocityInternal();
 #ifdef DEBUG_MOTOR_CONTROLLER
-  if((mc_display_interval_counter % 20) == 0){
-    Serial.printf("%i: Setpoint: %.2f | RPM: %.2f\n",  mc_display_interval_counter/100, setpoint, current_velocity);
+  if((mc_display_interval_counter % 40) == 0){
+    Serial.printf("%i: Setpoint: %.2f | Velocity: %.2f\n",  mc_display_interval_counter/100, setpoint, current_velocity);
   }
   mc_display_interval_counter++;
 #endif
@@ -93,7 +93,7 @@ float MotorController::pid(float setpoint) {
   PreviousTimeForError = CurrentTimeForError;
 
 #ifdef DEBUG_MOTOR_CONTROLLER
-  if((mc_display_interval_counter % 20) == 0){
+  if((mc_display_interval_counter % 40) == 0){
     Serial.printf("-- Error: %.2f | Integral: %.2f | Derivative: %.2f\n", error, eintegral, ederivative);
     Serial.printf("-- control signal: %.2f\n", control_signal);
   }
@@ -111,7 +111,7 @@ void MotorController::moveBase(float ActuatingSignal) {
 
     // Afdrukken om de 100 cycli
 #ifdef DEBUG_MOTOR_CONTROLLER
-    if ((mc_display_interval_counter % 20) == 0) {
+    if ((mc_display_interval_counter % 40) == 0) {
       Serial.printf("-- Actuating Signal: %.2f\n", ActuatingSignal);
     }
 #endif
@@ -127,7 +127,7 @@ void MotorController::moveBase(float ActuatingSignal) {
 
 #ifdef DEBUG_MOTOR_CONTROLLER
     // Debug print
-    if ((mc_display_interval_counter % 20) == 0) {
+    if ((mc_display_interval_counter % 40) == 0) {
       Serial.printf("-- Duty Cycle before limit: %d\n", dutyCycle);
     }
 #endif
@@ -135,7 +135,7 @@ void MotorController::moveBase(float ActuatingSignal) {
     if (dutyCycle > MAX_PWM) dutyCycle = MAX_PWM;
 
 #ifdef DEBUG_MOTOR_CONTROLLER
-    if ((mc_display_interval_counter % 20) == 0) {
+    if ((mc_display_interval_counter % 40) == 0) {
       Serial.printf("-- PWM value after limit: %d\n", dutyCycle);
     }
 #endif
