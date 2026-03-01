@@ -75,10 +75,6 @@
 #define KI_R        (float)160
 #define KD_R        (float)0.1
 
-// PWM channel assignments
-#define PWM_CHANNEL_LEFT 0
-#define PWM_CHANNEL_RIGHT 1
-
 
 #define DEBUG
 #ifdef DEBUG

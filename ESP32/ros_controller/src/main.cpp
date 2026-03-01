@@ -424,7 +424,7 @@ void statusPublisher(){
   float adc_voltage = analogRead(BATTERY_VOLTAGE_PIN) * (3.3 / 1023.0);
   // Calculate actual battery voltage using voltage divider formula: Vout = Vin * R3/(R2+R3)
   // Rearranged: Vin = Vout * (R2+R3)/R3
-  status_msg.battery_voltage = adc_voltage * ((R2 + R3) / R3) * 4; // Multiply by 4 to account for voltage divider scaling (since we want the actual battery voltage, not just the divided voltage)
+  status_msg.battery_voltage = adc_voltage * ((R2 + R3) / R3) * 3.3; // Multiply by 3.3 to account for voltage divider scaling (since we want the actual battery voltage, not just the divided voltage)
   status_msg.motor_enable = motors_enabled;
 
 #if defined(WIFI)

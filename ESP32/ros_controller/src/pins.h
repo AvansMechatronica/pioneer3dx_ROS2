@@ -5,19 +5,23 @@
 //Left wheel
 #define L_PWM_PIN        3
 #define L_DIR_PIN        4
+#define PWM_CHANNEL_LEFT 0
 #define L_ENCODER_PINA   10 //Encoder Output of pin1 must connected with intreput pin of Esp32.
 #define L_ENCODER_PINB   7
 //right wheel
 #define R_PWM_PIN        5
 #define R_DIR_PIN        6
+#define PWM_CHANNEL_RIGHT 1
 #define R_ENCODER_PINA   9  //Encoder Output of pin1 must connected with intreput pin of Esp32.
 #define R_ENCODER_PINB   8
+
+
+
 
 #if defined(HANDLE_BUMPERS)
 #define BUMPER_FRONT_PIN    45
 #define BUMPER_REAR_PIN     46
 #endif
-
 
 
 #define MOTOR_ENABLE_PIN    2
@@ -43,7 +47,7 @@
 #define UCP_RESET_PIN       40 // Pin to reset UCP
 #define UCP_MOTORS_PIN      41 // Pin to control UCP motor power
 #define UCP_BUZZER_PIN      42 // Pin to control UCP buzzer
-#define UCP_BUZZER_PWM_CHANNEL  1 // PWM channel for UCP buzzer
+#define UCP_BUZZER_PWM_CHANNEL  2 // PWM channel for UCP buzzer (must not overlap motor channels)
 
 #define I2C_SDA_PIN  36 //  
 #define I2C_SCL_PIN  37 // 

@@ -30,7 +30,7 @@
 #endif
 
 #ifndef MAX_PWM
-#define MAX_PWM ((1 << PWM_RESOLUTION) - 1)
+#define MAX_PWM ((1U << PWM_RESOLUTION) - 1U)
 #endif
 
 class MotorController {
