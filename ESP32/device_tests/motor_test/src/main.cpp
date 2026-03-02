@@ -9,21 +9,14 @@
 //#define R_CHANNEL         1
 
 #if defined(R_CHANNEL)
-#undef L_PWM_PIN        
-#undef L_DIR_PIN        
-#undef L_ENCODER_PINA   
-#undef L_ENCODER_PINB
-
-//#undef CLOCK_WISE
-//#undef COUNTER_CLOCK_WISE
-
-#define L_PWM_PIN        R_PWM_PIN
-#define L_DIR_PIN        R_DIR_PIN
-#define L_ENCODER_PINA   R_ENCODER_PINA
-#define L_ENCODER_PINB   R_ENCODER_PINB
+#define PWM_PIN        R_PWM_PIN
+#define DIR_PIN        R_DIR_PIN
 
 //#define CLOCK_WISE            HIGH
 //#define COUNTER_CLOCK_WISE    LOW
+#else
+#define PWM_PIN        L_PWM_PIN
+#define DIR_PIN        L_DIR_PIN
 
 #endif
 
@@ -36,9 +29,18 @@ int dutyCycle = 0;
 
 void setup() {
   Serial.begin(115200);
+
   ledcSetup(pwmChannel, freq, resolution);
-  ledcAttachPin(L_PWM_PIN, pwmChannel);
+  pinMode(L_PWM_PIN, OUTPUT);
   pinMode(L_DIR_PIN, OUTPUT);
+  digitalWrite(L_PWM_PIN, LOW); // Start met motor uit
+  digitalWrite(L_DIR_PIN, LOW); // Start richting
+  pinMode(R_DIR_PIN, OUTPUT);
+  pinMode(R_PWM_PIN, OUTPUT);
+  digitalWrite(R_PWM_PIN, LOW); // Start richting
+  digitalWrite(R_DIR_PIN, LOW); // Start richting
+
+  ledcAttachPin(PWM_PIN, pwmChannel);
   pinMode(MOTOR_ENABLE_PIN, OUTPUT);
   digitalWrite(MOTOR_ENABLE_PIN, MOTOR_ENABLE); // Motor driver inschakelen
   
@@ -58,16 +60,16 @@ void loop() {
 
     // Bepaal richting
     if (value >= 0) {
-      digitalWrite(L_DIR_PIN, CLOCK_WISE);
+      digitalWrite(DIR_PIN, CLOCK_WISE);
       dutyCycle = map(value, 0, 100, 0, 1023);
     } else {
-      digitalWrite(L_DIR_PIN, COUNTER_CLOCK_WISE);
+      digitalWrite(DIR_PIN, COUNTER_CLOCK_WISE);
       dutyCycle = map(-value, 0, 100, 0, 1023);
     }
 
     ledcWrite(pwmChannel, dutyCycle);
 
     Serial.printf("Invoer: %d%% → PWM duty = %d / 1023, richting = %s\n",
-                  value, dutyCycle, (digitalRead(L_DIR_PIN) ? "HIGH" : "LOW"));
+                  value, dutyCycle, (digitalRead(DIR_PIN) ? "HIGH" : "LOW"));
   }
 }

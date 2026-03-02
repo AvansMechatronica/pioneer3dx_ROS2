@@ -7,11 +7,11 @@ teleop_twist_joy_node:
       x: 4  # Right joystick up/down
 
     scale_linear:
-      x: 1.0 # m/s per unit of joystick input
-      y: 1.0 # m/s per unit of joystick input
+      x: 0.5 # m/s per unit of joystick input
+      y: 0.5 # m/s per unit of joystick input
 
     axis_angular:
       yaw: 3  # Right joystick left/right
 
     scale_angular:
-      yaw: 1.0 # rad/s per unit of joystick input
+      yaw: 0.5 # rad/s per unit of joystick input
