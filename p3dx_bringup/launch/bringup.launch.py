@@ -44,6 +44,7 @@ def launch_setup(context, *args, **kwargs):
     # Package paths
     ekf_config_path = PathJoinSubstitution(
         [FindPackageShare("p3dx_base"), "config", "ekf.yaml"]
+        #[FindPackageShare("p3dx_base"), "config", "ekf_w_imu.yaml"] Untested IMU integration
     )
 
     description_launch_path = os.path.join(

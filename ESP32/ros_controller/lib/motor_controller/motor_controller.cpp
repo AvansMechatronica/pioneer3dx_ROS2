@@ -51,7 +51,7 @@ float MotorController::getVelocityInternal(){// returns linear velocity in m/s
   float velocity = ((float)(current_encoder_count - previous_encoder_count)) / delta1; // in ticks per second
 
   float rpm = (velocity / TICK_PER_REVOLUTION) * 60; // convert to rpm
-  rpmFilt = rpm;//0.854f * rpmFilt + 0.0728f * rpm + 0.0728f * rpmPrev; // 
+  rpmFilt = 0.854f * rpmFilt + 0.0728f * rpm + 0.0728f * rpmPrev; // 
   rpmPrev = rpm; // store previous rpm value   
   previous_encoder_count = current_encoder_count; //      
   PreviousTime = currentTime;
