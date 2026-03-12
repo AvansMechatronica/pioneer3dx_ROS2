@@ -41,6 +41,9 @@
 		{
 			"name": "eps32_host",
 			"path": "../../../../rpc_esp32/eps32_host"
+		},
+		{
+			"path": "device_tests/ydlidar_t_mini_plus_lidar_tests"
 		}
 	],
 	"settings": {
