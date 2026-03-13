@@ -40,7 +40,7 @@ void loop() {
       Serial.printf("Start angle: %.2f deg, End angle: %.2f deg\n",
         scanValue.start_angle,
         scanValue.end_angle);
-      for(int i = 0; i < POINT_PER_PACK; i++) {
+      for(int i = 0; i < ydlidar_t_mini_plus_POINT_PER_PACK; i++) {
         Serial.printf("Angle: %.2f deg, Distance: %.2f mm, Quality: %d\n",
           scanValue.point[i].angle,
           scanValue.point[i].distance,

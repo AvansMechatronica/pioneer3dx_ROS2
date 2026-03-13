@@ -3,10 +3,12 @@
 extern Buzzer *buzzer;
 extern Adafruit_ST7735 *tft;
 #if defined(INCLUDE_LIDAR)
-#ifdef RPLIDAR_H
+#if defined(LIDAR_RP)
     extern rplidar *lidar;
-#else
+#elif defined(LIDAR_LDS08)
     extern lds08_lidar *lidar;
+#elif defined(LIDAR_YD_T_MINI)
+  extern ydlidar_t_mini_plus *lidar;
 #endif
 #endif
 
@@ -117,27 +119,30 @@ void init_display(){
  * Convert snake_case to camelCase
  */
 char* convertToCamelCase(const char *input) {
-    int i, j;
-    int len = strlen(input);
-    char *output = (char *)malloc((len + 1) * sizeof(char));
-    
-    if(output == NULL) {
-        DEBUG_PRINT("Error allocating memory\n");
-        error_handler(__LINE__);
-    }
-
-    strcpy(output, input);
-
-    for (i = 0; i < len; i++) {
-        if (output[i] == '_') {
-            for (j = i; j < len; j++) {
-                output[j] = output[j + 1];
-            }
-            output[i] = toupper(output[i]);
-            len--;
-        }
-    }
+  static char output[64];
+  if (input == nullptr) {
+    output[0] = '\0';
     return output;
+  }
+
+  size_t out_index = 0;
+  bool upper_next = false;
+  for (size_t in_index = 0; input[in_index] != '\0' && out_index < (sizeof(output) - 1); ++in_index) {
+    char current = input[in_index];
+    if (current == '_') {
+      upper_next = true;
+      continue;
+    }
+
+    if (upper_next && current >= 'a' && current <= 'z') {
+      current = static_cast<char>(current - ('a' - 'A'));
+    }
+    upper_next = false;
+    output[out_index++] = current;
+  }
+
+  output[out_index] = '\0';
+  return output;
 }
 
 #if 0

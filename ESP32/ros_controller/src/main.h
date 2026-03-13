@@ -15,10 +15,18 @@
 #include <std_msgs/msg/float32.h>
 #include <odometry.h>
 #include <jointstate.h>
+
 #if defined(INCLUDE_LIDAR)
-#include <lds08_lidar.h>
-//#include <rplidar.h>
-#endif
+  #if defined(LIDAR_RP)
+    #include <rplidar.h>  
+  #elif defined(LIDAR_LDS08)
+    #include <lds08_lidar.h>
+  #elif defined(LIDAR_YD_T_MINI)
+    #include <ydlidar_t_mini_plus.h>
+  #else
+    #error "Please define a valid LIDAR_TYPE in platformio.ini"
+  #endif // LIDAR type check
+#endif // INCLUDE_LIDAR
 
 #include <buzzer.h>
 

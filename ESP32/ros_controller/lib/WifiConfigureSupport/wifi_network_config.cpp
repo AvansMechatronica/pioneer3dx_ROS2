@@ -53,6 +53,10 @@ const char* ros_server_portPath = "/ros_agent_port.txt";
 unsigned long previousMillis = 0;
 const long interval = 10000;  // interval to wait for Wi-Fi connection (milliseconds)
 
+static bool hasStoredNetworkConfig() {
+  return !ssid.isEmpty() && !pass.isEmpty() && !ros_agent_ipPath.isEmpty() && !ros_agent_port.isEmpty();
+}
+
 // Initialize filesystem (LittleFS or SPIFFS)
 void initFS() {
   bool result;
@@ -113,7 +117,16 @@ bool testWifi() {
     return false;
   }
 
+  WiFi.useStaticBuffers(true);
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(false);
+  WiFi.disconnect(true, true);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+  WiFi.mode(WIFI_MODE_NULL);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
   WiFi.mode(WIFI_STA);
+  vTaskDelay(100 / portTICK_PERIOD_MS);
+  WiFi.setSleep(false);
   WiFi.begin(ssid.c_str(), pass.c_str());
   DEBUG_PRINT("Connecting to WiFi...\n");
 #if defined (WIFI_INCLUDE_TFT_PRINT)
@@ -122,16 +135,27 @@ bool testWifi() {
 
   unsigned long currentMillis = millis();
   previousMillis = currentMillis;
-
+  vTaskDelay(500 / portTICK_PERIOD_MS);
   while(WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    wl_status_t status = WiFi.status();
+    if (status == WL_CONNECT_FAILED || status == WL_NO_SSID_AVAIL) {
+      DEBUG_PRINT("WiFi failed with status=%d\n", status);
+      WiFi.disconnect(true, true);
+      vTaskDelay(100 / portTICK_PERIOD_MS);
+      return false;
+    }
     currentMillis = millis();
     if (currentMillis - previousMillis >= interval) {
       DEBUG_PRINT("Failed to connect\n");
 #if defined (WIFI_INCLUDE_TFT_PRINT)
       tft_printf(ST77XX_MAGENTA, "Failed to\nconnect to\nWiFi\n");
 #endif
+      WiFi.disconnect(true, true);
+      vTaskDelay(100 / portTICK_PERIOD_MS);
       return false;
     }
+    vTaskDelay(500 / portTICK_PERIOD_MS);
   }
 
   DEBUG_PRINT("Connected to WiFi\n");
@@ -213,7 +237,7 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
   DEBUG_PRINT("ros_agent_ipPath : %s\n", ros_agent_ipPath.c_str());
   DEBUG_PRINT("ros_agent_port : %s\n", ros_agent_port.c_str());
 
-  if(testWifi() && !forceConfigure) {
+  if(!forceConfigure && hasStoredNetworkConfig() && testWifi()) {
     networkConfig->password = pass;
     networkConfig->ssid = ssid;
     networkConfig->microros_agent_ip_address.fromString(ros_agent_ipPath);
@@ -239,13 +263,31 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     return true;
   }
   else {
+    if (forceConfigure) {
+      DEBUG_PRINT("Forced WiFi configuration requested\n");
+    } else if (!hasStoredNetworkConfig()) {
+      DEBUG_PRINT("No stored WiFi credentials found, entering AP mode\n");
+    }
+
     // Connect to Wi-Fi network with SSID and password
+    WiFi.useStaticBuffers(true);
+    WiFi.persistent(false);
+    WiFi.setAutoReconnect(false);
+    WiFi.disconnect(false, true);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
     WiFi.mode(WIFI_AP);
+    vTaskDelay(50 / portTICK_PERIOD_MS);
     const char *ap_name = "Pioneer3DX";
     DEBUG_PRINT("Setting AP (Access Point)\n");
 
-    // NULL sets an open Access Point
-    WiFi.softAP(ap_name, NULL);
+        if (!WiFi.softAP(ap_name, NULL)) {
+      DEBUG_PRINT("Failed to start AP\n");
+    #if defined (WIFI_INCLUDE_TFT_PRINT)
+      tft_printf(ST77XX_MAGENTA, "Failed to\nstart AP\nRestarting...\n");
+    #endif
+      delay(3000);
+      ESP.restart();
+        }
 
     IPAddress IP = WiFi.softAPIP();
     DEBUG_PRINT("AP IP address: %s\n", IP.toString().c_str());

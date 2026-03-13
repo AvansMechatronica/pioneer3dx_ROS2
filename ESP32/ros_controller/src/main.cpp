@@ -1,7 +1,7 @@
 #include "main.h"
 #include <rmw_microros/time_sync.h>
 
-#ifdef RPLIDAR_H
+#if defined(LIDAR_RP)
 #define EXPRESS_LIDAR_MODE  false
 #endif
 
@@ -57,10 +57,12 @@ Odometry *odometry;
 Jointstate *jointstate;
 
 #if defined(INCLUDE_LIDAR)
-#ifdef RPLIDAR_H
+#if defined(LIDAR_RP)
 rplidar *lidar;
-#else
+#elif defined(LIDAR_LDS08)
 lds08_lidar *lidar;
+#elif defined(LIDAR_YD_T_MINI)
+ydlidar_t_mini_plus *lidar;
 #endif
 #endif
 #if defined(INCLUDE_IMU)
@@ -111,6 +113,8 @@ void setup() {
   
   // UCP_MOTORS_PIN low to force WiFi configuration mode
   bool force_configure_wifi = digitalRead(UCP_MOTORS_PIN) == LOW;
+  force_configure_wifi = false;
+  
 
   NETWORK_CONFIG networkConfig;
   wifiUp = configureNetwork(force_configure_wifi, &networkConfig);
@@ -131,6 +135,8 @@ void setup() {
   set_microros_serial_transports(Serial);
   delay(2000);
 #endif // 
+
+#if 1
   // Initialize ADC for battery voltage reading
   pinMode(BATTERY_VOLTAGE_PIN, INPUT);
   analogReadResolution(10);
@@ -151,8 +157,11 @@ void setup() {
   pinMode(R_ENCODER_PINA, INPUT);
   pinMode(R_ENCODER_PINB, INPUT);
   // Attach encoder interrupts
-  attachInterrupt(digitalPinToInterrupt(L_ENCODER_PINB), updateEncoderL, RISING);
-  attachInterrupt(digitalPinToInterrupt(R_ENCODER_PINB), updateEncoderR, RISING);
+
+  #ifndef DE_ATTACH_ENCODER_INTERRUPTS
+    attachInterrupt(digitalPinToInterrupt(L_ENCODER_PINB), updateEncoderL, RISING);
+    attachInterrupt(digitalPinToInterrupt(R_ENCODER_PINB), updateEncoderR, RISING);
+  #endif
 
   prev_rpm_l = leftWheel->getVelocity();
   prev_rpm_r = rightWheel->getVelocity();
@@ -230,13 +239,16 @@ void setup() {
     
   // Initialize sensors
 #if defined(INCLUDE_LIDAR)
-#ifdef RPLIDAR_H
+#if defined(LIDAR_RP)
   lidar = new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   Serial.println("RPlidar A1M8 - Setup gestart");
-#else // RPLIDAR_H
+#elif defined(LIDAR_LDS08)
   lidar = new lds08_lidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
   Serial.println("LDS08 Lidar - Setup gestart");
-#endif // RPLIDAR_H
+#elif defined(LIDAR_YD_T_MINI)
+  lidar = new ydlidar_t_mini_plus(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+  Serial.println("YDLIDAR T-mini Plus - Setup gestart");
+#endif
 #endif // INCLUDE_LIDAR
 
   odometry = new Odometry(&node);
@@ -289,17 +301,18 @@ void setup() {
 
 
 #if defined(INCLUDE_LIDAR)
-#ifdef RPLIDAR_H
+#if defined(LIDAR_RP)
   lidar->startScan(EXPRESS_LIDAR_MODE, DEFAULT_LIDAR_MOTOR_PWM);
-#else // RPLIDAR_H
+
+  #elif defined(LIDAR_LDS08) || defined(LIDAR_YD_T_MINI)
   lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM);
-  tft_printf(ST77XX_MAGENTA, "LDS08 Lidar\nWait for sync\n");
+  tft_printf(ST77XX_MAGENTA, "Lidar\nWait for sync\n");
   while(!lidar->isSyncronized()){
     delay(100);
   }
-  tft_printf(ST77XX_MAGENTA, "LDS08 Lidar\nSyncronized\n");
+  tft_printf(ST77XX_MAGENTA, "Lidar\nSyncronized\n");
   delay(2000);
-#endif // RPLIDAR_H
+#endif
 #endif // INCLUDE_LIDAR
 
   // Create FreeRTOS task for scanning
@@ -338,17 +351,18 @@ void setup() {
   } 
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
   buzzer->welcomeTune();
-
+#endif
 }
 
 /**
  * Main loop - spins ROS2 executor
  */
 void loop() {
-
   vTaskDelay(1 / portTICK_PERIOD_MS); // Allow other tasks to run
+#if 1
   buzzer->update();
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));
+#endif
 }
 
 
