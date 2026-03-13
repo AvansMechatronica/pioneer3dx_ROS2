@@ -57,6 +57,56 @@ static bool hasStoredNetworkConfig() {
   return !ssid.isEmpty() && !pass.isEmpty() && !ros_agent_ipPath.isEmpty() && !ros_agent_port.isEmpty();
 }
 
+static String escapeJson(const String& input) {
+  String output;
+  output.reserve(input.length() + 8);
+  for (size_t i = 0; i < input.length(); ++i) {
+    const char ch = input[i];
+    if (ch == '"' || ch == '\\') {
+      output += '\\';
+    }
+    output += ch;
+  }
+  return output;
+}
+
+static String buildWifiScanJson() {
+  String payload = "[";
+  int network_count = WiFi.scanComplete();
+
+  if (network_count == -2) {
+    WiFi.scanNetworks(true, true);
+    payload += "]";
+    return payload;
+  }
+
+  if (network_count == -1) {
+    payload += "]";
+    return payload;
+  }
+
+  if (network_count <= 0) {
+    payload += "]";
+    WiFi.scanDelete();
+    WiFi.scanNetworks(true, true);
+    return payload;
+  }
+
+  for (int index = 0; index < network_count; ++index) {
+    if (index > 0) {
+      payload += ",";
+    }
+    payload += "\"";
+    payload += escapeJson(WiFi.SSID(index));
+    payload += "\"";
+  }
+
+  payload += "]";
+  WiFi.scanDelete();
+  WiFi.scanNetworks(true, true);
+  return payload;
+}
+
 // Initialize filesystem (LittleFS or SPIFFS)
 void initFS() {
   bool result;
@@ -275,7 +325,7 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     WiFi.setAutoReconnect(false);
     WiFi.disconnect(false, true);
     vTaskDelay(50 / portTICK_PERIOD_MS);
-    WiFi.mode(WIFI_AP);
+    WiFi.mode(WIFI_AP_STA);
     vTaskDelay(50 / portTICK_PERIOD_MS);
     const char *ap_name = "Pioneer3DX";
     DEBUG_PRINT("Setting AP (Access Point)\n");
@@ -292,6 +342,9 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     IPAddress IP = WiFi.softAPIP();
     DEBUG_PRINT("AP IP address: %s\n", IP.toString().c_str());
 
+    WiFi.scanDelete();
+    WiFi.scanNetworks(true, true);
+
 #if defined (WIFI_INCLUDE_TFT_PRINT)
     tft_printf(ST77XX_MAGENTA, "Connect to AP:\n%s\nIP: %s\n", ap_name, IP.toString().c_str());
 #endif
@@ -302,6 +355,10 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
 
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
       request->send(FS_SYSTEM, "/wifimanager.html", "text/html");
+    });
+
+    server.on("/scan", HTTP_GET, [](AsyncWebServerRequest *request){
+      request->send(200, "application/json", buildWifiScanJson());
     });
     
 #if 1
@@ -316,10 +373,8 @@ bool configureNetwork(bool forceConfigure, NETWORK_CONFIG *networkConfig) {
     
     server.begin();
     DEBUG_PRINT("Web server started\n");
-    while(true){
-      // Stay in AP mode until configured
-      vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
+    // Do not block here: keep AP web server running asynchronously.
+    // Caller can remain in configuration mode while the AsyncWebServer handles requests.
     return false;
   }
 }

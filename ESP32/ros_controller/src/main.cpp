@@ -80,6 +80,7 @@ SPIClass *spiClass;
 Adafruit_ST7735 *tft;
 
 bool wifiUp = false;
+bool controllerReady = false;
 /**
  * Setup function - initializes hardware and ROS2 components
  */
@@ -113,16 +114,14 @@ void setup() {
   
   // UCP_MOTORS_PIN low to force WiFi configuration mode
   bool force_configure_wifi = digitalRead(UCP_MOTORS_PIN) == LOW;
-  force_configure_wifi = false;
   
 
   NETWORK_CONFIG networkConfig;
   wifiUp = configureNetwork(force_configure_wifi, &networkConfig);
   if(!wifiUp){
-    tft_printf(ST77XX_MAGENTA, "Error configuring\nWiFi\nRestarting...\n");
-    delay(5000);
-    ESP.restart();
-  };
+    tft_printf(ST77XX_MAGENTA, "Config mode:\nconnect to AP\nand set WiFi\n");
+    return;
+  }
 
   set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
                                const_cast<char*>(networkConfig.password.c_str()), 
@@ -352,6 +351,7 @@ void setup() {
   tft_printf(ST77XX_MAGENTA, "Controller\nReady\n");
   buzzer->welcomeTune();
 #endif
+  controllerReady = true;
 }
 
 /**
@@ -359,6 +359,9 @@ void setup() {
  */
 void loop() {
   vTaskDelay(1 / portTICK_PERIOD_MS); // Allow other tasks to run
+  if (!controllerReady) {
+    return;
+  }
 #if 1
   buzzer->update();
   RCCHECK(rclc_executor_spin_some(&executor, RCL_MS_TO_NS(100)));

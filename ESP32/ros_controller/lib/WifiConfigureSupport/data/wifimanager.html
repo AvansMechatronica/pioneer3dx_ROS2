@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Railtrack WiFi Manager</title>
+  <title>Pioneer 3DX WiFi Manager</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
   <link rel="stylesheet" type="text/css" href="style.css">
 </head>
 <body>
   <div class="topnav">
-    <h1>Railtrack WiFi Manager</h1>
+    <h1>Pioneer 3DX WiFi Manager</h1>
   </div>
   <div class="content">
     <div class="card-grid">
@@ -16,7 +16,9 @@
         <form action="/" method="POST">
           <p>
             <label for="ssid">WIFI_SSID</label>
-            <input type="text" id ="ssid" name="ssid"><br>
+            <select id="ssid" name="ssid">
+              <option value="">Scanning networks...</option>
+            </select><br>
             <label for="pass">Password</label>
             <input type="text" id ="pass" name="pass"><br>
             <label for="ros_agent_ipPath">microROS Agent IP Addr</label>
@@ -29,5 +31,42 @@
       </div>
     </div>
   </div>
+  <script>
+    async function loadSsidOptions() {
+      const select = document.getElementById('ssid');
+      try {
+        const response = await fetch('/scan');
+        const ssids = await response.json();
+
+        select.innerHTML = '';
+
+        if (!Array.isArray(ssids) || ssids.length === 0) {
+          const option = document.createElement('option');
+          option.value = '';
+          option.textContent = 'No networks found';
+          select.appendChild(option);
+          return;
+        }
+
+        ssids.forEach((networkName, index) => {
+          const option = document.createElement('option');
+          option.value = networkName;
+          option.textContent = networkName;
+          if (index === 0) {
+            option.selected = true;
+          }
+          select.appendChild(option);
+        });
+      } catch (error) {
+        select.innerHTML = '';
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'Scan failed';
+        select.appendChild(option);
+      }
+    }
+
+    window.addEventListener('load', loadSsidOptions);
+  </script>
 </body>
 </html>
