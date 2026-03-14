@@ -7,8 +7,8 @@
 // =============================================================
 // ydlidar_t_mini_plus.h — Fully Commented Version
 // =============================================================
-#ifndef ydlidar_t_mini_plus_H
-#define ydlidar_t_mini_plus_H
+#ifndef YDLIDAR_H
+#define YDLIDAR_H
 
 #include "Arduino.h"
 
@@ -28,9 +28,9 @@ constexpr double pi = 3.14159265358979323846;
 // =============================================================
 // LIDAR scan parameters
 // =============================================================
-#define ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN 720//360 // Number of samples collected per scan
-#define ydlidar_t_mini_plus_MIN_RANGE_M  0.10    // Minimum valid reading in meters
-#define ydlidar_t_mini_plus_MAX_RANGE_M  12.0    // Maximum valid reading in meters
+#define YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN 720//360 // Number of samples collected per scan
+#define YDLIDAR_MIN_RANGE_M  0.10    // Minimum valid reading in meters
+#define YDLIDAR_MAX_RANGE_M  12.0    // Maximum valid reading in meters
 
 #define DEFAULT_LIDAR_MOTOR_PWM 0 // Default motor PWM value, not used for YDLIDAR T-mini Plus
 
@@ -38,13 +38,13 @@ constexpr double pi = 3.14159265358979323846;
 enum
 {
     // Maximum number of measurement nodes (Si) in a single protocol packet.
-  ydlidar_t_mini_plus_POINT_PER_PACK = 80,
+  YDLIDAR_POINT_PER_PACK = 80,
     // Packet header value seen on the wire as bytes [0xAA, 0x55] (little-endian 0x55AA).
-  ydlidar_t_mini_plus_PACKET_HEADER = 0x55AA,
+  YDLIDAR_PACKET_HEADER = 0x55AA,
     // One Si node is 3 bytes: intensity, distance/flag low byte, distance high byte.
-  ydlidar_t_mini_plus_SAMPLE_BYTES = 3,
+  YDLIDAR_SAMPLE_BYTES = 3,
     // LSB check bit for encoded FSA/LSA angle words (must be set).
-  ydlidar_t_mini_plus_ANGLE_CHECKBIT = 0x0001,
+  YDLIDAR_ANGLE_CHECKBIT = 0x0001,
 };
 
 // Individual scan point
@@ -57,7 +57,7 @@ typedef struct {
 
 
 typedef struct {
-    ydlidar_t_mini_plusMeasurementElement point[ydlidar_t_mini_plus_POINT_PER_PACK];
+    ydlidar_t_mini_plusMeasurementElement point[YDLIDAR_POINT_PER_PACK];
     // Number of valid points parsed from the current packet (<= POINT_PER_PACK).
     uint8_t count;
     // Convenience value: scan_frequency_hz * 10, derived from CT metadata.
@@ -146,4 +146,4 @@ public:
     ~ydlidar_t_mini_plus();
 };
 
-#endif // ydlidar_t_mini_plus_H
+#endif // YDLIDAR_H

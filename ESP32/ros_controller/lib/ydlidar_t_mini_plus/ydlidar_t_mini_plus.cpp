@@ -3,7 +3,7 @@
 // =============================================================
 // Author: Gerard Harkema
 // Date: November 2025
-// Description: RPLIDAR interface implementation for ESP32 with micro-ROS
+// Description: YDLIDAR T-mini Plus interface implementation for ESP32 with micro-ROS
 // License: CC BY-NC-SA 4.0
 // Note: Comments added for clarity and explanation.
 
@@ -40,17 +40,17 @@ namespace {
  * type code 0x81 for continuous scan data.
  */
 
-constexpr uint8_t ydlidar_t_mini_plus_CMD_SYNC = 0xA5;
-constexpr uint8_t ydlidar_t_mini_plus_CMD_SCAN = 0x60;
-constexpr uint8_t ydlidar_t_mini_plus_CMD_STOP = 0x65;
-constexpr uint8_t ydlidar_t_mini_plus_CMD_RESTART = 0x40;
-constexpr uint8_t ydlidar_t_mini_plus_CMD_SCAN_FREQ_UP_1HZ = 0x0B;
-constexpr uint8_t ydlidar_t_mini_plus_ANS_SYNC1 = 0xA5;
-constexpr uint8_t ydlidar_t_mini_plus_ANS_SYNC2 = 0x5A;
-constexpr uint8_t ydlidar_t_mini_plus_ANS_SCAN_TYPE = 0x81;
-constexpr size_t ydlidar_t_mini_plus_SCAN_DESCRIPTOR_SIZE = 7;
-constexpr uint8_t ydlidar_t_mini_plus_PACKET_HEADER_LOW = 0xAA;
-constexpr uint8_t ydlidar_t_mini_plus_PACKET_HEADER_HIGH = 0x55;
+constexpr uint8_t YDLIDAR_CMD_SYNC = 0xA5;
+constexpr uint8_t YDLIDAR_CMD_SCAN = 0x60;
+constexpr uint8_t YDLIDAR_CMD_STOP = 0x65;
+constexpr uint8_t YDLIDAR_CMD_RESTART = 0x40;
+constexpr uint8_t YDLIDAR_CMD_SCAN_FREQ_UP_1HZ = 0x0B;
+constexpr uint8_t YDLIDAR_ANS_SYNC1 = 0xA5;
+constexpr uint8_t YDLIDAR_ANS_SYNC2 = 0x5A;
+constexpr uint8_t YDLIDAR_ANS_SCAN_TYPE = 0x81;
+constexpr size_t YDLIDAR_SCAN_DESCRIPTOR_SIZE = 7;
+constexpr uint8_t YDLIDAR_PACKET_HEADER_LOW = 0xAA;
+constexpr uint8_t YDLIDAR_PACKET_HEADER_HIGH = 0x55;
 
 struct ydlidar_t_mini_plusPacketHeader {
     // CT: bit0=start-of-rotation flag, bits7:1 contain metadata (frequency in first packet).
@@ -105,7 +105,7 @@ bool readScanDescriptor(HardwareSerial* serial, uint32_t timeout_ms) {
     // Descriptor format for scan command reply:
     // [A5 5A len_l len_m mode/type_l mode/type_h type]
     // We only validate synchronization bytes and packet type for scan stream.
-    uint8_t descriptor[ydlidar_t_mini_plus_SCAN_DESCRIPTOR_SIZE];
+    uint8_t descriptor[YDLIDAR_SCAN_DESCRIPTOR_SIZE];
     const uint32_t start_time = millis();
 
     while ((millis() - start_time) <= timeout_ms) {
@@ -116,7 +116,7 @@ bool readScanDescriptor(HardwareSerial* serial, uint32_t timeout_ms) {
 
         //DEBUG_PRINT("Descriptor byte[0] = 0x%02X\n", descriptor[0]);
 
-        if (descriptor[0] != ydlidar_t_mini_plus_ANS_SYNC1) {
+        if (descriptor[0] != YDLIDAR_ANS_SYNC1) {
             continue;
         }
 
@@ -127,7 +127,7 @@ bool readScanDescriptor(HardwareSerial* serial, uint32_t timeout_ms) {
 
         //DEBUG_PRINT("Descriptor byte[1] = 0x%02X\n", descriptor[1]);
 
-        if (descriptor[1] != ydlidar_t_mini_plus_ANS_SYNC2) {
+        if (descriptor[1] != YDLIDAR_ANS_SYNC2) {
             continue;
         }
 
@@ -141,7 +141,7 @@ bool readScanDescriptor(HardwareSerial* serial, uint32_t timeout_ms) {
         //    descriptor[2], descriptor[3], descriptor[4], descriptor[5], descriptor[6], descriptor[6]
         //);
 
-        return descriptor[6] == ydlidar_t_mini_plus_ANS_SCAN_TYPE;
+        return descriptor[6] == YDLIDAR_ANS_SCAN_TYPE;
     }
 
     //DEBUG_PRINT("Descriptor search timed out after %lu ms\n", static_cast<unsigned long>(timeout_ms));
@@ -169,11 +169,11 @@ float clockwiseAngleDiff(float start_angle_deg, float end_angle_deg) {
 uint16_t computePacketChecksum(const ydlidar_t_mini_plusPacketHeader& header, const uint8_t* sample_bytes) {
     // Checksum follows the vendor XOR rule using 16-bit words:
     // PH ^ (LSN|CT) ^ FSA ^ LSA ^ each sample as (00|S1) and (S3|S2).
-    uint16_t checksum = ydlidar_t_mini_plus_PACKET_HEADER;
+    uint16_t checksum = YDLIDAR_PACKET_HEADER;
     checksum ^= header.start_angle;
 
     for (uint8_t index = 0; index < header.lsn; index++) {
-        const size_t offset = static_cast<size_t>(index) * ydlidar_t_mini_plus_SAMPLE_BYTES;
+        const size_t offset = static_cast<size_t>(index) * YDLIDAR_SAMPLE_BYTES;
         checksum ^= sample_bytes[offset];
         checksum ^= static_cast<uint16_t>(sample_bytes[offset + 2] << 8 | sample_bytes[offset + 1]);
     }
@@ -231,13 +231,13 @@ ydlidar_t_mini_plus::ydlidar_t_mini_plus(uint8_t uart_channel, uint8_t lidar_tx_
     scan_msg.header.frame_id = micro_ros_string_utilities_set(scan_msg.header.frame_id, "laser");
     scan_msg.angle_min = -pi;
     scan_msg.angle_max =  pi;
-    scan_msg.angle_increment = (2 * pi) / ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN;
-    scan_msg.range_min = ydlidar_t_mini_plus_MIN_RANGE_M;
-    scan_msg.range_max = ydlidar_t_mini_plus_MAX_RANGE_M;
+    scan_msg.angle_increment = (2 * pi) / YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN;
+    scan_msg.range_min = YDLIDAR_MIN_RANGE_M;
+    scan_msg.range_max = YDLIDAR_MAX_RANGE_M;
     scan_msg.scan_time = 1.0 / 10.0; // Assuming 10 Hz scan rate
-    scan_msg.time_increment = scan_msg.scan_time / ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN;
+    scan_msg.time_increment = scan_msg.scan_time / YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN;
     // Allocate range and intensity arrays
-    scan_msg.ranges.data = (float*) malloc(ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
+    scan_msg.ranges.data = (float*) malloc(YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
     if (scan_msg.ranges.data == NULL) {
         DEBUG_PRINT("Fout bij toewijzen geheugen voor ranges array\n");
         // Handle memory allocation error appropriately
@@ -245,25 +245,25 @@ ydlidar_t_mini_plus::ydlidar_t_mini_plus(uint8_t uart_channel, uint8_t lidar_tx_
         scan_msg.ranges.capacity = 0;
     }
     else { 
-            scan_msg.ranges.size = ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN;
-            scan_msg.ranges.capacity = ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN;
+            scan_msg.ranges.size = YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN;
+            scan_msg.ranges.capacity = YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN;
         // Initialize scan arrays
-        for(int i = 0; i < ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
+        for(int i = 0; i < YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
             scan_msg.ranges.data[i] = INFINITY;
         }
     }
 
-    scan_msg.intensities.data = (float*) malloc(ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
+    scan_msg.intensities.data = (float*) malloc(YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN * sizeof(float));
     if (scan_msg.intensities.data == NULL) {
         DEBUG_PRINT("Fout bij toewijzen geheugen voor intensities array\n");
         // Handle memory allocation error appropriately
         scan_msg.intensities.size = 0;
         scan_msg.intensities.capacity = 0;
     } else { 
-        scan_msg.intensities.size = ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN;
-        scan_msg.intensities.capacity = ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN;
+        scan_msg.intensities.size = YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN;
+        scan_msg.intensities.capacity = YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN;
         // Initialize scan arrays
-        for(int i = 0; i < ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
+        for(int i = 0; i < YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
             scan_msg.intensities.data[i] = 0.0;
         }
     }
@@ -311,14 +311,14 @@ void ydlidar_t_mini_plus::scanTaskFunction(void* parameter) {
             // Convert angle from degrees to radians
 
             if (measurement.start_packet) {
-                for (int i = 0; i < ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
+                for (int i = 0; i < YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN; i++) {
                     lidar->scan_msg.ranges.data[i] = INFINITY;
                     lidar->scan_msg.intensities.data[i] = 0.0f;
                 }
 
                 if (measurement.scan_frequency_hz > 0.0f) {
                     lidar->scan_msg.scan_time = 1.0f / measurement.scan_frequency_hz;
-                    lidar->scan_msg.time_increment = lidar->scan_msg.scan_time / ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN;
+                    lidar->scan_msg.time_increment = lidar->scan_msg.scan_time / YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN;
                 }
             }
 
@@ -334,22 +334,22 @@ void ydlidar_t_mini_plus::scanTaskFunction(void* parameter) {
                 while (angle_rad > pi) angle_rad -= 2.0f * pi;
                 while (angle_rad < -pi) angle_rad += 2.0f * pi;
                 
-                // Convert angle from [-π, π] to array index [0, ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN-1]
+                // Convert angle from [-π, π] to array index [0, YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN-1]
                 // Formula: map [-π, π] to [0, N-1]
-                int index = (int)(((angle_rad + pi) / (2.0f * pi)) * ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN);
+                int index = (int)(((angle_rad + pi) / (2.0f * pi)) * YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN);
                 
                 // Clamp index to valid range
                 if (index < 0) index = 0;
-                if (index >= ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN) 
-                    index = ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN - 1;
+                if (index >= YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN) 
+                    index = YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN - 1;
 #if defined(LIDAR_INVERT_SCAN)
-                index = ydlidar_t_mini_plus_NUMBER_OF_SAMPLES_PER_SCAN - 1 - index;
+                index = YDLIDAR_NUMBER_OF_SAMPLES_PER_SCAN - 1 - index;
 #endif
 
                 const float distance_m = measurement.point[i].distance / 1000.0f;
                 const bool invalid_point = measurement.point[i].distance <= 0.0f ||
-                                           distance_m < ydlidar_t_mini_plus_MIN_RANGE_M ||
-                                           distance_m > ydlidar_t_mini_plus_MAX_RANGE_M ||
+                                           distance_m < YDLIDAR_MIN_RANGE_M ||
+                                           distance_m > YDLIDAR_MAX_RANGE_M ||
                                            measurement.point[i].interference_flag == 2 ||
                                            measurement.point[i].interference_flag == 3;
 
@@ -380,9 +380,9 @@ void ydlidar_t_mini_plus::setupMotorPWM(int percent) {
 
 // Start scanning in standard or express mode
 void ydlidar_t_mini_plus::startScan(uint32_t lidar_speed, uint32_t timeout_ms) {
-    const uint8_t command[] = {ydlidar_t_mini_plus_CMD_SYNC, ydlidar_t_mini_plus_CMD_SCAN};
-    const uint8_t restart_command[] = {ydlidar_t_mini_plus_CMD_SYNC, ydlidar_t_mini_plus_CMD_RESTART};
-    const uint8_t freq_up_1hz_command[] = {ydlidar_t_mini_plus_CMD_SYNC, ydlidar_t_mini_plus_CMD_SCAN_FREQ_UP_1HZ};
+    const uint8_t command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_SCAN};
+    const uint8_t restart_command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_RESTART};
+    const uint8_t freq_up_1hz_command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_SCAN_FREQ_UP_1HZ};
 
     // Reset local parser state before issuing new scan commands.
     scan_enable = false;
@@ -429,7 +429,7 @@ void ydlidar_t_mini_plus::startScan(uint32_t lidar_speed, uint32_t timeout_ms) {
 
 // Stop scanning
 void ydlidar_t_mini_plus::stopScan() {
-    const uint8_t command[] = {ydlidar_t_mini_plus_CMD_SYNC, ydlidar_t_mini_plus_CMD_STOP};
+    const uint8_t command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_STOP};
 
     scan_enable = false; // Disable scanning in task
     vTaskDelay(100 / portTICK_PERIOD_MS); // Wait for task to settle
@@ -446,7 +446,7 @@ void ydlidar_t_mini_plus::stopScan() {
 }
 
 bool ydlidar_t_mini_plus::reset() {
-    const uint8_t command[] = {ydlidar_t_mini_plus_CMD_SYNC, ydlidar_t_mini_plus_CMD_RESTART};
+    const uint8_t command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_RESTART};
 
     scan_enable = false;
     syncronized = false;
@@ -504,7 +504,7 @@ bool ydlidar_t_mini_plus::getScanValue(ydlidar_t_mini_plusMeasurement* value, ui
             return false;
         }
 
-        if (first_byte != ydlidar_t_mini_plus_PACKET_HEADER_LOW) {
+        if (first_byte != YDLIDAR_PACKET_HEADER_LOW) {
             DEBUG_PRINT("Skip byte while searching packet header: 0x%02X\n", first_byte);
             continue;
         }
@@ -517,12 +517,12 @@ bool ydlidar_t_mini_plus::getScanValue(ydlidar_t_mini_plusMeasurement* value, ui
 
         DEBUG_PRINT("Packet header candidate: [0x%02X 0x%02X]\n", first_byte, second_byte);
 
-        if (second_byte == ydlidar_t_mini_plus_PACKET_HEADER_HIGH) {
+        if (second_byte == YDLIDAR_PACKET_HEADER_HIGH) {
             break;
         }
     }
 
-    if (second_byte != ydlidar_t_mini_plus_PACKET_HEADER_HIGH) {
+    if (second_byte != YDLIDAR_PACKET_HEADER_HIGH) {
         DEBUG_PRINT("Geen geldige packet header gevonden\n");
         syncronized = false;
         return false;
@@ -544,22 +544,22 @@ bool ydlidar_t_mini_plus::getScanValue(ydlidar_t_mini_plusMeasurement* value, ui
     //DEBUG_PRINT("Packet header parsed: ct=0x%02X lsn=%u start=0x%04X end=0x%04X checksum=0x%04X\n",
     //            header.ct, header.lsn, header.start_angle, header.end_angle, header.checksum);
 
-    if (header.lsn == 0 || header.lsn > ydlidar_t_mini_plus_POINT_PER_PACK) {
+    if (header.lsn == 0 || header.lsn > YDLIDAR_POINT_PER_PACK) {
         DEBUG_PRINT("Ongeldig aantal samples in packet: %u\n", header.lsn);
         syncronized = false;
         return false;
     }
 
-    if ((header.start_angle & ydlidar_t_mini_plus_ANGLE_CHECKBIT) == 0 ||
-        (header.end_angle & ydlidar_t_mini_plus_ANGLE_CHECKBIT) == 0) {
+    if ((header.start_angle & YDLIDAR_ANGLE_CHECKBIT) == 0 ||
+        (header.end_angle & YDLIDAR_ANGLE_CHECKBIT) == 0) {
         // The manual specifies bit0 of encoded angle words must always be 1.
         DEBUG_PRINT("Hoek checkbit ontbreekt\n");
         syncronized = false;
         return false;
     }
 
-    uint8_t sample_bytes[ydlidar_t_mini_plus_POINT_PER_PACK * ydlidar_t_mini_plus_SAMPLE_BYTES];
-    const size_t sample_length = static_cast<size_t>(header.lsn) * ydlidar_t_mini_plus_SAMPLE_BYTES;
+    uint8_t sample_bytes[YDLIDAR_POINT_PER_PACK * YDLIDAR_SAMPLE_BYTES];
+    const size_t sample_length = static_cast<size_t>(header.lsn) * YDLIDAR_SAMPLE_BYTES;
     if (!readBytesWithTimeout(LIDARSerial, sample_bytes, sample_length, timeout_ms)) {
         DEBUG_PRINT("Timeout bij lezen packet samples\n");
         syncronized = false;
@@ -599,7 +599,7 @@ bool ydlidar_t_mini_plus::getScanValue(ydlidar_t_mini_plusMeasurement* value, ui
                 value->start_angle, value->end_angle, angle_diff, value->count);
 
     for (uint8_t i = 0; i < header.lsn; i++) {
-        const uint8_t* sample = &sample_bytes[static_cast<size_t>(i) * ydlidar_t_mini_plus_SAMPLE_BYTES];
+        const uint8_t* sample = &sample_bytes[static_cast<size_t>(i) * YDLIDAR_SAMPLE_BYTES];
         float angle = value->start_angle;
 
         // Interpolate each sample angle between FSA and LSA across LSN samples.

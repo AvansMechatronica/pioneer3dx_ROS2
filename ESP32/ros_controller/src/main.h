@@ -17,9 +17,7 @@
 #include <jointstate.h>
 
 #if defined(INCLUDE_LIDAR)
-  #if defined(LIDAR_RP)
-    #include <rplidar.h>  
-  #elif defined(LIDAR_LDS08)
+  #if defined(LIDAR_LDS08)
     #include <lds08_lidar.h>
   #elif defined(LIDAR_YD_T_MINI)
     #include <ydlidar_t_mini_plus.h>
@@ -36,8 +34,10 @@
 
 #include <p3dx_interfaces/msg/status.h>
 
-
+#if defined(WIFI)
 #include "wifi_network_config.h"
+#include <esp_wifi.h>
+#endif
 
 #include "motor_controller.h"
 #include "pins.h"

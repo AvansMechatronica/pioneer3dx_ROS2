@@ -37,11 +37,11 @@
 #define DISPLAY_SDA_PIN   17
 //#define DISPLAY_MISO_PIN  19 // Not used
 
-#define RPLIDAR_COM_PORT    2      
-#define RPLIDAR_TX_PIN      18 // Lidar side
+#define LIDAR_COM_PORT    2      
+#define LIDAR_TX_PIN      18 // Lidar side
 
-#define RPLIDAR_RX_PIN      21 // Lidar side
-#define RPLIDAR_MOTOR_PIN   35 // optioneel: PWM of GPIO voor motor aan/uit
+#define LIDAR_RX_PIN      21 // Lidar side
+#define LIDAR_MOTOR_PIN   35 // optioneel: PWM of GPIO voor motor aan/uit
 
 #define UCP_STATUS_PIN      39 // Pin to read UCP status
 #define UCP_RESET_PIN       40 // Pin to reset UCP

@@ -3,9 +3,7 @@
 extern Buzzer *buzzer;
 extern Adafruit_ST7735 *tft;
 #if defined(INCLUDE_LIDAR)
-#if defined(LIDAR_RP)
-    extern rplidar *lidar;
-#elif defined(LIDAR_LDS08)
+#if defined(LIDAR_LDS08)
     extern lds08_lidar *lidar;
 #elif defined(LIDAR_YD_T_MINI)
   extern ydlidar_t_mini_plus *lidar;

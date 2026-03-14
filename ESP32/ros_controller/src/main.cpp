@@ -1,9 +1,7 @@
 #include "main.h"
 #include <rmw_microros/time_sync.h>
 
-#if defined(LIDAR_RP)
-#define EXPRESS_LIDAR_MODE  false
-#endif
+
 
 // ROS2 subscribers
 rcl_subscription_t cmd_vel_subscriber;  // Subscribes to velocity commands
@@ -57,9 +55,7 @@ Odometry *odometry;
 Jointstate *jointstate;
 
 #if defined(INCLUDE_LIDAR)
-#if defined(LIDAR_RP)
-rplidar *lidar;
-#elif defined(LIDAR_LDS08)
+#if defined(LIDAR_LDS08)
 lds08_lidar *lidar;
 #elif defined(LIDAR_YD_T_MINI)
 ydlidar_t_mini_plus *lidar;
@@ -102,8 +98,8 @@ void setup() {
   // Use polling instead of interrupt to avoid accidental motor enables
   //attachInterrupt(digitalPinToInterrupt(UCP_MOTORS_PIN), motors_button_hit, FALLING);
 
-  pinMode(RPLIDAR_MOTOR_PIN, OUTPUT);
-  digitalWrite(RPLIDAR_MOTOR_PIN, LOW);
+  pinMode(LIDAR_MOTOR_PIN, OUTPUT);
+  digitalWrite(LIDAR_MOTOR_PIN, LOW);
 
   buzzer = new Buzzer(UCP_BUZZER_PIN, UCP_BUZZER_PWM_CHANNEL);
 
@@ -122,6 +118,8 @@ void setup() {
     tft_printf(ST77XX_MAGENTA, "Config mode:\nconnect to AP\nand set WiFi\n");
     return;
   }
+
+  esp_wifi_set_max_tx_power(WIFI_POWER_19_5dBm); // Set max WiFi transmit power to 19.5 dBm (max for ESP32-S3)
 
   set_microros_wifi_transports(const_cast<char*>(networkConfig.ssid.c_str()), 
                                const_cast<char*>(networkConfig.password.c_str()), 
@@ -238,14 +236,11 @@ void setup() {
     
   // Initialize sensors
 #if defined(INCLUDE_LIDAR)
-#if defined(LIDAR_RP)
-  lidar = new rplidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
-  Serial.println("RPlidar A1M8 - Setup gestart");
-#elif defined(LIDAR_LDS08)
-  lidar = new lds08_lidar(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+#if defined(LIDAR_LDS08)
+  lidar = new lds08_lidar(&node, LIDAR_COM_PORT, LIDAR_TX_PIN, LIDAR_RX_PIN, LIDAR_MOTOR_PIN);
   Serial.println("LDS08 Lidar - Setup gestart");
 #elif defined(LIDAR_YD_T_MINI)
-  lidar = new ydlidar_t_mini_plus(&node, RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN);
+  lidar = new ydlidar_t_mini_plus(&node, LIDAR_COM_PORT, LIDAR_TX_PIN, LIDAR_RX_PIN, LIDAR_MOTOR_PIN);
   Serial.println("YDLIDAR T-mini Plus - Setup gestart");
 #endif
 #endif // INCLUDE_LIDAR
@@ -300,10 +295,7 @@ void setup() {
 
 
 #if defined(INCLUDE_LIDAR)
-#if defined(LIDAR_RP)
-  lidar->startScan(EXPRESS_LIDAR_MODE, DEFAULT_LIDAR_MOTOR_PWM);
 
-  #elif defined(LIDAR_LDS08) || defined(LIDAR_YD_T_MINI)
   lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM);
   tft_printf(ST77XX_MAGENTA, "Lidar\nWait for sync\n");
   while(!lidar->isSyncronized()){
@@ -311,7 +303,6 @@ void setup() {
   }
   tft_printf(ST77XX_MAGENTA, "Lidar\nSyncronized\n");
   delay(2000);
-#endif
 #endif // INCLUDE_LIDAR
 
   // Create FreeRTOS task for scanning
