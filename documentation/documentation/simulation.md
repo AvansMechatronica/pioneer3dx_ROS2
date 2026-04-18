@@ -1,4 +1,4 @@
-# Simulatie wereld modelle
+# Simulatie wereld modellen
 
 Er zijn een aantal wereld modellen beschikbaar om de p3dx in een virtuele omgeving te laten rondrijden.
 

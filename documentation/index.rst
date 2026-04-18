@@ -29,10 +29,9 @@ Welkom bij de Pioneer 3DX documentatie!
    documentation/teleoperation.md
    documentation/mapping.md
    documentation/navigation.md
-   documentation/advanced_features.md
-   documentation/background.md
-   documentation/troubleshooting.md
+   documentation/robot_migration.md
    documentation/faq.md
+
 
 
 License
