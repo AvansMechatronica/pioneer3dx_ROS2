@@ -34,6 +34,9 @@ PCB Layout van het processorbord. De componenten zijn als volgt:
 | 12 | R2,R3 | 1 | 100k |
 | 14 | U1 | 1 | MPU6050 |
 
+:::{warning}
+Gebruik alleen een originele ESP32-S3-DevKitC van Espressif. Er zijn veel namaak ESP32-S3 boards op de markt die mogelijk niet correct functioneren. Bekend issue met namaak ESP32-S3 dat het LiteFS bestandssysteem niet correct functioneert, wat kan leiden tot problemen met het opslaan van de wifi configuratie.
+:::
 
 ## Programmeren van de processor
 In de directory ` ESP32/ros_controller` van de Pioneer 3DX repository is de code te vinden die op de ESP32-S3 device moet worden geprogrammeerd. Deze code is verantwoordelijk voor het aansturen van de robot en het communiceren met de ROS2 nodes. Je kunt deze code uploaden naar de ESP32-S3 met Visual Studio Code en de PlatformIO extension. 
@@ -84,7 +87,7 @@ pio run --target upload -e esp32-s3-wroom-usb
 
 
 :::{note}
-In de `build_flags` sectie van de geselecteerde environment kan er geslecteerd worden welk type Lidar er wordt gebruikt. Standaard is dit ingesteld op de LDS-08, maar dit kan worden aangepast naar de YD-T-mini door de volgende regel te wijzigen:
+In de `build_flags` sectie van de geselecteerde environment kan er geslecteerd worden welk type Lidar er wordt gebruikt. Standaard is dit ingesteld op de YD-T-mini, maar dit kan worden aangepast naar de LDS-08 door de juiste environment te wijzigen:
 ```ini
 build_flags = 
 ; Enable WiFi
@@ -164,6 +167,7 @@ Orgineel zijn de bumpers van de Pioneer 3DX robot geconfigureerd in een wired ac
 
 *Verplaats de draden van iedere micro-switch de `NC`-aansluiting naar de `NO`-aansluiting. Hierdoor worden de bumpers geconfigureerd in een active-low configuratie.
 Laat de `COM`-aansluiting ongemoeid.
+
 :::{grid-item-card} 
 ![image](../images/bumper_before.jpg)
 Voor modificatie
