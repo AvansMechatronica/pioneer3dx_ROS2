@@ -46,6 +46,9 @@ De statusmonitor-module geeft realtime feedback over de robotstatus, waaronder b
 ### Startup sequence op de echte Pioneer 3DX robot
 ::::{grid} 2
 :::{grid-item-card} 
+![Image](./../images/started.jpg)
+:::
+:::{grid-item-card} 
 ![Image](./../images/connecting.jpg)
 Deze sequentie wordt overgeslagen als de robot is geconfigreerd voor de USB micro-ROS agent.
 :::
