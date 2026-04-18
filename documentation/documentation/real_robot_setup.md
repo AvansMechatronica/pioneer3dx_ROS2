@@ -1,5 +1,4 @@
-# Echte wereld
-
+# Fysieke robot setup
 
 
 ## Starten van de micro-ROS agent en robot
