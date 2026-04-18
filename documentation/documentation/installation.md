@@ -51,7 +51,7 @@ git clone https://github.com/AvansMechatronica/pioneer3dx_ROS2.git
 
 
 
-### Buid workspace
+### Build workspace
 ```bash
 cd ~/p3dx_ws/
 rosdep update
