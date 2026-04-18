@@ -3,13 +3,6 @@
 ## P3dx workspace
 
 ### Clone repository
-```bash
-mkdir pioneer_ws/src -p
-git clone https://github.com/AvansMechatronica/pioneer3dx_ROS2
-```
-
-
-
 
 :::::{card} 
 
@@ -35,7 +28,7 @@ cd ~/p3dx_ws/src
 git clone https://github.com/<jouw_account_naam>/pioneer3dx_ROS2.git
 ```
 
-*ps. Het gebruik van github (zoals add, commit & push commando's) valt  buiten de scope van deze workshop*
+*ps. Het gebruik van github (zoals add, commit & push commando's) valt  buiten de scope van deze documentatie*
 
 :::
 
@@ -106,4 +99,10 @@ if ! grep -Fxq "source $(pwd)/install/setup.bash" ~/.bashrc; then
 else
     echo "Source command already exists in .bashrc"
 fi  
+```
+
+
+### Test setup
+```bash
+ros2 launch p3dx_gazebo p3dx_mazeworld.launch.py 
 ```
