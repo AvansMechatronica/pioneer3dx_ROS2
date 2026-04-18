@@ -8,6 +8,14 @@ Er wordt een Lidar toegevoegd aan de robot, waarbij er twee opties zijn: de LDS-
 ## Bouw van het processorbord
 In de directory `kiCad` van de Pioneer 3DX repostory is het ontwerp van het processorbord te vinden. Dit bord zal worden gebruikt om de ESP32-S3 device te integreren in de Pioneer 3DX en zal ook de nodige componenten bevatten voor de communicatie en voeding van de processor.
 
+:::{note}
+Je kunt het processorboard zelf laten produceren bij een PCB fabrikant zoals b.v. JLCPCB of PCBWay.
+De eigendomsrechten van het ontwerp van het processorbord liggen bij Gerard Harkema/Avans Hogeschool. Het is niet toegestaan om het ontwerp te gebruiken voor commerciële doeleinden zonder toestemming van Gerard Harkema/Avans Hogeschool. Tevens dienen bij productie van het processorbord de volgende voorwaarden in acht te worden genomen:
+* Het ontwerp van het processorbord mag alleen worden gebruikt voor educatieve doeleinden en niet voor commerciële doeleinden.
+* Het ontwerp van het processorbord mag niet worden aangepast of gewijzigd zonder toestemming van Gerard Harkema/Avans Hogeschool.
+* Bij productie van het processorbord dient de bronvermelding "Ontwerp van het processorbord is eigendom van Gerard Harkema/Avans Hogeschool" te worden opgenomen in de documentatie van het product.
+:::
+
 ### Schema
 Het schema van de nieuwe processorbord:
 [Processorboard schema](./schematic.pdf)
@@ -22,7 +30,7 @@ PCB Layout van het processorbord. De componenten zijn als volgt:
 |---|---|---|---|
 | 1 | C1,C2 | 2 | 100nF |
 | 2 | U2 | 1 | TXS0108EPW |
-| 3 | U4 | 1 | ~ |
+| 3 | U4 | 1 | 1.77" TFT Display |
 | 4 | R6,R5,R1,R4 | 4 | DO NOT PLACE |
 | 5 | J5 | 1 | Conn_01x03_Pin |
 | 6 | J4 | 1 | Conn_01x16_Pin |
