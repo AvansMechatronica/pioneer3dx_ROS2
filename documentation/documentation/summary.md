@@ -23,19 +23,31 @@ De P3DX-robot heeft de volgende eigenschappen:
 * De robot kan worden gereset met het /p3dx/reset (bool) topic.
 * Een grafische user interface is voor raadplegen status en resetten van de p3dx-robot 
 
-![Pioneer 3DX mobile robot with red chassis and black top deck displaying P3DX branding, equipped with mounted LIDAR sensor on top platform and 1.77 inch status display on front panel, featuring yellow-rimmed wheels with rugged tires, positioned on light wooden floor against wooden furniture background](../images/p3dxWithLidarAndDisplay.jpg)
+
+
+![Pioneer 3DX mobiele](../images/p3dxWithLidarAndDisplay.jpg)
+
 
 Gemodificeerde P3DX-robot met lidar en 1.77" status display.
 
 
-![Pioneer 3DX robot showing mounted LIDAR sensor on top and 1.77 inch status display mounted on front panel, both integrated into the modified chassis for autonomous navigation capabilities](../images/lidaAndDisplay.jpg)
 
-Detail van lidar en status display
+::::{grid} 2
+:::{grid-item-card} 
+![Image](./../images/lidar_lds08.jpg)
+Met LDS08 lidar
+:::
+:::{grid-item-card}
+![Image](./../images/lidar_yd_t_mini.jpg)
+Met YD-T mini lidar
+:::
+::::
 
-![Green PCB circuit board labeled avans hogeschool showing Pioneer 3DX Mobile Robot Controller with ESP32-S3-WROOM microcontroller module, multiple rainbow-colored ribbon cables, blue sensor modules, capacitors, and various electronic components. Board designed by Gerard Harkema for Alix/Mechatronics Department in 2025](../images/ESP32_board.jpg)
 
-Detail van het processorboard.
+![PCB](../images/real_pcb.jpg)
+Nieuw processorboard gebaseerd op een ESP32-S3-N16R8 processor.
+
 
 In deze documentatie worden de benodigde stappen, configuraties en voorbeeldcommando's beschreven om de robot in gebruik te nemen met ROS2 Jazzy.
 
-Tevens wordt beschreven hoe een bestaande robot kan worden omgebouwd. Alle tekeningen en bijbehorende documentatie zijn beschikbaar in de github repository.
+Tevens wordt beschreven hoe een bestaande robot kan worden omgebouwd. Alle tekeningen en bijbehorende documentatie zijn beschikbaar in de [github repository](https://github.com/AvansMechatronica/pioneer3dx_ROS2).

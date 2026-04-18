@@ -1,6 +1,13 @@
-# P3dx besturen
+# Teleoperatie
 
-## Toetsenbord Teleop
+Zowel in simulatie als op de echte robot kun je de robot besturen met behulp van teleoperatie. Er zijn verschillende manieren om dit te doen, waaronder het gebruik van een toetsenbord of een joystick.
+
+:::::{card} 
+
+::::{tab-set}
+
+:::{tab-item} Toetsenbord Teleop
+
 Voer [teleop_twist_keyboard](https://index.ros.org/r/teleop_twist_keyboard/) uit om de robot te besturen met je toetsenbord:
 
 ```bash
@@ -15,8 +22,9 @@ Druk op:
 - **shift + j** - Om de robot naar links te laten schuiven (voor mecanum robots).
 - **shift + l** - Om de robot naar rechts te laten schuiven (voor mecanum robots).
 - **u / o / m / .** - Gebruikt voor het draaien van de robot, door lineaire snelheid x en hoeksnelheid z te combineren.
+:::
 
-## Joystick
+:::{tab-item} Joystick support
 Voer onderstaand commando uit om de robot te besturen met je joystick:
 
 
@@ -37,3 +45,9 @@ Druk op Knop/Beweeg Joystick:
 - **Linker Joystick Omhoog/Omlaag** - Om de robot vooruit/achteruit te laten rijden.
 - **Linker Joystick Links/Rechts** - Om de robot naar links/rechts te laten schuiven.
 - **Rechter Joystick Links/Rechts** - Om de robot CW/CCW te draaien.
+
+:::
+
+::::
+
+:::::

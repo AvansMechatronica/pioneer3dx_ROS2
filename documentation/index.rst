@@ -3,13 +3,19 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Pioneer 3DX's documentation!
+Welkom bij de Pioneer 3DX documentatie!
 =========================================
 
-**Welcome to Pioneer 3DX** 
+**Welkom bij de Pioneer 3DX documentatie** 
+
+**Vrijwillige donaties voor dit project**
+
+`Support Pioneer 3DX Development <https://www.paypal.com/donate/?business=HG6WLGFWKCANG&no_recurring=1&item_name=For+future+railtrack+develpment&currency_code=EUR>`_
+
 
 .. note::
-   This project is under active development.
+   Dit is een open-source prive project, en wordt toegepast bij courses van de Avans Hogeschool. Alle bijdragen zijn welkom, of het nu gaat om code, documentatie of feedback.
+   Als je wilt bijdragen, neem dan contact op via de GitHub-repository.
 
 
 .. toctree::

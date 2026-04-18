@@ -69,6 +69,10 @@ else
     echo "Source command already exists in .bashrc"
 fi  
 ```
+### Test setup
+```bash
+ros2 launch p3dx_gazebo p3dx_mazeworld.launch.py 
+```
 
 ## microROS agent
 
@@ -99,10 +103,4 @@ if ! grep -Fxq "source $(pwd)/install/setup.bash" ~/.bashrc; then
 else
     echo "Source command already exists in .bashrc"
 fi  
-```
-
-
-### Test setup
-```bash
-ros2 launch p3dx_gazebo p3dx_mazeworld.launch.py 
 ```
