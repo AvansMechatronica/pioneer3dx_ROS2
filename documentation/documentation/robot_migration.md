@@ -177,11 +177,11 @@ Orgineel zijn de bumpers van de Pioneer 3DX robot geconfigureerd in een wired ac
 Laat de `COM`-aansluiting ongemoeid.
 
 :::{grid-item-card} 
-![image](../images/bumper_before.jpg)
+![image](../images/bumper_switch_before.jpg)
 Voor modificatie
 :::
 :::{grid-item-card}
-![image](../images/bumper_after.jpg)
+![image](../images/bumper_switch_after.jpg)
 Na modificatie
 :::
 ::::
