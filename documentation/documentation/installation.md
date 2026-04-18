@@ -8,9 +8,59 @@ mkdir pioneer_ws/src -p
 git clone https://github.com/AvansMechatronica/pioneer3dx_ROS2
 ```
 
+
+
+
+:::::{card} 
+
+::::{tab-set}
+
+:::{tab-item} Met GIT-repository support
+
+* Maak een account aan bij [Github](https://github.com/) en login op dit account
+
+* Open de [pioneer3dx_ROS2](https://github.com/AvansMechatronica/pioneer3dx_ROS2) repository
+
+* Maak een Fork van de repository naar je eigen Github account door op het **Fork icoon**  te klikken:
+
+![image](../images/fork.jpg)
+
+* Volg de instructies, maar wijzig de naam van de nieuwe repository niet. Bevestig met **Create Fork**  
+
+* Nu kun je de workspace als volgt creëren
+
+```bash
+mkdir -p ~/p3dx_ws/src
+cd ~/p3dx_ws/src
+git clone https://github.com/<jouw_account_naam>/pioneer3dx_ROS2.git
+```
+
+*ps. Het gebruik van github (zoals add, commit & push commando's) valt  buiten de scope van deze workshop*
+
+:::
+
+:::{tab-item} Zonder GIT-repository support
+
+* Je kunt de workspace als volgt creëren
+```bash
+mkdir -p ~/p3dx_ws/src
+cd ~/p3dx_ws/src
+git clone https://github.com/AvansMechatronica/pioneer3dx_ROS2.git
+```
+
+:::
+
+::::
+
+:::::
+
+
+
+
+
 ### Buid workspace
 ```bash
-cd ~/pioneer_ws/
+cd ~/p3dx_ws/
 rosdep update
 rosdep install --from-paths src/pioneer3dx_ROS2/p3dx --ignore-src -y
 colcon build --symlink-install
