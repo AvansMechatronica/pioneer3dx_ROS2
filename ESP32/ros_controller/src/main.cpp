@@ -115,7 +115,7 @@ void setup() {
   NETWORK_CONFIG networkConfig;
   wifiUp = configureNetwork(force_configure_wifi, &networkConfig);
   if(!wifiUp){
-    tft_printf(ST77XX_MAGENTA, "Config mode:\nconnect to AP\nand set WiFi\n");
+    //tft_printf(ST77XX_MAGENTA, "Config mode:\nconnect to AP\nand set WiFi\n");
     return;
   }
 

@@ -203,25 +203,27 @@ Voordat je de lidar aan kun sluiten dien je de draden van de lidar te verlengen 
 
 :::{tab-item} LDS-08 lidar
 ![image](../images/lidar_lds08.jpg)
-< nog controleren>
-| Lidar draad | Kleur | J6 connector pin |
+
+| J6 connector pin | Signaal | kleur
 |---|---|---|
-| VCC | Rood | 1 |
-| GND | Zwart | 2 |
-| TX | Geel | 3 |
-| RX | Groen | 4 |  
+| 1 | VCC | Rood |
+| 2 | TX | Geel |
+| 3 | RX | NC |
+| 4 | GND | Blauw |
+| 5 | Motor | Groen |
 :::
 
 :::{tab-item} YD-T-mini lidar
 ![image](../images/lidar_yd_t_mini.jpg)
-<nog controleren>
-| Lidar draad | Kleur | J6 connector pin |
-|---|---|---|
-| VCC | Rood | 1 |
-| GND | Zwart | 2 |
-| TX | Geel | 3 |
-| RX | Groen | 4 |  
 
+| J6 connector pin | Signaal | kleur
+|---|---|---|
+| 1 | VCC | Rood |
+| 2 | TX | Groen |
+| 3 | RX | Geel |
+| 4 | GND | Zwart |
+| 5 | Motor | NC |
+:::
 :::
 
 ::::
