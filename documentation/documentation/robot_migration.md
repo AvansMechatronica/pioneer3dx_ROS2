@@ -223,7 +223,7 @@ Voordat je de lidar aan kun sluiten dien je de draden van de lidar te verlengen 
 | 3 | RX | Geel |
 | 4 | GND | Zwart |
 | 5 | Motor | NC |
-:::
+
 :::
 
 ::::

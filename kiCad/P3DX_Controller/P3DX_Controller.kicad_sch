@@ -5937,7 +5937,7 @@
 				)
 				(uuid "c8978804-b9fe-4b5e-a7c1-c950feb10241")
 			)
-			(table_cell "RPLIDAR"
+			(table_cell "YD-T-mini"
 				(exclude_from_sim no)
 				(at 207.01 19.05 0)
 				(size 12.7 2.54)
@@ -6039,7 +6039,7 @@
 				)
 				(uuid "91416dbc-aa0e-4816-bf85-a9f33341cd98")
 			)
-			(table_cell "Yellow"
+			(table_cell "Green"
 				(exclude_from_sim no)
 				(at 207.01 24.13 0)
 				(size 12.7 2.54)
@@ -6090,7 +6090,7 @@
 				)
 				(uuid "605e0da1-fbee-49a8-94a4-2b5d79a3c964")
 			)
-			(table_cell "Green"
+			(table_cell "Yellow"
 				(exclude_from_sim no)
 				(at 207.01 26.67 0)
 				(size 12.7 2.54)
@@ -6192,7 +6192,7 @@
 				)
 				(uuid "e308fc0e-6aac-40df-a394-c17384b26a7e")
 			)
-			(table_cell "Blue"
+			(table_cell "NC"
 				(exclude_from_sim no)
 				(at 207.01 31.75 0)
 				(size 12.7 2.54)

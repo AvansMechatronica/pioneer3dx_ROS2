@@ -11675,7 +11675,7 @@
 					)
 				)
 			)
-			(table_cell "RP-LIDAR"
+			(table_cell "YD-T-mini"
 				(start 158.5 67.3)
 				(end 169.5 69.75)
 				(margins 1.0025 1.0025 1.0025 1.0025)
@@ -11753,7 +11753,7 @@
 					)
 				)
 			)
-			(table_cell "Yellow"
+			(table_cell "Green"
 				(start 158.5 72.2)
 				(end 169.5 74.65)
 				(margins 1.0025 1.0025 1.0025 1.0025)
@@ -11792,7 +11792,7 @@
 					)
 				)
 			)
-			(table_cell "Geen"
+			(table_cell "Yellow"
 				(start 158.5 74.65)
 				(end 169.5 77.1)
 				(margins 1.0025 1.0025 1.0025 1.0025)
@@ -11870,7 +11870,7 @@
 					)
 				)
 			)
-			(table_cell "Blue"
+			(table_cell "NC"
 				(start 158.5 79.55)
 				(end 169.5 82)
 				(margins 1.0025 1.0025 1.0025 1.0025)

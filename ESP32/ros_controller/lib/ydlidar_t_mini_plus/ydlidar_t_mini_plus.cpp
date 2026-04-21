@@ -44,7 +44,10 @@ constexpr uint8_t YDLIDAR_CMD_SYNC = 0xA5;
 constexpr uint8_t YDLIDAR_CMD_SCAN = 0x60;
 constexpr uint8_t YDLIDAR_CMD_STOP = 0x65;
 constexpr uint8_t YDLIDAR_CMD_RESTART = 0x40;
+constexpr uint8_t YDLIDAR_CMD_SCAN_FREQ_UP_0HZ5 = 0x09;
+constexpr uint8_t YDLIDAR_CMD_SCAN_FREQ_DOWN_0HZ5 = 0x0A;
 constexpr uint8_t YDLIDAR_CMD_SCAN_FREQ_UP_1HZ = 0x0B;
+constexpr uint8_t YDLIDAR_CMD_SCAN_FREQ_DOWN_1HZ = 0x0C;
 constexpr uint8_t YDLIDAR_ANS_SYNC1 = 0xA5;
 constexpr uint8_t YDLIDAR_ANS_SYNC2 = 0x5A;
 constexpr uint8_t YDLIDAR_ANS_SCAN_TYPE = 0x81;
@@ -212,7 +215,7 @@ ydlidar_t_mini_plus::ydlidar_t_mini_plus(uint8_t uart_channel, uint8_t lidar_tx_
     DEBUG_PRINT("Initialiseer LIDAR op UART kanaal %d, TX pin %d, RX pin %d\n", uart_channel, lidar_tx_pin, lidar_rx_pin);
     LIDARSerial->begin(230400, SERIAL_8N1, lidar_tx_pin, lidar_rx_pin);
 
-    //reset(); // Reset LIDAR
+    reset(); // Reset LIDAR
     stopScan(); // Ensure scanning is stopped
     delay(100); // Wait for device to stabilize
 
@@ -298,6 +301,7 @@ void ydlidar_t_mini_plus::scanTaskFunction(void* parameter) {
 
     while (true) {
         vTaskDelay(pdMS_TO_TICKS(1));
+        //taskYIELD();
         if (lidar->scan_enable == false) {
             continue;
         }
@@ -383,6 +387,7 @@ void ydlidar_t_mini_plus::startScan(uint32_t lidar_speed, uint32_t timeout_ms) {
     const uint8_t command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_SCAN};
     const uint8_t restart_command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_RESTART};
     const uint8_t freq_up_1hz_command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_SCAN_FREQ_UP_1HZ};
+    const uint8_t freq_down_1hz_command[] = {YDLIDAR_CMD_SYNC, YDLIDAR_CMD_SCAN_FREQ_DOWN_1HZ};
 
     // Reset local parser state before issuing new scan commands.
     scan_enable = false;
@@ -405,11 +410,11 @@ void ydlidar_t_mini_plus::startScan(uint32_t lidar_speed, uint32_t timeout_ms) {
     // Optional frequency tuning stage.
     // Each command [A5 0B] requests +1 Hz according to the protocol.
     for (int index = 0; index < 0; ++index) {
-        LIDARSerial->write(freq_up_1hz_command, sizeof(freq_up_1hz_command));
+        LIDARSerial->write(freq_down_1hz_command, sizeof(freq_down_1hz_command));
         LIDARSerial->flush();
         vTaskDelay(pdMS_TO_TICKS(20));
     }
-    DEBUG_PRINT("Scan frequency increase command sent (+3Hz)\n");
+    DEBUG_PRINT("Scan frequency decrease command sent (-1Hz)\n");
 
     LIDARSerial->write(command, sizeof(command));
     LIDARSerial->flush();
