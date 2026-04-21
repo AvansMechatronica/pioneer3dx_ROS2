@@ -176,6 +176,9 @@ Orgineel zijn de bumpers van de Pioneer 3DX robot geconfigureerd in een wired ac
 *Verplaats de draden van iedere micro-switch de `NC`-aansluiting naar de `NO`-aansluiting. Hierdoor worden de bumpers geconfigureerd in een active-low configuratie.
 Laat de `COM`-aansluiting ongemoeid.
 
+::::{grid} 1 1 2 2
+ :gutter: 2
+
 :::{grid-item-card} 
 ![image](../images/bumper_switch_before.jpg)
 Voor modificatie
