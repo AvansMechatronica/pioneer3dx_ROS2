@@ -51,3 +51,7 @@ Nieuw processorboard gebaseerd op een ESP32-S3-N16R8 processor.
 In deze documentatie worden de benodigde stappen, configuraties en voorbeeldcommando's beschreven om de robot in gebruik te nemen met ROS2 Jazzy.
 
 Tevens wordt beschreven hoe een bestaande robot kan worden omgebouwd. Alle tekeningen en bijbehorende documentatie zijn beschikbaar in de [github repository](https://github.com/AvansMechatronica/pioneer3dx_ROS2).
+
+:::{note}
+Je kunt de robot gebruiken in wifi of usb modes. De wifi mode is handig als je de robot op afstand wilt bedienen, terwijl de usb mode handig is voor directe verbinding en debugging. Alvorens je de robot voor 1 van beide modes kunt gebruiken, moet je de robot eerst te programmeren met de juiste firmware. Zie hiervoor de [firmware installatie instructies](https://avansmechatronica.github.io/pioneer3dx_ROS2/documentation/robot_migration.html#programmeren-van-de-processor)
+:::
