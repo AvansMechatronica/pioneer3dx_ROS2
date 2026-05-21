@@ -32,7 +32,7 @@ constexpr double pi = 3.14159265358979323846;
 #define LDS08_LIDAR_MIN_RANGE_M  0.16    // Minimum valid reading in meters
 #define LDS08_LIDAR_MAX_RANGE_M  12.0    // Maximum valid reading in meters
 
-#define DEFAULT_LIDAR_MOTOR_PWM 60 // Default motor PWM value
+#define DEFAULT_LIDAR_MOTOR_PWM 80 // Default motor PWM value
 
 static const uint8_t CrcTable[256] =
 {

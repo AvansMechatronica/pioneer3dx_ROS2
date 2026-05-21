@@ -37,7 +37,7 @@
 #define DISPLAY_SDA_PIN   17
 //#define DISPLAY_MISO_PIN  19 // Not used
 
-#define LIDAR_COM_PORT    2      
+#define LIDAR_COM_PORT    1      
 #define LIDAR_TX_PIN      18 // Lidar side
 
 #define LIDAR_RX_PIN      21 // Lidar side

@@ -32,7 +32,7 @@ ros2 launch p3dx_bringup bringup.launch.py
 ```
 ### Starten van de USB micro-ROS agent en robot
 ```bash
-ros2 launch p3dx_bringup bringup.launch.py base_serial_port:=/dev/ttyUSB0 micro_ros_transport:=serieel
+ros2 launch p3dx_bringup bringup.launch.py base_serial_port:=/dev/ttyACM0 micro_ros_transport:=serial
 ```
 :::{note}
 Kies 1 van bovenstaande commando's afhankelijk van hoe de robots is geconfigureerd (wifi of USB micro-ROS agent).

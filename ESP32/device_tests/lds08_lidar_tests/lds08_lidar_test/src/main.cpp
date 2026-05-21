@@ -15,7 +15,8 @@ void setup() {
   delay(500);
   Serial.println("RPLIDAR A1M8 - Setup gestart");
 
-  lidar = new lds08_lidar( RPLIDAR_COM_PORT, RPLIDAR_TX_PIN, RPLIDAR_RX_PIN, RPLIDAR_MOTOR_PIN );
+  lidar = new lds08_lidar( LIDAR_COM_PORT, LIDAR_TX_PIN, LIDAR_RX_PIN, LIDAR_MOTOR_PIN );
+
 
   Serial.printf("LIDAR initialized\n");
   // Device info en health uitlezen
@@ -23,7 +24,7 @@ void setup() {
 
   // Start scan (false = standaard scan, true = express scan)
   lidar->startScan(DEFAULT_LIDAR_MOTOR_PWM);
-  lidar->startScan(40);
+  lidar->startScan(60);
 }
 
 
@@ -33,7 +34,7 @@ lds08_lidarMeasurement scanValue;
 void loop() {
 #if 1
   if(lidar->getScanValue(&scanValue, 100)) {
-#if 0
+#if 1
     if(loop_counter++ % 1000 == 0) {
       Serial.printf("Speed: %d\n", scanValue.speed);
       Serial.printf("Start angle: %.2f deg, End angle: %.2f deg\n",

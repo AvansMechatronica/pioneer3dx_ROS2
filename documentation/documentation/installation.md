@@ -61,6 +61,7 @@ source install/setup.bash
 ```
 
 ### Add setup.bash to .bashrc
+Voer onderstaande commando's uit in een terminal:
 ```bash
 if ! grep -Fxq "source $(pwd)/install/setup.bash" ~/.bashrc; then
     echo "source $(pwd)/install/setup.bash" >> ~/.bashrc
