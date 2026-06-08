@@ -38,6 +38,7 @@ def launch_setup(context, *args, **kwargs):
     micro_ros_baudrate = LaunchConfiguration('micro_ros_baudrate')
     micro_ros_transport = LaunchConfiguration('micro_ros_transport')
     micro_ros_port = LaunchConfiguration('micro_ros_port')
+    status_monitor = LaunchConfiguration('status_monitor')
     micro_ros_transport_value = micro_ros_transport.perform(context)
 
 
@@ -86,6 +87,7 @@ def launch_setup(context, *args, **kwargs):
             executable='p3dx_status_monitor',
             name='p3dx_status_monitor',
             output='screen',
+            condition=IfCondition(status_monitor),
         )
 
     description_launch = IncludeLaunchDescription(
@@ -151,6 +153,13 @@ def generate_launch_description():
             name='odom_topic',
             default_value='/odom',
             description='EKF out odometry topic'
+        ),
+
+        DeclareLaunchArgument(
+            name='status_monitor',
+            default_value='true',
+            description='Enable status monitor node',
+            choices=['true', 'false']
         ),
                 
         OpaqueFunction(function=launch_setup)
