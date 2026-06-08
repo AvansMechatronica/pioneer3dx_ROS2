@@ -1,0 +1,171 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="nl" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Teleoperatie &mdash; ROS2 Pioneer 3DX 0.1 documentatie</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a57088fb"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/translations.js?v=e4d38c6a"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Zoeken" href="../search.html" />
+    <link rel="next" title="Cartografie" href="mapping.html" />
+    <link rel="prev" title="Fysieke robot setup" href="real_robot_setup.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ROS2 Pioneer 3DX
+              <img src="../_static/avans-hogeschool.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Zoek in documentatie" aria-label="Zoek in documentatie" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigatiemenu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="summary.html">Inleiding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulatie wereld modellen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="real_robot_setup.html">Fysieke robot setup</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Teleoperatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mapping.html">Cartografie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="navigation.html">Navigatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="robot_migration.html">Robot migratie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Veel gestelde vragen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Navigatiemenu voor mobiel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ROS2 Pioneer 3DX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Paginanavigatie">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Teleoperatie</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/documentation/teleoperation.md.txt" rel="nofollow"> Bekijk paginabron</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="teleoperatie">
+<h1>Teleoperatie<a class="headerlink" href="#teleoperatie" title="Link to this heading"></a></h1>
+<p>Zowel in simulatie als op de echte robot kun je de robot besturen met behulp van teleoperatie. Er zijn verschillende manieren om dit te doen, waaronder het gebruik van een toetsenbord of een joystick.</p>
+<div class="sd-card sd-sphinx-override sd-mb-3 sd-shadow-sm docutils">
+<div class="sd-card-body docutils">
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+Toetsenbord Teleop</label><div class="sd-tab-content docutils">
+<p class="sd-card-text">Voer <a class="reference external" href="https://index.ros.org/r/teleop_twist_keyboard/">teleop_twist_keyboard</a> uit om de robot te besturen met je toetsenbord:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ros2<span class="w"> </span>run<span class="w"> </span>teleop_twist_keyboard<span class="w"> </span>teleop_twist_keyboard
+</pre></div>
+</div>
+<p class="sd-card-text">Druk op:</p>
+<ul class="simple">
+<li><p class="sd-card-text"><strong>i</strong> - Om de robot vooruit te laten rijden.</p></li>
+<li><p class="sd-card-text"><strong>,</strong> - Om de robot achteruit te laten rijden.</p></li>
+<li><p class="sd-card-text"><strong>j</strong> - Om de robot CCW (tegen de klok in) te draaien.</p></li>
+<li><p class="sd-card-text"><strong>l</strong> - Om de robot CW (met de klok mee) te draaien.</p></li>
+<li><p class="sd-card-text"><strong>shift + j</strong> - Om de robot naar links te laten schuiven (voor mecanum robots).</p></li>
+<li><p class="sd-card-text"><strong>shift + l</strong> - Om de robot naar rechts te laten schuiven (voor mecanum robots).</p></li>
+<li><p class="sd-card-text"><strong>u / o / m / .</strong> - Gebruikt voor het draaien van de robot, door lineaire snelheid x en hoeksnelheid z te combineren.</p></li>
+</ul>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+Joystick support</label><div class="sd-tab-content docutils">
+<p class="sd-card-text">Voer onderstaand commando uit om de robot te besturen met je joystick:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ros2<span class="w"> </span>launch<span class="w"> </span>p3dx_bringup<span class="w"> </span>joy_teleop.launch.py
+</pre></div>
+</div>
+<p class="sd-card-text">Linkshandig</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ros2<span class="w"> </span>launch<span class="w"> </span>p3dx_bringup<span class="w"> </span>joy_teleop.launch.py<span class="w"> </span>left_handed:<span class="o">=</span><span class="nb">true</span>
+</pre></div>
+</div>
+<ul class="simple">
+<li><p class="sd-card-text">Op de F710 Gamepad moet de bovenste schakelaar op ‘X’ staan en de ‘MODE’ LED moet uit zijn.</p></li>
+</ul>
+<p class="sd-card-text">Druk op Knop/Beweeg Joystick:</p>
+<ul class="simple">
+<li><p class="sd-card-text"><strong>RB (Eerste bovenste rechter knop)</strong> - Houd deze knop ingedrukt terwijl je de joysticks beweegt om de besturing in te schakelen.</p></li>
+<li><p class="sd-card-text"><strong>Linker Joystick Omhoog/Omlaag</strong> - Om de robot vooruit/achteruit te laten rijden.</p></li>
+<li><p class="sd-card-text"><strong>Linker Joystick Links/Rechts</strong> - Om de robot naar links/rechts te laten schuiven.</p></li>
+<li><p class="sd-card-text"><strong>Rechter Joystick Links/Rechts</strong> - Om de robot CW/CCW te draaien.</p></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Voettekst">
+        <a href="real_robot_setup.html" class="btn btn-neutral float-left" title="Fysieke robot setup" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Vorige</a>
+        <a href="mapping.html" class="btn btn-neutral float-right" title="Cartografie" accesskey="n" rel="next">Volgende <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Gerard Harkema.</p>
+  </div>
+
+  Gebouwd met <a href="https://www.sphinx-doc.org/">Sphinx</a> met een
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">thema</a>
+    geleverd door <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

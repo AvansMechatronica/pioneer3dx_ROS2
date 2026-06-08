@@ -1,0 +1,241 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="nl" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Installatie &mdash; ROS2 Pioneer 3DX 0.1 documentatie</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a57088fb"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/translations.js?v=e4d38c6a"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Zoeken" href="../search.html" />
+    <link rel="next" title="Simulatie wereld modellen" href="simulation.html" />
+    <link rel="prev" title="Inleiding" href="summary.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ROS2 Pioneer 3DX
+              <img src="../_static/avans-hogeschool.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Zoek in documentatie" aria-label="Zoek in documentatie" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigatiemenu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="summary.html">Inleiding</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installatie</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#p3dx-workspace">P3dx workspace</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#clone-repository">Clone repository</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-workspace">Build workspace</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#add-setup-bash-to-bashrc">Add setup.bash to .bashrc</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-setup">Test setup</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#microros-agent">microROS agent</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#installatie-microros-agent">Installatie microROS agent</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#id1">Add setup.bash to .bashrc</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulatie wereld modellen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="real_robot_setup.html">Fysieke robot setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="teleoperation.html">Teleoperatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mapping.html">Cartografie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="navigation.html">Navigatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="robot_migration.html">Robot migratie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Veel gestelde vragen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Navigatiemenu voor mobiel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ROS2 Pioneer 3DX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Paginanavigatie">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Installatie</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/documentation/installation.md.txt" rel="nofollow"> Bekijk paginabron</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="installatie">
+<h1>Installatie<a class="headerlink" href="#installatie" title="Link to this heading"></a></h1>
+<section id="p3dx-workspace">
+<h2>P3dx workspace<a class="headerlink" href="#p3dx-workspace" title="Link to this heading"></a></h2>
+<section id="clone-repository">
+<h3>Clone repository<a class="headerlink" href="#clone-repository" title="Link to this heading"></a></h3>
+<div class="sd-card sd-sphinx-override sd-mb-3 sd-shadow-sm docutils">
+<div class="sd-card-body docutils">
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+Met GIT-repository support</label><div class="sd-tab-content docutils">
+<ul class="simple">
+<li><p class="sd-card-text">Maak een account aan bij <a class="reference external" href="https://github.com/">Github</a> en login op dit account</p></li>
+<li><p class="sd-card-text">Open de <a class="reference external" href="https://github.com/AvansMechatronica/pioneer3dx_ROS2">pioneer3dx_ROS2</a> repository</p></li>
+<li><p class="sd-card-text">Maak een Fork van de repository naar je eigen Github account door op het <strong>Fork icoon</strong>  te klikken:</p></li>
+</ul>
+<p class="sd-card-text"><img alt="image" src="../_images/fork.jpg" /></p>
+<ul class="simple">
+<li><p class="sd-card-text">Volg de instructies, maar wijzig de naam van de nieuwe repository niet. Bevestig met <strong>Create Fork</strong></p></li>
+<li><p class="sd-card-text">Nu kun je de workspace als volgt creëren</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>-p<span class="w"> </span>~/p3dx_ws/src
+<span class="nb">cd</span><span class="w"> </span>~/p3dx_ws/src
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/&lt;jouw_account_naam&gt;/pioneer3dx_ROS2.git
+</pre></div>
+</div>
+<p class="sd-card-text"><em>ps. Het gebruik van github (zoals add, commit &amp; push commando’s) valt  buiten de scope van deze documentatie</em></p>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+Zonder GIT-repository support</label><div class="sd-tab-content docutils">
+<ul class="simple">
+<li><p class="sd-card-text">Je kunt de workspace als volgt creëren</p></li>
+</ul>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>-p<span class="w"> </span>~/p3dx_ws/src
+<span class="nb">cd</span><span class="w"> </span>~/p3dx_ws/src
+git<span class="w"> </span>clone<span class="w"> </span>https://github.com/AvansMechatronica/pioneer3dx_ROS2.git
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="build-workspace">
+<h3>Build workspace<a class="headerlink" href="#build-workspace" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>~/p3dx_ws/
+rosdep<span class="w"> </span>update
+rosdep<span class="w"> </span>install<span class="w"> </span>--from-paths<span class="w"> </span>src/pioneer3dx_ROS2/p3dx<span class="w"> </span>--ignore-src<span class="w"> </span>-y
+colcon<span class="w"> </span>build<span class="w"> </span>--symlink-install
+<span class="nb">source</span><span class="w"> </span>install/setup.bash
+</pre></div>
+</div>
+</section>
+<section id="add-setup-bash-to-bashrc">
+<h3>Add setup.bash to .bashrc<a class="headerlink" href="#add-setup-bash-to-bashrc" title="Link to this heading"></a></h3>
+<p>Voer onderstaande commando’s uit in een terminal:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>grep<span class="w"> </span>-Fxq<span class="w"> </span><span class="s2">&quot;source </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="s2">/install/setup.bash&quot;</span><span class="w"> </span>~/.bashrc<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;source </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="s2">/install/setup.bash&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Added source command to .bashrc&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Source command already exists in .bashrc&quot;</span>
+<span class="k">fi</span><span class="w">  </span>
+</pre></div>
+</div>
+</section>
+<section id="test-setup">
+<h3>Test setup<a class="headerlink" href="#test-setup" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ros2<span class="w"> </span>launch<span class="w"> </span>p3dx_gazebo<span class="w"> </span>p3dx_mazeworld.launch.py<span class="w"> </span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="microros-agent">
+<h2>microROS agent<a class="headerlink" href="#microros-agent" title="Link to this heading"></a></h2>
+<p>De p3dx-robot maakt gebruik van microROS om te communiceren met de host-computer.</p>
+<section id="installatie-microros-agent">
+<h3>Installatie microROS agent<a class="headerlink" href="#installatie-microros-agent" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>mkdir<span class="w"> </span>-p<span class="w"> </span>~/microROS_agent_ws/src
+<span class="nb">cd</span><span class="w"> </span>~/microROS_agent_ws/src
+
+<span class="c1"># Verkrijg de juiste ROS2 distributie</span>
+git<span class="w"> </span>clone<span class="w"> </span>-b<span class="w"> </span>jazzy<span class="w"> </span>https://github.com/micro-ROS/micro-ROS-Agent.git
+
+<span class="nb">cd</span><span class="w"> </span>..
+<span class="c1"># Build de microROS agent</span>
+colcon<span class="w"> </span>build<span class="w"> </span>--symlink-install
+<span class="nb">source</span><span class="w"> </span>install/setup.bash
+<span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;source ~/microROS_agent_ws/install/setup.bash&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+</pre></div>
+</div>
+</section>
+<section id="id1">
+<h3>Add setup.bash to .bashrc<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="k">if</span><span class="w"> </span>!<span class="w"> </span>grep<span class="w"> </span>-Fxq<span class="w"> </span><span class="s2">&quot;source </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="s2">/install/setup.bash&quot;</span><span class="w"> </span>~/.bashrc<span class="p">;</span><span class="w"> </span><span class="k">then</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;source </span><span class="k">$(</span><span class="nb">pwd</span><span class="k">)</span><span class="s2">/install/setup.bash&quot;</span><span class="w"> </span>&gt;&gt;<span class="w"> </span>~/.bashrc
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Added source command to .bashrc&quot;</span>
+<span class="k">else</span>
+<span class="w">    </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Source command already exists in .bashrc&quot;</span>
+<span class="k">fi</span><span class="w">  </span>
+</pre></div>
+</div>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Voettekst">
+        <a href="summary.html" class="btn btn-neutral float-left" title="Inleiding" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Vorige</a>
+        <a href="simulation.html" class="btn btn-neutral float-right" title="Simulatie wereld modellen" accesskey="n" rel="next">Volgende <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Gerard Harkema.</p>
+  </div>
+
+  Gebouwd met <a href="https://www.sphinx-doc.org/">Sphinx</a> met een
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">thema</a>
+    geleverd door <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

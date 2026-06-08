@@ -1,0 +1,162 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="nl" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cartografie &mdash; ROS2 Pioneer 3DX 0.1 documentatie</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a57088fb"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/translations.js?v=e4d38c6a"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Zoeken" href="../search.html" />
+    <link rel="next" title="Navigatie" href="navigation.html" />
+    <link rel="prev" title="Teleoperatie" href="teleoperation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ROS2 Pioneer 3DX
+              <img src="../_static/avans-hogeschool.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Zoek in documentatie" aria-label="Zoek in documentatie" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigatiemenu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="summary.html">Inleiding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulatie wereld modellen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="real_robot_setup.html">Fysieke robot setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="teleoperation.html">Teleoperatie</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Cartografie</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#start-de-robot">Start de robot</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#simulatie">Simulatie</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#real-world">Real World</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#start-slam-toolbox">Start SLAM Toolbox:</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#beweeg-de-robot-om-te-starten-met-mappen">Beweeg de robot om te starten met mappen</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sla-de-kaart-op">Sla de kaart op</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="navigation.html">Navigatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="robot_migration.html">Robot migratie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Veel gestelde vragen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Navigatiemenu voor mobiel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ROS2 Pioneer 3DX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Paginanavigatie">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Cartografie</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/documentation/mapping.md.txt" rel="nofollow"> Bekijk paginabron</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="cartografie">
+<h1>Cartografie<a class="headerlink" href="#cartografie" title="Link to this heading"></a></h1>
+<section id="start-de-robot">
+<h2>Start de robot<a class="headerlink" href="#start-de-robot" title="Link to this heading"></a></h2>
+<section id="simulatie">
+<h3>Simulatie<a class="headerlink" href="#simulatie" title="Link to this heading"></a></h3>
+<p>Start 1 van de virtuele werelden die beschreven zijn in <a class="reference internal" href="simulation.html"><span class="std std-doc">simulatie</span></a></p>
+</section>
+<section id="real-world">
+<h3>Real World<a class="headerlink" href="#real-world" title="Link to this heading"></a></h3>
+<p>Start de p3dx robot zoals beschreven in <a class="reference internal" href="real_robot_setup.html"><span class="std std-doc">echte robot</span></a></p>
+</section>
+</section>
+<section id="start-slam-toolbox">
+<h2>Start <a class="reference external" href="https://github.com/SteveMacenski/slam_toolbox">SLAM Toolbox</a>:<a class="headerlink" href="#start-slam-toolbox" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>ros2<span class="w"> </span>launch<span class="w"> </span>p3dx_navigation<span class="w"> </span>slam.launch.py
+</pre></div>
+</div>
+</section>
+<section id="beweeg-de-robot-om-te-starten-met-mappen">
+<h2>Beweeg de robot om te starten met mappen<a class="headerlink" href="#beweeg-de-robot-om-te-starten-met-mappen" title="Link to this heading"></a></h2>
+<p>Bestuur de robot <a class="reference internal" href="teleoperation.html"><span class="std std-doc">handmatig</span></a> totdat de robot het volledige werkgebied heeft afgedekt. Als alternatief kun je de <code class="docutils literal notranslate"><span class="pre">2D</span> <span class="pre">Goal</span> <span class="pre">Pose</span></code> tool in RVIZ gebruiken om een autonoom doel in te stellen tijdens het mappen. Meer informatie <a class="reference external" href="https://navigation.ros.org/tutorials/docs/navigation2_with_slam.html">hier</a>.</p>
+</section>
+<section id="sla-de-kaart-op">
+<h2>Sla de kaart op<a class="headerlink" href="#sla-de-kaart-op" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>p3dx/p3dx_navigation/maps
+ros2<span class="w"> </span>run<span class="w"> </span>nav2_map_server<span class="w"> </span>map_saver_cli<span class="w"> </span>-f<span class="w"> </span>&lt;map_name&gt;<span class="w"> </span>--ros-args<span class="w"> </span>-p<span class="w"> </span>save_map_timeout:<span class="o">=</span><span class="m">10000</span>.
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Voettekst">
+        <a href="teleoperation.html" class="btn btn-neutral float-left" title="Teleoperatie" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Vorige</a>
+        <a href="navigation.html" class="btn btn-neutral float-right" title="Navigatie" accesskey="n" rel="next">Volgende <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Gerard Harkema.</p>
+  </div>
+
+  Gebouwd met <a href="https://www.sphinx-doc.org/">Sphinx</a> met een
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">thema</a>
+    geleverd door <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

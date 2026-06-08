@@ -1,0 +1,513 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="nl" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robot migratie &mdash; ROS2 Pioneer 3DX 0.1 documentatie</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/copybutton.css?v=76b2166b" />
+      <link rel="stylesheet" type="text/css" href="../_static/sphinx-design.min.css?v=95c83b7e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=a57088fb"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+      <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
+      <script src="../_static/copybutton.js?v=f281be69"></script>
+      <script src="../_static/translations.js?v=e4d38c6a"></script>
+      <script src="../_static/design-tabs.js?v=f930bc37"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Zoeken" href="../search.html" />
+    <link rel="next" title="Veel gestelde vragen" href="faq.html" />
+    <link rel="prev" title="Navigatie" href="navigation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            ROS2 Pioneer 3DX
+              <img src="../_static/avans-hogeschool.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Zoek in documentatie" aria-label="Zoek in documentatie" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigatiemenu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="summary.html">Inleiding</a></li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="simulation.html">Simulatie wereld modellen</a></li>
+<li class="toctree-l1"><a class="reference internal" href="real_robot_setup.html">Fysieke robot setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="teleoperation.html">Teleoperatie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="mapping.html">Cartografie</a></li>
+<li class="toctree-l1"><a class="reference internal" href="navigation.html">Navigatie</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Robot migratie</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#bouw-van-het-processorbord">Bouw van het processorbord</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#schema">Schema</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcb">PCB</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#programmeren-van-de-processor">Programmeren van de processor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#inbouwen-van-het-processorbord">Inbouwen van het processorbord</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#voorbeeld-van-de-bedrading">Voorbeeld van de bedrading</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#modificatie-van-de-bumpers">Modificatie van de bumpers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lidar-configurarties">Lidar configurarties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#carriers">Carriers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#testen-van-de-migratie">Testen van de migratie</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Veel gestelde vragen</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Navigatiemenu voor mobiel" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">ROS2 Pioneer 3DX</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Paginanavigatie">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Robot migratie</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/documentation/robot_migration.md.txt" rel="nofollow"> Bekijk paginabron</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="robot-migratie">
+<h1>Robot migratie<a class="headerlink" href="#robot-migratie" title="Link to this heading"></a></h1>
+<p>Om de Pioneer 3DX geschikt te maken voor de ROS2 migratie, zijn er een aantal aanpassingen nodig. Deze aanpassingen zijn onderverdeeld in verschillende categorieën, zoals de bouw van het processorbord, het programmeren van de processor, het inbouwen van het processorbord, de modificatie van de bumpers en het testen van de migratie.</p>
+<p>Uit de Pioneer 3DX robot wordt het oude processorbord verwijderd en vervangen door een nieuw processorbord dat is ontworpen om een ESP32-S3 device te integreren. De bumpers van de robot en het bedieningspaneel blijven behouden en worden opnieuw aangesloten op het nieuwe processorbord.</p>
+<p>Er wordt een Lidar toegevoegd aan de robot, waarbij er twee opties zijn: de LDS-08 en de YD-T-mini.</p>
+<section id="bouw-van-het-processorbord">
+<h2>Bouw van het processorbord<a class="headerlink" href="#bouw-van-het-processorbord" title="Link to this heading"></a></h2>
+<p>In de directory <code class="docutils literal notranslate"><span class="pre">kiCad</span></code> van de Pioneer 3DX repostory is het ontwerp van het processorbord te vinden. Dit bord zal worden gebruikt om de ESP32-S3 device te integreren in de Pioneer 3DX en zal ook de nodige componenten bevatten voor de communicatie en voeding van de processor.</p>
+<div class="admonition note">
+<p class="admonition-title">Notitie</p>
+<p>Je kunt het processorboard zelf laten produceren bij een PCB fabrikant zoals b.v. JLCPCB of PCBWay.
+De eigendomsrechten van het ontwerp van het processorbord liggen bij Gerard Harkema/Avans Hogeschool. Het is niet toegestaan om het ontwerp te gebruiken voor commerciële doeleinden zonder toestemming van Gerard Harkema/Avans Hogeschool. Tevens dienen bij productie van het processorbord de volgende voorwaarden in acht te worden genomen:</p>
+<ul class="simple">
+<li><p>Het ontwerp van het processorbord mag alleen worden gebruikt voor educatieve doeleinden en niet voor commerciële doeleinden.</p></li>
+<li><p>Het ontwerp van het processorbord mag niet worden aangepast of gewijzigd zonder toestemming van Gerard Harkema/Avans Hogeschool.</p></li>
+<li><p>Bij productie van het processorbord dient de bronvermelding “Ontwerp van het processorbord is eigendom van Gerard Harkema/Avans Hogeschool” te worden opgenomen in de documentatie van het product.</p></li>
+</ul>
+</div>
+<section id="schema">
+<h3>Schema<a class="headerlink" href="#schema" title="Link to this heading"></a></h3>
+<p>Het schema van de nieuwe processorbord:
+<a class="reference download internal" download="" href="../_downloads/574eba6c4cfedbb01cc7de3249330bd4/schematic.pdf"><span class="xref download myst">Processorboard schema</span></a></p>
+</section>
+<section id="pcb">
+<h3>PCB<a class="headerlink" href="#pcb" title="Link to this heading"></a></h3>
+<p><img alt="Image" src="../_images/pcb-render.png" /></p>
+<p><img alt="image" src="../_images/pcb-layout.png" />
+PCB Layout van het processorbord. De componenten zijn als volgt:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Id</p></th>
+<th class="head"><p>Designator</p></th>
+<th class="head"><p>Quantity</p></th>
+<th class="head"><p>Designation</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>1</p></td>
+<td><p>C1,C2</p></td>
+<td><p>2</p></td>
+<td><p>100nF</p></td>
+</tr>
+<tr class="row-odd"><td><p>2</p></td>
+<td><p>U2</p></td>
+<td><p>1</p></td>
+<td><p>TXS0108EPW</p></td>
+</tr>
+<tr class="row-even"><td><p>3</p></td>
+<td><p>U4</p></td>
+<td><p>1</p></td>
+<td><p>1.77” TFT Display</p></td>
+</tr>
+<tr class="row-odd"><td><p>4</p></td>
+<td><p>R6,R5,R1,R4</p></td>
+<td><p>4</p></td>
+<td><p>DO NOT PLACE</p></td>
+</tr>
+<tr class="row-even"><td><p>5</p></td>
+<td><p>J5</p></td>
+<td><p>1</p></td>
+<td><p>Conn_01x03_Pin</p></td>
+</tr>
+<tr class="row-odd"><td><p>6</p></td>
+<td><p>J4</p></td>
+<td><p>1</p></td>
+<td><p>Conn_01x16_Pin</p></td>
+</tr>
+<tr class="row-even"><td><p>7</p></td>
+<td><p>CP2,CP1</p></td>
+<td><p>2</p></td>
+<td><p>100uF/10V</p></td>
+</tr>
+<tr class="row-odd"><td><p>8</p></td>
+<td><p>J2</p></td>
+<td><p>1</p></td>
+<td><p>Conn_01x26_Pin</p></td>
+</tr>
+<tr class="row-even"><td><p>9</p></td>
+<td><p>U3</p></td>
+<td><p>1</p></td>
+<td><p>ESP32-S3-DevKitC</p></td>
+</tr>
+<tr class="row-odd"><td><p>10</p></td>
+<td><p>J3,J1</p></td>
+<td><p>2</p></td>
+<td><p>Conn_01x10_Pin</p></td>
+</tr>
+<tr class="row-even"><td><p>11</p></td>
+<td><p>J6</p></td>
+<td><p>1</p></td>
+<td><p>Conn_01x05_Pin</p></td>
+</tr>
+<tr class="row-odd"><td><p>12</p></td>
+<td><p>R2,R3</p></td>
+<td><p>1</p></td>
+<td><p>100k</p></td>
+</tr>
+<tr class="row-even"><td><p>14</p></td>
+<td><p>U1</p></td>
+<td><p>1</p></td>
+<td><p>MPU6050</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition warning">
+<p class="admonition-title">Waarschuwing</p>
+<p>Gebruik alleen een originele ESP32-S3-DevKitC van Espressif. Er zijn veel namaak ESP32-S3 boards op de markt die mogelijk niet correct functioneren. Bekend issue met namaak ESP32-S3 dat het LiteFS bestandssysteem niet correct functioneert, wat kan leiden tot problemen met het opslaan van de wifi configuratie.</p>
+</div>
+</section>
+</section>
+<section id="programmeren-van-de-processor">
+<h2>Programmeren van de processor<a class="headerlink" href="#programmeren-van-de-processor" title="Link to this heading"></a></h2>
+<p>In de directory <code class="docutils literal notranslate"> <span class="pre">ESP32/ros_controller</span></code> van de Pioneer 3DX repository is de code te vinden die op de ESP32-S3 device moet worden geprogrammeerd. Deze code is verantwoordelijk voor het aansturen van de robot en het communiceren met de ROS2 nodes. Je kunt deze code uploaden naar de ESP32-S3 met Visual Studio Code en de PlatformIO extension.</p>
+<div class="sd-card sd-sphinx-override sd-mb-3 sd-shadow-sm docutils">
+<div class="sd-card-body docutils">
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-0" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-0">
+Wifi configuratie</label><div class="sd-tab-content docutils">
+<p class="sd-card-text">Selecteer in Visual Studio Code de <code class="docutils literal notranslate"><span class="pre">esp32-s3-wroom-wifi</span></code> environment.</p>
+<p class="sd-card-text"><strong>Upload Filesystem image</strong></p>
+<p class="sd-card-text">Om de wifi configuratie op te slaan, moet er een filesystem image worden geüpload naar de ESP32-S3 device. Dit kan worden gedaan met de volgende commando’s in de terminal van Visual Studio Code:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>ESP32/ros_controller
+pio<span class="w"> </span>run<span class="w"> </span>--target<span class="w"> </span>uploadfs<span class="w"> </span>-e<span class="w"> </span>esp32-s3-wroom-wifi
+</pre></div>
+</div>
+<p class="sd-card-text"><strong>Upload firmware</strong>
+Om de firmware te uploaden naar de ESP32-S3 device, kan het volgende commando worden gebruikt in de terminal van Visual Studio Code:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>ESP32/ros_controller
+pio<span class="w"> </span>run<span class="w"> </span>--target<span class="w"> </span>upload<span class="w"> </span>-e<span class="w"> </span>esp32-s3-wroom-wifi
+</pre></div>
+</div>
+</div>
+<input id="sd-tab-item-1" name="sd-tab-set-0" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-1">
+USB Configuratie</label><div class="sd-tab-content docutils">
+<p class="sd-card-text">Selecteer in Visual Studio Code de <code class="docutils literal notranslate"><span class="pre">esp32-s3-wroom-usb</span></code> environment.</p>
+<p class="sd-card-text"><strong>Upload firmware</strong></p>
+<p class="sd-card-text">Om de firmware te uploaden naar de ESP32-S3 device, kan het volgende commando worden gebruikt in de terminal van Visual Studio Code:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>ESP32/ros_controller
+pio<span class="w"> </span>run<span class="w"> </span>--target<span class="w"> </span>upload<span class="w"> </span>-e<span class="w"> </span>esp32-s3-wroom-usb
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Notitie</p>
+<p>In de <code class="docutils literal notranslate"><span class="pre">build_flags</span></code> sectie van de geselecteerde environment kan er geslecteerd worden welk type Lidar er wordt gebruikt. Standaard is dit ingesteld op de YD-T-mini, maar dit kan worden aangepast naar de LDS-08 door de juiste environment te wijzigen:</p>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="na">build_flags</span><span class="w"> </span><span class="o">=</span><span class="w"> </span>
+<span class="c1">; Enable WiFi</span>
+<span class="w">  </span><span class="na">-DWIFI </span>
+<span class="c1">; Enable WiFi config debug</span>
+<span class="w">  </span><span class="na">-DNETWORK_CONFIG_DEBUG</span>
+<span class="c1">; Enable native USB CDC serial on ESP32-S3, do not change this when using WiFi transport for micro-ROS </span>
+<span class="w">  </span><span class="na">-DARDUINO_USB_MODE</span><span class="o">=</span><span class="s">1</span>
+<span class="w">  </span><span class="na">-DARDUINO_USB_CDC_ON_BOOT</span><span class="o">=</span><span class="s">1</span>
+<span class="c1">; Enable TFT print for WiFi status</span>
+<span class="w">  </span><span class="na">-DWIFI_INCLUDE_TFT_PRINT</span>
+<span class="c1">; Enable general debugging</span>
+<span class="c1">;  -DDEBUG </span>
+<span class="c1">; Enable motor controller debug</span>
+<span class="c1">;  -DDEBUG_MOTOR_CONTROLLER </span>
+<span class="c1">; Detach encoder interrupts during critical sections to prevent issues with the ESP32-S3&#39;s USB CDC implementation, use with caution as it may cause missed encoder ticks</span>
+<span class="c1">; -DDE_ATTACH_ENCODER_INTERRUPTS</span>
+<span class="c1">; Enable multiple executors for publishers</span>
+<span class="w">  </span><span class="na">-DMULTIPLE_PUBLISH_EXECUTORS</span>
+<span class="c1">; Enable bumper handling </span>
+<span class="w">  </span><span class="na">-DHANDLE_BUMPERS </span>
+<span class="c1">; Enable LIDAR</span>
+<span class="w">  </span><span class="na">-DINCLUDE_LIDAR</span>
+<span class="c1">; Lidar type, choose one of the following based on your hardware</span>
+<span class="c1">;  -DLIDAR_LDS08</span>
+<span class="c1">; LIDAR angle offset for LDS-08, adjust as needed for your specific mounting orientation</span>
+<span class="c1">;  -DLIDAR_ANGLE_OFFSET=-90 </span>
+<span class="c1">; Invert LIDAR scan for LDS-08, adjust as needed based on your specific mounting orientation and desired scan direction</span>
+<span class="c1">;  -DLIDAR_INVERT_SCAN </span>
+<span class="w">  </span><span class="na">-DLIDAR_YD_T_MINI</span>
+<span class="c1">; LiDAR angle offset for YDLIDAR T-mini Plus, adjust as needed for your specific mounting orientation</span>
+<span class="w">  </span><span class="na">-DLIDAR_ANGLE_OFFSET</span><span class="o">=</span><span class="s">180</span>
+<span class="c1">; Invert LIDAR scan for YDLIDAR T-mini Plus, adjust as needed based on your specific mounting orientation and desired scan direction  </span>
+<span class="w">  </span><span class="na">-DLIDAR_INVERT_SCAN </span>
+<span class="c1">; Enable LIDAR debug</span>
+<span class="w">  </span><span class="na">-DDEBUG_LIDAR</span>
+<span class="c1">; Set core debug level to maximum</span>
+<span class="w"> </span><span class="na">-DCORE_DEBUG_LEVEL</span><span class="o">=</span><span class="s">3</span>
+<span class="c1">; Enable IMU not tested yet, use with caution</span>
+<span class="c1">;  -DINCLUDE_IMU </span>
+<span class="c1">; Enable IMU debug</span>
+<span class="c1">;  -DDEBUG_IMU</span>
+<span class="c1">; Enable IMU acquisition debug</span>
+<span class="c1">;  -DDEBUG_IMU_AQUISITION</span>
+</pre></div>
+</div>
+</div>
+</section>
+<section id="inbouwen-van-het-processorbord">
+<h2>Inbouwen van het processorbord<a class="headerlink" href="#inbouwen-van-het-processorbord" title="Link to this heading"></a></h2>
+<div class="admonition danger">
+<p class="admonition-title">Gevaar</p>
+<p>Verwijder de batterij uit de robot voordat je begint met het inbouwen van het processorbord. Dit is belangrijk om schade aan de componenten te voorkomen en om veilig te kunnen werken aan de robot.</p>
+</div>
+<p>Verwijder het oude processorbord uit de Pioneer 3DX robot en installeer het nieuwe processorbord. Gebruik hiervoor de verderop beschreven carrier.</p>
+<ul class="simple">
+<li><p>Sluit de motordriver-board aan op de J2 connector van het processorbord.</p></li>
+<li><p>Sluit de front-bumpers aan op de J3 connector van het processorbord.</p></li>
+<li><p>Sluit de rear-bumpers aan op de J1 connector van het processorbord.</p></li>
+<li><p>Sluit het digital display aan op de U4 connector van het processorbord (gebruik hiervoor bandkabel).</p></li>
+<li><p>Sluit de Lidar aan op de J6 connector van het processorbord.(zie verderop voor de verschillende Lidar carriers)</p></li>
+<li><p>Sluit de voeding van het motordriver-board aan op de J5 connector van het processorbord.</p>
+<ul>
+<li><p>Verwijder de gele draad van de voeding uit het motordriver-board.</p></li>
+<li><p>Let op dat de bedrading van de voeding correct is.</p></li>
+</ul>
+</li>
+<li><p>Sluit het bedieningspaneel aan op de J4 connector van het processorbord.</p></li>
+</ul>
+</section>
+<section id="voorbeeld-van-de-bedrading">
+<h2>Voorbeeld van de bedrading<a class="headerlink" href="#voorbeeld-van-de-bedrading" title="Link to this heading"></a></h2>
+<p>In de volgende afbeeldingen is te zien hoe het processorbord is ingebouwd in de Pioneer 3DX robot en hoe de verschillende componenten zijn aangesloten.
+<img alt="image" src="../_images/ESP32_board.jpg" /></p>
+</section>
+<section id="modificatie-van-de-bumpers">
+<h2>Modificatie van de bumpers<a class="headerlink" href="#modificatie-van-de-bumpers" title="Link to this heading"></a></h2>
+<p>Orgineel zijn de bumpers van de Pioneer 3DX robot geconfigureerd in een wired active-high <code class="docutils literal notranslate"><span class="pre">AND</span></code> configuratie. Voor de ROS2 migratie is het nodig om deze te modificeren naar een active-low <code class="docutils literal notranslate"><span class="pre">AND</span></code> configuratie.</p>
+<ul class="simple">
+<li><p>Verwijder de 4 schroeven net boven de bumpers. Hierdoor komt de beschermingskap aan de onderkant van de robot los.
+<img alt="image" src="../_images/bumper_screw.jpg" /></p></li>
+</ul>
+<p>*Draai de robot op zijn kop en onderstaande aansluitingen worden zichtbaar.
+<img alt="image" src="../_images/bumper_down.jpg" /></p>
+<p>*Verplaats de draden van iedere micro-switch de <code class="docutils literal notranslate"><span class="pre">NC</span></code>-aansluiting naar de <code class="docutils literal notranslate"><span class="pre">NO</span></code>-aansluiting. Hierdoor worden de bumpers geconfigureerd in een active-low configuratie.
+Laat de <code class="docutils literal notranslate"><span class="pre">COM</span></code>-aansluiting ongemoeid.</p>
+<div class="sd-container-fluid sd-sphinx-override sd-mb-4 docutils">
+<div class="sd-row sd-row-cols-1 sd-row-cols-xs-1 sd-row-cols-sm-1 sd-row-cols-md-2 sd-row-cols-lg-2 sd-g-2 sd-g-xs-2 sd-g-sm-2 sd-g-md-2 sd-g-lg-2 docutils">
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<div class="sd-card-body docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/bumper_switch_before.jpg" />
+Voor modificatie</p>
+</div>
+</div>
+</div>
+<div class="sd-col sd-d-flex-row docutils">
+<div class="sd-card sd-sphinx-override sd-w-100 sd-shadow-sm docutils">
+<div class="sd-card-body docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/bumper_switch_after.jpg" />
+Na modificatie</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<ul class="simple">
+<li><p>Monteer de beschermingskap weer terug op de robot en draai de 4 schroeven weer vast.</p></li>
+<li><p>Herhaal bovenstaande stappen voor zowel de front-bumpers als de rear-bumpers.</p></li>
+</ul>
+</section>
+<section id="lidar-configurarties">
+<h2>Lidar configurarties<a class="headerlink" href="#lidar-configurarties" title="Link to this heading"></a></h2>
+<p>Er zijn twee verschillende Lidar opties beschikbaar voor de Pioneer 3DX robot: de LDS-08 en de YD-T-mini. Beide Lidar’s kunnen worden geïntegreerd met het nieuwe processorbord en bieden verschillende functies en prestaties.</p>
+<p>Voordat je de lidar aan kun sluiten dien je de draden van de lidar te verlengen zodat deze bij de J6 connector van het processorbord kunnen worden aangesloten. Gebruik voor de verleng draden dezelfde kleur codering als de originele draden van de lidar om verwarring te voorkomen. Sluit vervolgens de verlengde draden aan op de J6 connector van het processorbord volgens schema.</p>
+<div class="sd-card sd-sphinx-override sd-mb-3 sd-shadow-sm docutils">
+<div class="sd-card-body docutils">
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-2" name="sd-tab-set-1" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-2">
+LDS-08 lidar</label><div class="sd-tab-content docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/lidar_lds08.jpg" /></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p class="sd-card-text">J6 connector pin</p></th>
+<th class="head"><p class="sd-card-text">Signaal</p></th>
+<th class="head"><p class="sd-card-text">kleur</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p class="sd-card-text">1</p></td>
+<td><p class="sd-card-text">VCC</p></td>
+<td><p class="sd-card-text">Rood</p></td>
+</tr>
+<tr class="row-odd"><td><p class="sd-card-text">2</p></td>
+<td><p class="sd-card-text">TX</p></td>
+<td><p class="sd-card-text">Geel</p></td>
+</tr>
+<tr class="row-even"><td><p class="sd-card-text">3</p></td>
+<td><p class="sd-card-text">RX</p></td>
+<td><p class="sd-card-text">NC</p></td>
+</tr>
+<tr class="row-odd"><td><p class="sd-card-text">4</p></td>
+<td><p class="sd-card-text">GND</p></td>
+<td><p class="sd-card-text">Blauw</p></td>
+</tr>
+<tr class="row-even"><td><p class="sd-card-text">5</p></td>
+<td><p class="sd-card-text">Motor</p></td>
+<td><p class="sd-card-text">Groen</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<input id="sd-tab-item-3" name="sd-tab-set-1" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-3">
+YD-T-mini lidar</label><div class="sd-tab-content docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/lidar_yd_t_mini.jpg" /></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p class="sd-card-text">J6 connector pin</p></th>
+<th class="head"><p class="sd-card-text">Signaal</p></th>
+<th class="head"><p class="sd-card-text">kleur</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p class="sd-card-text">1</p></td>
+<td><p class="sd-card-text">VCC</p></td>
+<td><p class="sd-card-text">Rood</p></td>
+</tr>
+<tr class="row-odd"><td><p class="sd-card-text">2</p></td>
+<td><p class="sd-card-text">TX</p></td>
+<td><p class="sd-card-text">Groen</p></td>
+</tr>
+<tr class="row-even"><td><p class="sd-card-text">3</p></td>
+<td><p class="sd-card-text">RX</p></td>
+<td><p class="sd-card-text">Geel</p></td>
+</tr>
+<tr class="row-odd"><td><p class="sd-card-text">4</p></td>
+<td><p class="sd-card-text">GND</p></td>
+<td><p class="sd-card-text">Zwart</p></td>
+</tr>
+<tr class="row-even"><td><p class="sd-card-text">5</p></td>
+<td><p class="sd-card-text">Motor</p></td>
+<td><p class="sd-card-text">NC</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="carriers">
+<h2>Carriers<a class="headerlink" href="#carriers" title="Link to this heading"></a></h2>
+<p>Voor de diverse onderdelen van de robot zijn er carriers ontworpen om de verschillende componenten netjes te kunnen monteren en aansluiten op het processorbord. Deze carriers zijn ontworpen in FreeCAD. De bestanden van de carriers zijn te vinden in de directory <code class="docutils literal notranslate"><span class="pre">freecad</span></code> van de Pioneer 3DX repository. De carriers zijn te exporteren naar verschillende formaten voor productie of 3D-printen. Hieronder is een overzicht van de verschillende carriers.</p>
+<div class="sd-card sd-sphinx-override sd-mb-3 sd-shadow-sm docutils">
+<div class="sd-card-body docutils">
+<div class="sd-tab-set docutils">
+<input checked="checked" id="sd-tab-item-4" name="sd-tab-set-2" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-4">
+p3dxControllerCarrier.FCStd</label><div class="sd-tab-content docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/pcb-carrier.png" /></p>
+</div>
+<input id="sd-tab-item-5" name="sd-tab-set-2" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-5">
+LidarLds08DisplayCarrier.FCStd</label><div class="sd-tab-content docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/lidar-lds08-carrier.png" /></p>
+</div>
+<input id="sd-tab-item-6" name="sd-tab-set-2" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-6">
+LidarYd_t_mini_DisplayCarrier.FCStd</label><div class="sd-tab-content docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/lidar-yd-t-mini-carrier.png" /></p>
+</div>
+<input id="sd-tab-item-7" name="sd-tab-set-2" type="radio">
+<label class="sd-tab-label" for="sd-tab-item-7">
+RaspberryPiPowerCarrier.FCStd</label><div class="sd-tab-content docutils">
+<p class="sd-card-text"><img alt="image" src="../_images/raspbarry-pi-power-carrier.png" /></p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section id="testen-van-de-migratie">
+<h2>Testen van de migratie<a class="headerlink" href="#testen-van-de-migratie" title="Link to this heading"></a></h2>
+<p>Controleer of alle componenten correct zijn aangesloten en of de firmware correct is geüpload naar de ESP32-S3 device. Plaats de batterij terug in de robot en zet de robot aan. Controleer of de robot correct functioneert door de berichten op het display te bekijken.</p>
+<p>Start vervolgens de ROS2 nodes op en controleer of de robot correct communiceert met de ROS2 nodes.
+Zie <a class="reference internal" href="real_robot_setup.html"><span class="std std-doc">Fysieke robot setup</span></a> voor meer informatie over het starten van de ROS2 nodes en het controleren van de robotstatus.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Voettekst">
+        <a href="navigation.html" class="btn btn-neutral float-left" title="Navigatie" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Vorige</a>
+        <a href="faq.html" class="btn btn-neutral float-right" title="Veel gestelde vragen" accesskey="n" rel="next">Volgende <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright Gerard Harkema.</p>
+  </div>
+
+  Gebouwd met <a href="https://www.sphinx-doc.org/">Sphinx</a> met een
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">thema</a>
+    geleverd door <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
